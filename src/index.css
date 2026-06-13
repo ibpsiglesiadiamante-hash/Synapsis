@@ -1,0 +1,594 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom theme colors mapping to CSS variables */
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-primary-mid: var(--primary-mid);
+
+  /* Alias slate & gray to adapt to active themes globally */
+  --color-slate-50: var(--gray-50);
+  --color-slate-100: var(--gray-100);
+  --color-slate-200: var(--gray-200);
+  --color-slate-202: var(--gray-202);
+  --color-slate-205: var(--gray-202);
+  --color-slate-220: var(--gray-202);
+  --color-slate-300: var(--gray-300);
+  --color-slate-400: var(--gray-400);
+  --color-slate-500: var(--gray-500);
+  --color-slate-600: var(--gray-600);
+  --color-slate-700: var(--gray-700);
+  --color-slate-800: var(--gray-800);
+  --color-slate-900: var(--gray-900);
+
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+}
+
+:root {
+  --primary: #1a56db;
+  --primary-dark: #1342b0;
+  --primary-light: #e8f0fe;
+  --primary-mid: #4285f4;
+  --success: #0f7b3e;
+  --success-bg: #e6f4ea;
+  --danger: #c0392b;
+  --danger-bg: #fdecea;
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-202: #e2e8f0;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --card-bg: #ffffff;
+}
+
+/* Default Theme Explicit Mapping (Light Mode) */
+body.theme-default {
+  --primary: #1a56db;
+  --primary-dark: #1342b0;
+  --primary-light: #e8f0fe;
+  --primary-mid: #4285f4;
+  --success: #0f7b3e;
+  --success-bg: #e6f4ea;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-202: #e2e8f0;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --card-bg: #ffffff;
+}
+
+/* Gray Theme (Sleek Light Metallic / Silver-Gray Professional Theme with Premium Charcoal Sidebar Accent) */
+body.theme-gray {
+  --primary: #475569;        /* Steel Charcoal modern primary brand color */
+  --primary-dark: #1e293b;
+  --primary-light: #f1f5f9;  /* Delicate light-gray accent highlights */
+  --primary-mid: #64748b;
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --gray-50: #f1f3f6;        /* Beautiful light silver-gray workspace canvas background */
+  --gray-101: #e9ecf0;       /* Row stripes & subcontainers */
+  --gray-100: #e9ecf0;       /* Secondary backgrounds */
+  --gray-202: #d8dce3;       /* Premium elegant silver-gray borders */
+  --gray-200: #d8dce3;
+  --gray-300: #94a3b8;
+  --gray-400: #64748b;       /* Moderate descriptions */
+  --gray-500: #475569;
+  --gray-600: #334155;
+  --gray-700: #1e293b;       /* Corporate dark steel labels */
+  --gray-800: #0f172a;       /* Optimum high-contrast readability */
+  --gray-900: #020617;
+  --card-bg: #ffffff;        /* Pure immaculate white card surfaces */
+}
+
+/* Blue Theme (Midnight Blue / Navy Dark-Medium Tone) - Professional Light Workspace with Navy Accent */
+body.theme-blue {
+  --primary: #2563eb;        /* Professional Vibrant Sapphire Blue primary */
+  --primary-dark: #1d4ed8;
+  --primary-light: #eff6ff;  /* Delicate soft blue accent highlights */
+  --primary-mid: #3b82f6;
+  --success: #10b981;
+  --success-bg: #d1fae5;
+  --gray-50: #eff3f8;        /* Exquisite soft light blue-gray workspace background */
+  --gray-101: #e2e8f1;       /* Row stripes & subcontainers */
+  --gray-100: #e2e8f1;       /* Secondary inputs & backgrounds */
+  --gray-202: #cfd7e6;       /* Soft navy-steel elegant borders */
+  --gray-200: #cfd7e6;
+  --gray-300: #94a3b8;
+  --gray-400: #64748b;       /* Moderate text descriptions */
+  --gray-500: #475569;
+  --gray-600: #334155;
+  --gray-700: #1e293b;       /* Corporate steel navy text labels */
+  --gray-800: #0f172a;       /* Maximum readability */
+  --gray-900: #020617;
+  --card-bg: #ffffff;        /* Pure white cards */
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--gray-50) !important;
+  color: var(--gray-800) !important;
+  transition: background-color 0.2s ease-in-out, color 0.18s ease-in-out;
+}
+
+/* High Contrast & Themed Background Hooks */
+.theme-bg-surface {
+  background-color: var(--card-bg) !important;
+}
+.theme-border {
+  border-color: var(--gray-200) !important;
+}
+.theme-input {
+  background-color: var(--gray-100) !important;
+  border-color: var(--gray-250, var(--gray-200)) !important;
+}
+
+/* Specific theme overrides for active deep-color themes (theme-gray and theme-blue) */
+body.theme-gray .bg-white,
+body.theme-gray .theme-bg-surface,
+body.theme-gray .modal,
+body.theme-gray .card,
+body.theme-gray header,
+body.theme-gray nav,
+body.theme-gray select.bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+body.theme-blue .bg-white,
+body.theme-blue .theme-bg-surface,
+body.theme-blue .modal,
+body.theme-blue .card,
+body.theme-blue header,
+body.theme-blue nav,
+body.theme-blue select.bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+/* Smooth background overrides for sub-containers and items */
+body.theme-gray .bg-slate-50,
+body.theme-gray .bg-slate-100,
+body.theme-gray .hover\:bg-slate-100:hover,
+body.theme-gray .hover\:bg-slate-50:hover,
+body.theme-gray tr.bg-slate-50,
+body.theme-gray div.bg-slate-50,
+body.theme-gray .form-control {
+  background-color: var(--gray-100) !important;
+}
+
+body.theme-blue .bg-slate-50,
+body.theme-blue .bg-slate-100,
+body.theme-blue .hover\:bg-slate-100:hover,
+body.theme-blue .hover\:bg-slate-50:hover,
+body.theme-blue tr.bg-slate-50,
+body.theme-blue div.bg-slate-50,
+body.theme-blue .form-control {
+  background-color: var(--gray-100) !important;
+}
+
+/* Inputs and select fields inside forms for dark/medium mode */
+body.theme-gray input, 
+body.theme-gray select, 
+body.theme-gray textarea {
+  background-color: #ffffff !important;
+  color: var(--gray-900) !important;
+  border-color: var(--gray-202) !important;
+}
+
+body.theme-blue input, 
+body.theme-blue select, 
+body.theme-blue textarea {
+  background-color: #ffffff !important;
+  color: var(--gray-900) !important;
+  border-color: var(--gray-202) !important;
+}
+
+/* Text elements color adaptations */
+body.theme-gray .text-slate-900,
+body.theme-gray .text-slate-800,
+body.theme-gray .text-slate-700,
+body.theme-gray .text-slate-600,
+body.theme-gray h1,
+body.theme-gray h2,
+body.theme-gray h3,
+body.theme-gray h4,
+body.theme-gray th,
+body.theme-gray .user-name {
+  color: var(--gray-800) !important;
+}
+
+body.theme-gray .text-slate-500,
+body.theme-gray .text-slate-450,
+body.theme-gray .text-slate-400,
+body.theme-gray .logo-sub {
+  color: var(--gray-400) !important;
+}
+
+body.theme-blue .text-slate-900,
+body.theme-blue .text-slate-800,
+body.theme-blue .text-slate-700,
+body.theme-blue .text-slate-600,
+body.theme-blue h1,
+body.theme-blue h2,
+body.theme-blue h3,
+body.theme-blue h4,
+body.theme-blue th,
+body.theme-blue .user-name {
+  color: var(--gray-800) !important;
+}
+
+body.theme-blue .text-slate-500,
+body.theme-blue .text-slate-450,
+body.theme-blue .text-slate-400,
+body.theme-blue .logo-sub {
+  color: var(--gray-400) !important;
+}
+
+/* Table body/row and other borders adaptation */
+body.theme-gray .border-slate-100,
+body.theme-gray .border-slate-200,
+body.theme-gray tr,
+body.theme-gray td,
+body.theme-gray th,
+body.theme-gray div {
+  border-color: var(--gray-200) !important;
+}
+
+body.theme-blue .border-slate-100,
+body.theme-blue .border-slate-200,
+body.theme-blue tr,
+body.theme-blue td,
+body.theme-blue th,
+body.theme-blue div {
+  border-color: var(--gray-200) !important;
+}
+
+/* Sidebar Elegance & Contrast Overrides */
+
+/* --- Default Theme (Light Pearl) --- */
+body.theme-default .sidebar {
+  background-color: #fafafc !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+body.theme-default .nav-item {
+  color: #475569 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.theme-default .nav-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+body.theme-default .nav-item.active {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+body.theme-default .nav-group-header {
+  color: #64748b !important;
+}
+body.theme-default .nav-group-header:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* --- Gray Theme (Professional Titanium Charcoal & Silver Gray Theme) --- */
+body.theme-gray .sidebar {
+  background-color: #1a1c23 !important; /* Elegant titanium charcoal deep contrast anchor */
+  border-right: 1px solid #2e313c !important;
+}
+body.theme-gray .nav-item {
+  color: #9da1b0 !important; /* Soft metallic gray */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.theme-gray .nav-item:hover {
+  background-color: #2b2e3a !important;
+  color: #ffffff !important;
+}
+body.theme-gray .nav-item.active {
+  background-color: #ffffff !important; /* Pristine white active overlay */
+  color: #1a1c23 !important; /* Deep charcoal text */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+}
+body.theme-gray .nav-group-header {
+  color: #717789 !important; /* Refined title header */
+}
+body.theme-gray .nav-group-header:hover {
+  background-color: #242630 !important;
+  color: #ffffff !important;
+}
+body.theme-gray .sidebar svg {
+  color: inherit !important; /* Ensure icons match active state colors */
+}
+
+/* --- Blue Theme (Professional Deep Navy & Vibrant Sapphire Theme) --- */
+body.theme-blue .sidebar {
+  background-color: #0c0e17 !important; /* Sleek corporate midnight deep contrast sidebar */
+  border-right: 1px solid #1e2438 !important;
+}
+body.theme-blue .nav-item {
+  color: #94a3b8 !important; /* Clean slate navy text */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.theme-blue .nav-item:hover {
+  background-color: #1a2238 !important;
+  color: #ffffff !important;
+}
+body.theme-blue .nav-item.active {
+  background-color: #2563eb !important; /* Sapphire blue indicator */
+  color: #ffffff !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4), 0 2px 4px -2px rgba(37, 99, 235, 0.4);
+}
+body.theme-blue .nav-group-header {
+  color: #60a5fa !important; /* Bright, legible heading indicator */
+}
+body.theme-blue .nav-group-header:hover {
+  background-color: #131726 !important;
+  color: #ffffff !important;
+}
+body.theme-blue .sidebar svg {
+  color: inherit !important; /* Ensure icons match active state colors */
+}
+
+
+/* --- COSMOS NATURE THEME (Futurista, Galáctico y Relajante) --- */
+body.theme-cosmos {
+  --primary: #06b6d4;        /* Radiant Stellar Cyan */
+  --primary-dark: #0891b2;
+  --primary-light: rgba(6, 182, 212, 0.15);
+  --primary-mid: #10b981;    /* Vibrant Forest Emerald */
+  --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --gray-50: #04061a;        /* Deep Space Midnight */
+  --gray-101: #090c2e;       /* Space panels */
+  --gray-100: #080a22;       /* Slate dark sub-elements */
+  --gray-202: rgba(255, 255, 255, 0.08); /* Cosmic frosted border */
+  --gray-200: rgba(255, 255, 255, 0.08);
+  --gray-300: #475569;
+  --gray-400: #94a3b8;
+  --gray-500: #cbd5e1;       /* Light gray readable lines */
+  --gray-600: #e2e8f0;
+  --gray-700: #f1f5f9;
+  --gray-800: #f8fafc;       /* Pure near-whites */
+  --gray-900: #ffffff;       
+  --card-bg: rgba(11, 14, 45, 0.65); /* Glassmorphic cabin black */
+}
+
+/* Cosmic Background */
+body.theme-cosmos {
+  background-image: 
+    radial-gradient(circle at 10% 25%, rgba(6, 182, 212, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(16, 185, 129, 0.18) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.13) 0%, transparent 60%) !important;
+  background-color: #04061a !important;
+  background-attachment: fixed !important;
+}
+
+/* Glassmorphism glass cards for Cosmos Theme */
+body.theme-cosmos .card,
+body.theme-cosmos .theme-bg-surface,
+body.theme-cosmos header,
+body.theme-cosmos select.bg-white,
+body.theme-cosmos .modal {
+  background-color: rgba(9, 13, 38, 0.72) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Glassmorphic inputs & controls */
+body.theme-cosmos input,
+body.theme-cosmos select,
+body.theme-cosmos textarea,
+body.theme-cosmos .form-control {
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+}
+
+body.theme-cosmos input:focus,
+body.theme-cosmos select:focus,
+body.theme-cosmos textarea:focus {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+}
+
+/* Sidebar Cosmos */
+body.theme-cosmos .sidebar {
+  background-color: rgba(5, 7, 28, 0.88) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 6px 0 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-cosmos .nav-item {
+  color: #94a3b8 !important;
+  border-left: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.theme-cosmos .nav-item:hover {
+  background-color: rgba(6, 182, 212, 0.12) !important;
+  color: #06b6d4 !important;
+  border-left-color: #10b981 !important;
+  text-shadow: 0 0 8px rgba(6, 182, 212, 0.45);
+}
+
+body.theme-cosmos .nav-item.active {
+  background: linear-gradient(135deg, #06b6d4, #10b981) !important;
+  color: #ffffff !important;
+  border-left-color: #06b6d4 !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35) !important;
+}
+
+body.theme-cosmos .nav-group-header {
+  color: #10b981 !important; /* Eco-nature green group title */
+  font-weight: 800 !important;
+}
+
+body.theme-cosmos .nav-group-header:hover {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+
+/* Interactive glow icons & labels */
+body.theme-cosmos .text-slate-900,
+body.theme-cosmos .text-slate-800,
+body.theme-cosmos .text-slate-700,
+body.theme-cosmos .text-slate-600,
+body.theme-cosmos h1,
+body.theme-cosmos h2,
+body.theme-cosmos h3,
+body.theme-cosmos h4,
+body.theme-cosmos th,
+body.theme-cosmos .user-name {
+  color: #f1f5f9 !important;
+}
+
+body.theme-cosmos .text-slate-550,
+body.theme-cosmos .text-slate-500,
+body.theme-cosmos .text-slate-450,
+body.theme-cosmos .text-slate-400,
+body.theme-cosmos .logo-sub {
+  color: #94a3b8 !important;
+}
+
+body.theme-cosmos .border-slate-100,
+body.theme-cosmos .border-slate-200,
+body.theme-cosmos tr,
+body.theme-cosmos td,
+body.theme-cosmos th,
+body.theme-cosmos div {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+body.theme-cosmos tr.hover\:bg-slate-50\/50:hover,
+body.theme-cosmos tr:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Soft atmospheric glowing elements */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 6px rgba(6, 182, 212, 0.2), 0 0 12px rgba(16, 185, 129, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(6, 182, 212, 0.45), 0 0 22px rgba(16, 185, 129, 0.25); }
+  100% { box-shadow: 0 0 6px rgba(6, 182, 212, 0.2), 0 0 12px rgba(16, 185, 129, 0.1); }
+}
+
+body.theme-cosmos .logo-icon {
+  animation: pulseGlow 4s infinite alternate;
+  background: linear-gradient(135deg, #06b6d4, #10b981) !important;
+  color: #ffffff !important;
+}
+
+/* Star background overlay classes */
+.stars-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 45px 75px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 60px 160px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 100px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 140px 85px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 180px 130px, #ffffff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 240px 240px;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+body.theme-cosmos .stars-overlay {
+  opacity: 0.55;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 3px;
+}
+
+/* GLOBAL HIGH-FIDELITY PRINT RULES */
+@media print {
+  header,
+  aside,
+  .sidebar,
+  .print\:hidden,
+  .fixed.bg-black\/35,
+  .modal-overlay,
+  .filters-meta,
+  .page-header button,
+  nav {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background-color: #ffffff !important;
+  }
+
+  body, html {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    padding: 6px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+  }
+}

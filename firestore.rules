@@ -1,0 +1,207 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper Primitives ---
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isNumeric(val) {
+      return val is int || val is float;
+    }
+
+    // --- Entity Validation Blueprints ---
+
+    // Validation Blueprint for User
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'nombre', 'email', 'pass', 'rol', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 256
+        && data.email is string && data.email.size() <= 256
+        && data.pass is string && data.pass.size() <= 128
+        && data.rol in ['admin', 'docente', 'estudiante']
+        && data.creado is string && data.creado.size() <= 128
+        && (!('cedula' in data) || (data.cedula is string && data.cedula.size() <= 64))
+        && (!('celular' in data) || (data.celular is string && data.celular.size() <= 64));
+    }
+
+    // Validation Blueprint for Institution
+    function isValidInstitution(data) {
+      return data.keys().hasAll(['id', 'nombre', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 256
+        && data.creado is string && data.creado.size() <= 128
+        && (!('tipo' in data) || (data.tipo is string && data.tipo.size() <= 128))
+        && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 128))
+        && (!('ciudad' in data) || (data.ciudad is string && data.ciudad.size() <= 128))
+        && (!('direccion' in data) || (data.direccion is string && data.direccion.size() <= 256))
+        && (!('telefono' in data) || (data.telefono is string && data.telefono.size() <= 128))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // Validation Blueprint for Subject
+    function isValidSubject(data) {
+      return data.keys().hasAll(['id', 'nombre', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 256
+        && data.creado is string && data.creado.size() <= 128
+        && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 128))
+        && (!('docenteId' in data) || (data.docenteId is string && data.docenteId.size() <= 128))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // Validation Blueprint for Semester
+    function isValidSemester(data) {
+      return data.keys().hasAll(['id', 'nombre', 'estado', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 256
+        && data.estado in ['activo', 'inactivo']
+        && data.creado is string && data.creado.size() <= 128
+        && (!('inicio' in data) || (data.inicio is string && data.inicio.size() <= 128))
+        && (!('fin' in data) || (data.fin is string && data.fin.size() <= 128))
+        && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 128))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // Validation Blueprint for Parcial
+    function isValidParcial(data) {
+      return data.keys().hasAll(['id', 'nombre', 'semestre', 'asignatura', 'estado', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.nombre is string && data.nombre.size() <= 256
+        && data.semestre is string && data.semestre.size() <= 128
+        && data.asignatura is string && data.asignatura.size() <= 128
+        && data.estado in ['abierto', 'cerrado']
+        && data.creado is string && data.creado.size() <= 128
+        && (!('porcentaje' in data) || isNumeric(data.porcentaje))
+        && (!('fechaInicio' in data) || (data.fechaInicio is string && data.fechaInicio.size() <= 128))
+        && (!('fechaFin' in data) || (data.fechaFin is string && data.fechaFin.size() <= 128))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // Validation Blueprint for Exam
+    function isValidExam(data) {
+      return data.keys().hasAll(['id', 'titulo', 'materia', 'docenteId', 'estado', 'tiempo', 'intentos', 'aprobacion', 'aleatorio', 'mostrarNota', 'creado', 'preguntas'])
+        && data.id is string && data.id.size() <= 128
+        && data.titulo is string && data.titulo.size() <= 256
+        && data.materia is string && data.materia.size() <= 128
+        && data.docenteId is string && data.docenteId.size() <= 128
+        && data.estado in ['activo', 'inactivo', 'borrador', 'cerrado']
+        && isNumeric(data.tiempo)
+        && isNumeric(data.intentos)
+        && isNumeric(data.aprobacion)
+        && data.aleatorio is bool
+        && data.mostrarNota is bool
+        && data.creado is string && data.creado.size() <= 128
+        && data.preguntas is list
+        && (!('parcialId' in data) || (data.parcialId == null || (data.parcialId is string && data.parcialId.size() <= 128)))
+        && (!('descripcion' in data) || (data.descripcion is string && data.descripcion.size() <= 2048));
+    }
+
+    // Validation Blueprint for Submission
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['id', 'examenId', 'estudianteId', 'estudianteNombre', 'respuestas', 'puntaje', 'aprobado', 'correctas', 'incorrectas', 'tiempoUsado', 'fecha', 'estado'])
+        && data.id is string && data.id.size() <= 128
+        && data.examenId is string && data.examenId.size() <= 128
+        && data.estudianteId is string && data.estudianteId.size() <= 128
+        && data.estudianteNombre is string && data.estudianteNombre.size() <= 256
+        && data.respuestas is map
+        && isNumeric(data.puntaje)
+        && data.aprobado is bool
+        && isNumeric(data.correctas)
+        && isNumeric(data.incorrectas)
+        && data.tiempoUsado is string && data.tiempoUsado.size() <= 128
+        && data.fecha is string && data.fecha.size() <= 128
+        && data.estado in ['pendiente', 'calificado']
+        && (!('manualScores' in data) || data.manualScores is map)
+        && (!('manualComments' in data) || data.manualComments is map)
+        && (!('autoPuntaje' in data) || isNumeric(data.autoPuntaje))
+        && (!('gradedBy' in data) || (data.gradedBy is string && data.gradedBy.size() <= 128))
+        && (!('gradedAt' in data) || (data.gradedAt is string && data.gradedAt.size() <= 128));
+    }
+
+    // Validation Blueprint for GradeRecord
+    function isValidGradeRecord(data) {
+      return data.keys().hasAll(['id', 'estudianteId', 'asignaturaId', 'parcialId', 'nota', 'aprobado', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.estudianteId is string && data.estudianteId.size() <= 128
+        && data.asignaturaId is string && data.asignaturaId.size() <= 128
+        && data.parcialId is string && data.parcialId.size() <= 128
+        && isNumeric(data.nota)
+        && data.aprobado is bool
+        && data.creado is string && data.creado.size() <= 128
+        && (!('notaEV1' in data) || isNumeric(data.notaEV1))
+        && (!('notaEV2' in data) || isNumeric(data.notaEV2))
+        && (!('notaTrabajo' in data) || isNumeric(data.notaTrabajo))
+        && (!('comentario' in data) || (data.comentario is string && data.comentario.size() <= 2048))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // Validation Blueprint for Assignment
+    function isValidAssignment(data) {
+      return data.keys().hasAll(['id', 'titulo', 'creado'])
+        && data.id is string && data.id.size() <= 128
+        && data.titulo is string && data.titulo.size() <= 256
+        && data.creado is string && data.creado.size() <= 128
+        && (!('descripcion' in data) || (data.descripcion is string && data.descripcion.size() <= 2048))
+        && (!('asignatura' in data) || (data.asignatura is string && data.asignatura.size() <= 128))
+        && (!('semestre' in data) || (data.semestre is string && data.semestre.size() <= 128))
+        && (!('parcialId' in data) || (data.parcialId is string && data.parcialId.size() <= 128))
+        && (!('fechaEntrega' in data) || (data.fechaEntrega is string && data.fechaEntrega.size() <= 128))
+        && (!('tipo' in data) || (data.tipo is string && data.tipo.size() <= 128))
+        && (!('porcentaje' in data) || isNumeric(data.porcentaje))
+        && (!('valor' in data) || isNumeric(data.valor))
+        && (!('puntos' in data) || isNumeric(data.puntos))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
+    }
+
+    // --- Matches for individual collections ---
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId) && isValidUser(request.resource.data);
+    }
+
+    match /institutions/{instId} {
+      allow read: if true;
+      allow write: if isValidId(instId) && isValidInstitution(request.resource.data);
+    }
+
+    match /subjects/{subjId} {
+      allow read: if true;
+      allow write: if isValidId(subjId) && isValidSubject(request.resource.data);
+    }
+
+    match /semesters/{semId} {
+      allow read: if true;
+      allow write: if isValidId(semId) && isValidSemester(request.resource.data);
+    }
+
+    match /parciales/{parcId} {
+      allow read: if true;
+      allow write: if isValidId(parcId) && isValidParcial(request.resource.data);
+    }
+
+    match /exams/{examId} {
+      allow read: if true;
+      allow write: if isValidId(examId) && isValidExam(request.resource.data);
+    }
+
+    match /submissions/{submId} {
+      allow read: if true;
+      allow write: if isValidId(submId) && isValidSubmission(request.resource.data);
+    }
+
+    match /gradeRecords/{gradId} {
+      allow read: if true;
+      allow write: if isValidId(gradId) && isValidGradeRecord(request.resource.data);
+    }
+
+    match /assignments/{assigId} {
+      allow read: if true;
+      allow write: if isValidId(assigId) && isValidAssignment(request.resource.data);
+    }
+  }
+}

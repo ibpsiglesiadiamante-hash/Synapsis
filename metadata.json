@@ -1,0 +1,6 @@
+{
+  "name": "Synapsis",
+  "description": "Sistema de evaluaciones académicas y gestión de parciales",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
