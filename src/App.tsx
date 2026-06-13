@@ -161,7 +161,22 @@ export default function App() {
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPass = loginPass.trim();
 
-    const matchedUser = db.users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
+    let matchedUser = db.users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
+    if (!matchedUser) {
+      // Fallback self-healing system for demonstration/seed users
+      const defaultUsers: User[] = [
+        { id: 'admin-fallback-id', nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: new Date().toISOString() },
+        { id: 'docente-fallback-id', nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: new Date().toISOString() },
+        { id: 'estudiante1-fallback-id', nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
+        { id: 'estudiante2-fallback-id', nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
+      ];
+      const fallbackUser = defaultUsers.find(u => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
+      if (fallbackUser) {
+        matchedUser = fallbackUser;
+        updateUsers([...db.users, fallbackUser]);
+      }
+    }
+
     if (!matchedUser) {
       showToast('Credenciales incorrectas. Verifica el correo y la contraseña.', 'error');
       return;
@@ -184,12 +199,28 @@ export default function App() {
     setLoginEmail(email);
     setLoginPass(pass);
     setTimeout(() => {
-      const matchedUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
+      let matchedUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
+      if (!matchedUser) {
+        const defaultUsers: User[] = [
+          { id: 'admin-fallback-id', nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: new Date().toISOString() },
+          { id: 'docente-fallback-id', nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: new Date().toISOString() },
+          { id: 'estudiante1-fallback-id', nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
+          { id: 'estudiante2-fallback-id', nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
+        ];
+        const fallbackUser = defaultUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
+        if (fallbackUser) {
+          matchedUser = fallbackUser;
+          updateUsers([...db.users, fallbackUser]);
+        }
+      }
+
       if (matchedUser) {
         setCurrentUser(matchedUser);
         localStorage.setItem('instituto_currentUser', JSON.stringify(matchedUser));
         setActiveTab('dashboard');
         showToast(`¡Sesión rápida iniciada: ${matchedUser.nombre}!`, 'success');
+      } else {
+        showToast('Credenciales incorrectas.', 'error');
       }
     }, 100);
   };

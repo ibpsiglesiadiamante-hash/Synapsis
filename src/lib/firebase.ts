@@ -139,47 +139,61 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
   if (!isFirestoreAvailable) {
     return null;
   }
-  try {
-    const users = await fetchCollectionFromFirestore<User>('users');
-    if (users.length === 0) {
-      return null; // DB is completely fresh/empty
+
+  const fetchPromise = async (): Promise<AppState | null> => {
+    try {
+      const users = await fetchCollectionFromFirestore<User>('users');
+      if (users.length === 0) {
+        return null; // DB is completely fresh/empty
+      }
+
+      const [
+        institutions,
+        subjects,
+        semesters,
+        parciales,
+        exams,
+        submissions,
+        gradeRecords,
+        assignments
+      ] = await Promise.all([
+        fetchCollectionFromFirestore<Institution>('institutions'),
+        fetchCollectionFromFirestore<Subject>('subjects'),
+        fetchCollectionFromFirestore<Semester>('semesters'),
+        fetchCollectionFromFirestore<Parcial>('parciales'),
+        fetchCollectionFromFirestore<Exam>('exams'),
+        fetchCollectionFromFirestore<Submission>('submissions'),
+        fetchCollectionFromFirestore<GradeRecord>('gradeRecords'),
+        fetchCollectionFromFirestore<Assignment>('assignments'),
+      ]);
+
+      return {
+        users,
+        institutions,
+        subjects,
+        semesters,
+        parciales,
+        exams,
+        submissions,
+        gradeRecords,
+        assignments,
+      };
+    } catch (error) {
+      console.error('Failed to download full db state from Firestore, running local.', error);
+      return null;
     }
+  };
 
-    const [
-      institutions,
-      subjects,
-      semesters,
-      parciales,
-      exams,
-      submissions,
-      gradeRecords,
-      assignments
-    ] = await Promise.all([
-      fetchCollectionFromFirestore<Institution>('institutions'),
-      fetchCollectionFromFirestore<Subject>('subjects'),
-      fetchCollectionFromFirestore<Semester>('semesters'),
-      fetchCollectionFromFirestore<Parcial>('parciales'),
-      fetchCollectionFromFirestore<Exam>('exams'),
-      fetchCollectionFromFirestore<Submission>('submissions'),
-      fetchCollectionFromFirestore<GradeRecord>('gradeRecords'),
-      fetchCollectionFromFirestore<Assignment>('assignments'),
-    ]);
+  // Prevent app loader hanging indefinitely if firestore calls hover forever due to network or configuration blocks
+  const timeoutPromise = new Promise<null>((resolve) => {
+    setTimeout(() => {
+      console.warn("Firestore collection download timed out. Continuing in safety standalone mode.");
+      isFirestoreAvailable = false;
+      resolve(null);
+    }, 3000);
+  });
 
-    return {
-      users,
-      institutions,
-      subjects,
-      semesters,
-      parciales,
-      exams,
-      submissions,
-      gradeRecords,
-      assignments,
-    };
-  } catch (error) {
-    console.error('Failed to download full db state from Firestore, running local.', error);
-    return null;
-  }
+  return Promise.race([fetchPromise(), timeoutPromise]);
 }
 
 /**
@@ -189,25 +203,39 @@ export async function seedFirestore(initialState: AppState): Promise<void> {
   if (!isFirestoreAvailable) {
     return;
   }
-  try {
-    console.log('Seeding fresh Firestore database with institutional structures...');
-    const promises: Promise<void>[] = [];
 
-    initialState.users.forEach(item => promises.push(saveDocToFirestore('users', item)));
-    initialState.institutions.forEach(item => promises.push(saveDocToFirestore('institutions', item)));
-    initialState.subjects.forEach(item => promises.push(saveDocToFirestore('subjects', item)));
-    initialState.semesters.forEach(item => promises.push(saveDocToFirestore('semesters', item)));
-    initialState.parciales.forEach(item => promises.push(saveDocToFirestore('parciales', item)));
-    initialState.exams.forEach(item => promises.push(saveDocToFirestore('exams', item)));
-    initialState.submissions.forEach(item => promises.push(saveDocToFirestore('submissions', item)));
-    initialState.gradeRecords.forEach(item => promises.push(saveDocToFirestore('gradeRecords', item)));
-    initialState.assignments.forEach(item => promises.push(saveDocToFirestore('assignments', item)));
+  const seedPromise = async (): Promise<void> => {
+    try {
+      console.log('Seeding fresh Firestore database with institutional structures...');
+      const promises: Promise<void>[] = [];
 
-    await Promise.all(promises);
-    console.log('Firestore seeding completed successfully.');
-  } catch (error) {
-    console.error('Failed to seed default state onto Firestore.', error);
-  }
+      initialState.users.forEach(item => promises.push(saveDocToFirestore('users', item)));
+      initialState.institutions.forEach(item => promises.push(saveDocToFirestore('institutions', item)));
+      initialState.subjects.forEach(item => promises.push(saveDocToFirestore('subjects', item)));
+      initialState.semesters.forEach(item => promises.push(saveDocToFirestore('semesters', item)));
+      initialState.parciales.forEach(item => promises.push(saveDocToFirestore('parciales', item)));
+      initialState.exams.forEach(item => promises.push(saveDocToFirestore('exams', item)));
+      initialState.submissions.forEach(item => promises.push(saveDocToFirestore('submissions', item)));
+      initialState.gradeRecords.forEach(item => promises.push(saveDocToFirestore('gradeRecords', item)));
+      initialState.assignments.forEach(item => promises.push(saveDocToFirestore('assignments', item)));
+
+      await Promise.all(promises);
+      console.log('Firestore seeding completed successfully.');
+    } catch (error) {
+      console.error('Failed to seed default state onto Firestore.', error);
+    }
+  };
+
+  // Guard against seed operations hanging on un-provisioned databases or blocked client environments
+  const timeoutPromise = new Promise<void>((resolve) => {
+    setTimeout(() => {
+      console.warn("Firestore database seeding timed out. Continuing in safety standalone mode.");
+      isFirestoreAvailable = false;
+      resolve();
+    }, 3000);
+  });
+
+  return Promise.race([seedPromise(), timeoutPromise]);
 }
 
 // Keep a local cached string version of the last synced collections to avoid redundant Firestore writes and save quota

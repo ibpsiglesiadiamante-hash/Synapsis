@@ -55,10 +55,26 @@ interface AppState {
 export function getInitialState(): AppState {
   const isInitialized = localStorage.getItem('ep_initialized');
 
+  // Pre-loaded seed database values
+  const uAdminId = uid();
+  const uDocenteId = uid();
+  const uEstudiante1Id = uid();
+  const uEstudiante2Id = uid();
+
+  const defaultUsers: User[] = [
+    { id: uAdminId, nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: now() },
+    { id: uDocenteId, nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: now() },
+    { id: uEstudiante1Id, nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
+    { id: uEstudiante2Id, nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
+  ];
+
   if (isInitialized) {
     try {
+      const storedUsers = JSON.parse(localStorage.getItem('ep_users') || '[]');
+      const usersToLoad = (storedUsers && storedUsers.length > 0) ? storedUsers : defaultUsers;
+
       return {
-        users: JSON.parse(localStorage.getItem('ep_users') || '[]'),
+        users: usersToLoad,
         institutions: JSON.parse(localStorage.getItem('ep_instituciones') || '[]'),
         subjects: JSON.parse(localStorage.getItem('ep_subjects') || '[]'),
         semesters: JSON.parse(localStorage.getItem('ep_semesters') || '[]'),
@@ -73,18 +89,7 @@ export function getInitialState(): AppState {
     }
   }
 
-  // Pre-loaded seed database
-  const uAdminId = uid();
-  const uDocenteId = uid();
-  const uEstudiante1Id = uid();
-  const uEstudiante2Id = uid();
-
-  const users: User[] = [
-    { id: uAdminId, nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: now() },
-    { id: uDocenteId, nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: now() },
-    { id: uEstudiante1Id, nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
-    { id: uEstudiante2Id, nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
-  ];
+  const users: User[] = defaultUsers;
 
   const subMathId = uid();
   const subSocialId = uid();
