@@ -136,8 +136,10 @@ export interface Question {
   tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table';
   puntos: number;
   opciones: string[]; // Options / Caja de palabras (list of terms to match)
+  opcionIds?: string[]; // Stable internal IDs for options to prevent UI collision on deletion
   correctas: number[]; // Index of correct option(s) for multiple, tf, dropdown, checkbox
   enunciados?: string[]; // Array of statements/definitions for matching type
+  enunciadoIds?: string[]; // Stable internal IDs for enunciados to prevent UI collision on deletion
   matchCorrectos?: number[]; // Match indices corresponding to opciones for each enunciado
   columnas?: string[]; // Encabezados de columnas para tabla
   tableRows?: {

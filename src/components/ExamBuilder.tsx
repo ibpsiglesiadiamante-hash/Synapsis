@@ -85,6 +85,17 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
       });
     }
 
+    const opcionIds: string[] = Array.isArray(q?.opcionIds) && q.opcionIds.length === opciones.length
+      ? [...q.opcionIds]
+      : opciones.map((_, i) => `opt_${id}_${i}_${uid()}`);
+
+    let enunciadoIds: string[] | undefined = undefined;
+    if (tipo === 'matching' && enunciados) {
+      enunciadoIds = Array.isArray(q?.enunciadoIds) && q.enunciadoIds.length === enunciados.length
+        ? [...q.enunciadoIds]
+        : enunciados.map((_, i) => `enun_${id}_${i}_${uid()}`);
+    }
+
     return {
       ...q,
       id,
@@ -92,8 +103,10 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
       texto: typeof q?.texto === 'string' ? q.texto : '',
       puntos: typeof q?.puntos === 'number' && !isNaN(q.puntos) ? q.puntos : 10,
       opciones,
+      opcionIds,
       correctas: Array.isArray(q?.correctas) ? [...q.correctas] : [],
       enunciados,
+      enunciadoIds,
       matchCorrectos,
     };
   });
@@ -329,12 +342,14 @@ export default function ExamBuilder({
   }, []);
 
   const handleAddField = () => {
+    const qId = uid();
     const newQ: Question = {
-      id: uid(),
+      id: qId,
       texto: '',
       tipo: 'multiple',
       puntos: 10,
       opciones: ['Opción A', 'Opción B'],
+      opcionIds: [`opt_${qId}_0_${uid()}`, `opt_${qId}_1_${uid()}`],
       correctas: [],
     };
     setQuestions(prev => [...prev, newQ]);
@@ -401,12 +416,19 @@ export default function ExamBuilder({
           options = [];
         }
 
+        const opcionIds = options.map((_, i) => `opt_${id}_${i}_${uid()}`);
+        const enunciadoIds = (type === 'matching' && enunciados)
+          ? enunciados.map((_, i) => `enun_${id}_${i}_${uid()}`)
+          : undefined;
+
         return {
           ...q,
           tipo: type,
           correctas: [],
           opciones: options,
+          opcionIds,
           enunciados: type === 'matching' ? enunciados : undefined,
+          enunciadoIds,
           matchCorrectos: type === 'matching' ? matchCorrectos : undefined,
           columnas: type === 'table' ? columnas : undefined,
           tableRows: type === 'table' ? tableRows : undefined,
@@ -518,10 +540,14 @@ export default function ExamBuilder({
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const nextEnun = Array.isArray(q.enunciados) ? [...q.enunciados] : [];
+        const currentEnunIds = Array.isArray(q.enunciadoIds)
+          ? [...q.enunciadoIds]
+          : nextEnun.map((_, i) => `enun_${q.id}_${i}_${uid()}`);
         const nextMatches = Array.isArray(q.matchCorrectos) ? [...q.matchCorrectos] : [];
         return {
           ...q,
           enunciados: [...nextEnun, `Enunciado ${nextEnun.length + 1}`],
+          enunciadoIds: [...currentEnunIds, `enun_${q.id}_${nextEnun.length}_${uid()}`],
           matchCorrectos: [...nextMatches, 0],
         };
       }
@@ -565,11 +591,12 @@ export default function ExamBuilder({
           return q;
         }
         const nextEnun = currentEnuns.filter((_, i) => i !== eIdx);
+        const nextEnunIds = Array.isArray(q.enunciadoIds) ? q.enunciadoIds.filter((_, i) => i !== eIdx) : undefined;
         const currentMatches = Array.isArray(q.matchCorrectos) 
           ? q.matchCorrectos 
           : currentEnuns.map(() => 0);
         const nextMatches = currentMatches.filter((_, i) => i !== eIdx);
-        return { ...q, enunciados: nextEnun, matchCorrectos: nextMatches };
+        return { ...q, enunciados: nextEnun, enunciadoIds: nextEnunIds, matchCorrectos: nextMatches };
       }
       return q;
     }));
@@ -619,12 +646,17 @@ export default function ExamBuilder({
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const currentOpts = Array.isArray(q.opciones) ? [...q.opciones] : [];
+        const currentOptIds = Array.isArray(q.opcionIds) 
+          ? [...q.opcionIds] 
+          : currentOpts.map((_, i) => `opt_${q.id}_${i}_${uid()}`);
         const newLabel = q.tipo === 'matching' || q.tipo === 'table'
           ? `Término ${currentOpts.length + 1}`
           : getNextOptionLabel(currentOpts.length);
+        const newOptId = `opt_${q.id}_${currentOpts.length}_${uid()}`;
         return {
           ...q,
           opciones: [...currentOpts, newLabel],
+          opcionIds: [...currentOptIds, newOptId],
         };
       }
       return q;
@@ -643,6 +675,7 @@ export default function ExamBuilder({
           return q;
         }
         const nextOpts = q.opciones.filter((_, i) => i !== oIdx);
+        const nextOptIds = Array.isArray(q.opcionIds) ? q.opcionIds.filter((_, i) => i !== oIdx) : undefined;
         const maxValidIdx = Math.max(0, nextOpts.length - 1);
 
         // adjust correct list
@@ -685,6 +718,7 @@ export default function ExamBuilder({
         return { 
           ...q, 
           opciones: nextOpts, 
+          opcionIds: nextOptIds,
           correctas: nextCorrect, 
           matchCorrectos: nextMatches,
           tableRows: nextRows 
@@ -1052,8 +1086,9 @@ export default function ExamBuilder({
                         ) : (
                           q.opciones.map((opt, oIdx) => {
                             const isCorrect = q.correctas.includes(oIdx);
+                            const optKey = q.opcionIds?.[oIdx] || `${q.id}-opt-${oIdx}`;
                             return (
-                              <div key={oIdx} className="flex items-center gap-2">
+                              <div key={optKey} className="flex items-center gap-2">
                                 {isCheck ? (
                                   <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded shrink-0 bg-slate-50" />
                                 ) : (
@@ -1142,9 +1177,11 @@ export default function ExamBuilder({
                               onClick={() => {
                                 setQuestions(prev => prev.map(item => {
                                   if (item.id === q.id) {
+                                    const opts = ['Verdadero', 'Falso'];
                                     return {
                                       ...item,
-                                      opciones: ['Verdadero', 'Falso'],
+                                      opciones: opts,
+                                      opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
                                       matchCorrectos: (item.enunciados || []).map((_, idx) => (item.matchCorrectos ? item.matchCorrectos[idx] ?? 0 : 0))
                                     };
                                   }
@@ -1160,9 +1197,11 @@ export default function ExamBuilder({
                               onClick={() => {
                                 setQuestions(prev => prev.map(item => {
                                   if (item.id === q.id) {
+                                    const opts = ['A', 'B', 'C', 'D'];
                                     return {
                                       ...item,
-                                      opciones: ['A', 'B', 'C', 'D'],
+                                      opciones: opts,
+                                      opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
                                       matchCorrectos: (item.enunciados || []).map((_, idx) => (item.matchCorrectos ? item.matchCorrectos[idx] ?? 0 : 0))
                                     };
                                   }
@@ -1178,43 +1217,47 @@ export default function ExamBuilder({
                               onClick={() => {
                                 setQuestions(prev => prev.map(item => {
                                   if (item.id === q.id) {
+                                    const opts = [
+                                      'Dios eterno.',
+                                      'Dios todopoderoso.',
+                                      'El Señor de los ejércitos.',
+                                      'El Señor tu santificador.',
+                                      'Dios Altísimo.',
+                                      'Jehová está allí.',
+                                      'Jehová mi Sanador.',
+                                      'Jehová es mi paz.',
+                                      'Señor, amo.',
+                                      'Creador.',
+                                      'Jehová',
+                                      'Jehová mi estandarte.',
+                                      'Jehová Justicia nuestra',
+                                      'Jehová proveerá.',
+                                      'Jehová es mi pastor.'
+                                    ];
+                                    const enuns = [
+                                      'a. Elohim',
+                                      'b. Adonai',
+                                      'c. Yahveh',
+                                      'd. Rafa',
+                                      'e. Nisi',
+                                      'f. Salom',
+                                      'g. Ra`ah',
+                                      'h. Tsidkenu',
+                                      'i. Jireh',
+                                      'j. Sama',
+                                      'k. Babbaot',
+                                      'l. Macadeshcem',
+                                      'm. Shaddai',
+                                      'n. Elyon',
+                                      'o. Olam'
+                                    ];
                                     return {
                                       ...item,
                                       texto: 'Relacione los nombres de Dios con su respectivo significado escribiendo o indicando la opción correcta en cada espacio:',
-                                      opciones: [
-                                        'Dios eterno.',
-                                        'Dios todopoderoso.',
-                                        'El Señor de los ejércitos.',
-                                        'El Señor tu santificador.',
-                                        'Dios Altísimo.',
-                                        'Jehová está allí.',
-                                        'Jehová mi Sanador.',
-                                        'Jehová es mi paz.',
-                                        'Señor, amo.',
-                                        'Creador.',
-                                        'Jehová',
-                                        'Jehová mi estandarte.',
-                                        'Jehová Justicia nuestra',
-                                        'Jehová proveerá.',
-                                        'Jehová es mi pastor.'
-                                      ],
-                                      enunciados: [
-                                        'a. Elohim',
-                                        'b. Adonai',
-                                        'c. Yahveh',
-                                        'd. Rafa',
-                                        'e. Nisi',
-                                        'f. Salom',
-                                        'g. Ra`ah',
-                                        'h. Tsidkenu',
-                                        'i. Jireh',
-                                        'j. Sama',
-                                        'k. Babbaot',
-                                        'l. Macadeshcem',
-                                        'm. Shaddai',
-                                        'n. Elyon',
-                                        'o. Olam'
-                                      ],
+                                      opciones: opts,
+                                      opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+                                      enunciados: enuns,
+                                      enunciadoIds: enuns.map((_, i) => `enun_${item.id}_${i}_${uid()}`),
                                       matchCorrectos: [9, 8, 10, 6, 11, 7, 14, 12, 13, 5, 2, 3, 1, 4, 0]
                                     };
                                   }
@@ -1228,23 +1271,26 @@ export default function ExamBuilder({
                           </div>
 
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {q.opciones.map((opt, oIdx) => (
-                              <div key={oIdx} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm">
-                                <input
-                                  type="text"
-                                  value={opt}
-                                  onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
-                                  className="bg-transparent text-xs font-semibold text-slate-800 w-24 focus:outline-none border-none outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOption(q.id, oIdx)}
-                                  className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 rounded"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
+                            {q.opciones.map((opt, oIdx) => {
+                              const optKey = q.opcionIds?.[oIdx] || `${q.id}-matchopt-${oIdx}`;
+                              return (
+                                <div key={optKey} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm">
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
+                                    className="bg-transparent text-xs font-semibold text-slate-800 w-24 focus:outline-none border-none outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveOption(q.id, oIdx)}
+                                    className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 rounded"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                           <button
                             type="button"
@@ -1267,11 +1313,12 @@ export default function ExamBuilder({
 
                           <div className="space-y-2">
                             {(q.enunciados || []).map((enun, eIdx) => {
+                              const enunKey = q.enunciadoIds?.[eIdx] || `${q.id}-enun-${eIdx}`;
                               const matchCorrectIdx = Array.isArray(q.matchCorrectos) && q.matchCorrectos[eIdx] !== undefined 
                                 ? q.matchCorrectos[eIdx] 
                                 : 0;
                               return (
-                                <div key={`enun-${eIdx}`} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
+                                <div key={enunKey} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
                                   <span className="text-xs font-extrabold text-slate-400 shrink-0 w-6">
                                     {eIdx + 1}.
                                   </span>
@@ -1341,25 +1388,27 @@ export default function ExamBuilder({
                               onClick={() => {
                                 setQuestions(prev => prev.map(item => {
                                   if (item.id === q.id) {
+                                    const opts = [
+                                      'Dios es personal',
+                                      'Dios es inmutable',
+                                      'Dios es amor',
+                                      'Dios es omnipotente',
+                                      'Dios es omnipresente',
+                                      'Dios es misericordioso.',
+                                      'Dios es infinito',
+                                      'Dios es omnisciente',
+                                      'Dios es santo',
+                                      'Dios es espíritu',
+                                      'Dios es absoluto e independiente',
+                                      'Dios es justo',
+                                      'Dios es Fiel',
+                                      'Dios es bueno'
+                                    ];
                                     return {
                                       ...item,
                                       texto: 'Ubique los Atributos de Dios presentes en la caja de palabras en la columna de la tabla que les corresponde (Naturales o Morales):',
-                                      opciones: [
-                                        'Dios es personal',
-                                        'Dios es inmutable',
-                                        'Dios es amor',
-                                        'Dios es omnipotente',
-                                        'Dios es omnipresente',
-                                        'Dios es misericordioso.',
-                                        'Dios es infinito',
-                                        'Dios es omnisciente',
-                                        'Dios es santo',
-                                        'Dios es espíritu',
-                                        'Dios es absoluto e independiente',
-                                        'Dios es justo',
-                                        'Dios es Fiel',
-                                        'Dios es bueno'
-                                      ],
+                                      opciones: opts,
+                                      opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
                                       columnas: ['ATRIBUTOS NATURALES', 'ATRIBUTOS MORALES'],
                                       tableRows: [
                                         {
@@ -1417,23 +1466,26 @@ export default function ExamBuilder({
                           </div>
 
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {q.opciones.map((opt, oIdx) => (
-                              <div key={oIdx} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm dark:bg-slate-950 dark:border-slate-700">
-                                <input
-                                  type="text"
-                                  value={opt}
-                                  onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
-                                  className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 w-24 focus:outline-none border-none outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOption(q.id, oIdx)}
-                                  className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
+                            {q.opciones.map((opt, oIdx) => {
+                              const optKey = q.opcionIds?.[oIdx] || `${q.id}-tblopt-${oIdx}`;
+                              return (
+                                <div key={optKey} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm dark:bg-slate-950 dark:border-slate-700">
+                                  <input
+                                    type="text"
+                                    value={opt}
+                                    onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
+                                    className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 w-24 focus:outline-none border-none outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveOption(q.id, oIdx)}
+                                    className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
                           </div>
                           <button
                             type="button"
