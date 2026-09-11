@@ -1,10 +1,12 @@
 {
-  "projectId": "synapsis-ec",
-  "appId": "1:614611743545:web:72ec2d0ce178f316952ee8",
-  "apiKey": "AIzaSyCaq5C9PalwcIYw1Z0q3QZJuDlNWOjRiSU",
-  "authDomain": "synapsis-ec.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-405b38ff-ac5e-4323-b431-731cc0afceac",
-  "storageBucket": "synapsis-ec.firebasestorage.app",
-  "messagingSenderId": "614611743545",
-  "measurementId": ""
+  "projectId": "synapsis-edu",
+  "appId": "1:830782447125:web:f202116d1c6f4c1a1c381c",
+  "apiKey": "AIzaSyDDg-s4ViJXSWB9BGHR2M5H_zxCJ8bDo40",
+  "authDomain": "synapsis-edu.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-maestroinstituto-405b38ff-ac5e-4323-b431-731cc0afceac",
+  "storageBucket": "synapsis-edu.firebasestorage.app",
+  "messagingSenderId": "830782447125",
+  "measurementId": "",
+  "oAuthClientId": "830782447125-jmtmdu3v1g9o0sh1iaja04k5n9hnj0kl.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

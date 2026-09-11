@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
+import { SearchableSelect } from './SearchableSelect';
 
 interface AttendanceRecord {
   studentId: string;
@@ -38,6 +39,9 @@ interface AsistenciaProps {
 
 export default function Asistencia({ currentUser, users, subjects, semesters, toast }: AsistenciaProps) {
   const isDocOrAdmin = currentUser.rol === 'admin' || currentUser.rol === 'docente';
+  const allMyUserIds = users 
+    ? users.filter(u => u.nombre === currentUser.nombre || u.email.toLowerCase() === currentUser.email.toLowerCase()).map(u => u.id)
+    : [currentUser.id];
   const students = users.filter(u => u.rol === 'estudiante');
 
   // State
@@ -55,6 +59,13 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
   // Pagination states
   const itemsPerPage = 8;
   const [currentPage, setCurrentPage] = useState(1);
+  const [studentPage, setStudentPage] = useState(1);
+  const studentsPerPage = 12;
+
+  // Reset student page on session configuration changes
+  useEffect(() => {
+    setStudentPage(1);
+  }, [selectedSubject, selectedSemester, selectedDate]);
 
   // Initialize data (including seeds if empty)
   useEffect(() => {
@@ -113,7 +124,7 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
 
     // If teacher, only map over subjects they teach
     const teacherSubjects = currentUser.rol === 'docente' 
-      ? subjects.filter(s => s.docenteId === currentUser.id) 
+      ? subjects.filter(s => s.docenteId && allMyUserIds.includes(s.docenteId)) 
       : subjects;
 
     if (teacherSubjects.length > 0) {
@@ -266,10 +277,18 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
 
   // Quick stats computed
   const teacherSubjects = currentUser.rol === 'docente' 
-    ? subjects.filter(s => s.docenteId === currentUser.id) 
+    ? subjects.filter(s => s.docenteId && allMyUserIds.includes(s.docenteId)) 
     : subjects;
 
   const currentSubjectObj = subjects.find(s => s.id === selectedSubject);
+
+  // Student list pagination for "take" mode (Control de Asistencia Diaria)
+  const totalStudentPages = Math.ceil(students.length / studentsPerPage) || 1;
+  const currentStudentPage = studentPage > totalStudentPages ? totalStudentPages : studentPage;
+  const currentStudentsForTake = students.slice(
+    (currentStudentPage - 1) * studentsPerPage,
+    currentStudentPage * studentsPerPage
+  );
 
   return (
     <div className="space-y-6 animate-fade-in text-slate-800">
@@ -431,30 +450,24 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
             <div className="space-y-3.5">
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Semestre Lectivo <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
+                  options={semesters.map(s => ({ value: s.id, label: `${s.nombre} (${s.estado})` }))}
                   value={selectedSemester}
-                  onChange={e => setSelectedSemester(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-xl bg-white text-slate-700 font-semibold focus:outline-indigo-500"
-                >
-                  <option value="">Selecciona semestre...</option>
-                  {semesters.map(s => (
-                    <option key={s.id} value={s.id}>{s.nombre} ({s.estado})</option>
-                  ))}
-                </select>
+                  onChange={val => setSelectedSemester(val)}
+                  placeholder="Selecciona semestre..."
+                  id="semester-select"
+                />
               </div>
 
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Asignatura Académica <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
+                  options={teacherSubjects.map(s => ({ value: s.id, label: `${s.nombre} ${s.codigo ? `[${s.codigo}]` : ''}` }))}
                   value={selectedSubject}
-                  onChange={e => setSelectedSubject(e.target.value)}
-                  className="w-full text-xs p-2.5 border rounded-xl bg-white text-slate-700 font-semibold focus:outline-indigo-500"
-                >
-                  <option value="">Selecciona materia...</option>
-                  {teacherSubjects.map(s => (
-                    <option key={s.id} value={s.id}>{s.nombre} {s.codigo ? `[${s.codigo}]` : ''}</option>
-                  ))}
-                </select>
+                  onChange={val => setSelectedSubject(val)}
+                  placeholder="Selecciona materia..."
+                  id="subject-select"
+                />
               </div>
 
               <div className="flex flex-col">
@@ -517,86 +530,136 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
                 No hay estudiantes registrados en el sistema para realizar el llamado.
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {students.map(st => {
-                  const record = activeRecords[st.id] || { status: 'presente', remarks: '' };
-                  const met = getStudentMetrics(st.id);
+              <div>
+                <div className="divide-y divide-slate-100">
+                  {currentStudentsForTake.map(st => {
+                    const record = activeRecords[st.id] || { status: 'presente', remarks: '' };
+                    const met = getStudentMetrics(st.id);
 
-                  return (
-                    <div key={st.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/40 transition">
-                      {/* Name & ID */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white uppercase shadow-inner" style={{ backgroundColor: '#6366f1' }}>
-                          {st.nombre.charAt(0)}
+                    return (
+                      <div key={st.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/40 transition">
+                        {/* Name & ID */}
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white uppercase shadow-inner" style={{ backgroundColor: '#6366f1' }}>
+                            {st.nombre.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-xs text-slate-800" style={{ color: 'var(--gray-900)' }}>{st.nombre}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">CC: {st.cedula || '---'} | Asistencia: <span className="font-bold text-indigo-600">{met.rate}%</span></div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-extrabold text-xs text-slate-800" style={{ color: 'var(--gray-900)' }}>{st.nombre}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">CC: {st.cedula || '---'} | Asistencia: <span className="font-bold text-indigo-600">{met.rate}%</span></div>
+
+                        {/* Status selectors & remarks */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                          {/* Selector items */}
+                          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(st.id, 'presente')}
+                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                                record.status === 'presente'
+                                  ? 'bg-white text-emerald-700 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              <CheckCircle className="w-3 h-3" /> P
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(st.id, 'tarde')}
+                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                                record.status === 'tarde'
+                                  ? 'bg-white text-amber-700 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              <Clock className="w-3 h-3" /> T
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(st.id, 'excusa')}
+                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                                record.status === 'excusa'
+                                  ? 'bg-white text-indigo-700 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              <AlertCircle className="w-3 h-3" /> E
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStatusChange(st.id, 'ausente')}
+                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                                record.status === 'ausente'
+                                  ? 'bg-white text-rose-700 shadow-xs'
+                                  : 'text-slate-500 hover:text-slate-800'
+                              }`}
+                            >
+                              <XCircle className="w-3 h-3" /> A
+                            </button>
+                          </div>
+
+                          {/* Optional statement comment */}
+                          <input
+                            type="text"
+                            value={record.remarks}
+                            onChange={e => handleRemarksChange(st.id, e.target.value)}
+                            placeholder="Nota u observación..."
+                            className="text-xs p-1.5 border border-slate-200 rounded-lg max-w-xs focus:outline-indigo-500 bg-white"
+                          />
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Status selectors & remarks */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        {/* Selector items */}
-                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(st.id, 'presente')}
-                            className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                              record.status === 'presente'
-                                ? 'bg-white text-emerald-700 shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                          >
-                            <CheckCircle className="w-3 h-3" /> P
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(st.id, 'tarde')}
-                            className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                              record.status === 'tarde'
-                                ? 'bg-white text-amber-700 shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                          >
-                            <Clock className="w-3 h-3" /> T
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(st.id, 'excusa')}
-                            className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                              record.status === 'excusa'
-                                ? 'bg-white text-indigo-700 shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                          >
-                            <AlertCircle className="w-3 h-3" /> E
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(st.id, 'ausente')}
-                            className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                              record.status === 'ausente'
-                                ? 'bg-white text-rose-700 shadow-xs'
-                                : 'text-slate-500 hover:text-slate-800'
-                            }`}
-                          >
-                            <XCircle className="w-3 h-3" /> A
-                          </button>
-                        </div>
-
-                        {/* Optional statement comment */}
-                        <input
-                          type="text"
-                          value={record.remarks}
-                          onChange={e => handleRemarksChange(st.id, e.target.value)}
-                          placeholder="Nota u observación..."
-                          className="text-xs p-1.5 border border-slate-200 rounded-lg max-w-xs focus:outline-indigo-500 bg-white"
-                        />
-                      </div>
+                {/* PAGINATION FOR STUDENTS */}
+                {students.length > studentsPerPage && (
+                  <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3 theme-bg-surface">
+                    <div className="text-xs text-slate-500 select-none">
+                      Mostrando <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{((currentStudentPage - 1) * studentsPerPage) + 1}</span> a{' '}
+                      <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
+                        {Math.min(currentStudentPage * studentsPerPage, students.length)}
+                      </span>{' '}
+                      de <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{students.length}</span> alumnos matriculados
                     </div>
-                  );
-                })}
+                    <div className="flex items-center gap-1.5 font-sans">
+                      <button
+                        type="button"
+                        disabled={currentStudentPage === 1}
+                        onClick={() => setStudentPage(prev => Math.max(1, prev - 1))}
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      
+                      {Array.from({ length: totalStudentPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          type="button"
+                          key={page}
+                          onClick={() => setStudentPage(page)}
+                          className={`px-3 py-1 text-xs font-semibold rounded-lg transition cursor-pointer ${
+                            currentStudentPage === page
+                              ? 'text-white'
+                              : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                          }`}
+                          style={currentStudentPage === page ? { backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        disabled={currentStudentPage === totalStudentPages}
+                        onClick={() => setStudentPage(prev => Math.min(totalStudentPages, prev + 1))}
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -613,18 +676,20 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
               <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Filtrar Historial:</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[200px]">
               <span className="text-slate-400 font-medium">Asignatura:</span>
-              <select
-                value={historySubjectFilter}
-                onChange={e => { setHistorySubjectFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-slate-700 font-bold focus:outline-none"
-              >
-                <option value="all">Todas</option>
-                {teacherSubjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
+              <div className="w-48">
+                <SearchableSelect
+                  options={[
+                    { value: 'all', label: 'Todas' },
+                    ...teacherSubjects.map(s => ({ value: s.id, label: s.nombre }))
+                  ]}
+                  value={historySubjectFilter}
+                  onChange={val => { setHistorySubjectFilter(val); setCurrentPage(1); }}
+                  placeholder="Filtrar asignatura..."
+                  id="history-subject-select"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-2">

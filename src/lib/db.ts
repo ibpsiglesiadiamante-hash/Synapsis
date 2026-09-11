@@ -4,7 +4,7 @@
  */
 
 import { 
-  User, Subject, Semester, Parcial, GradeRecord, Assignment, Institution, Exam, Submission 
+  User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission 
 } from '../types';
 
 export function uid(): string {
@@ -50,16 +50,14 @@ interface AppState {
   submissions: Submission[];
   gradeRecords: GradeRecord[];
   assignments: Assignment[];
+  assignmentSubmissions: AssignmentSubmission[];
 }
 
-export function getInitialState(): AppState {
-  const isInitialized = localStorage.getItem('ep_initialized');
-
-  // Pre-loaded seed database values
-  const uAdminId = uid();
-  const uDocenteId = uid();
-  const uEstudiante1Id = uid();
-  const uEstudiante2Id = uid();
+function buildDefaultSeedData(): AppState {
+  const uAdminId = 'admin-fallback-id';
+  const uDocenteId = 'docente-fallback-id';
+  const uEstudiante1Id = 'estudiante1-fallback-id';
+  const uEstudiante2Id = 'estudiante2-fallback-id';
 
   const defaultUsers: User[] = [
     { id: uAdminId, nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: now() },
@@ -68,58 +66,35 @@ export function getInitialState(): AppState {
     { id: uEstudiante2Id, nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
   ];
 
-  if (isInitialized) {
-    try {
-      const storedUsers = JSON.parse(localStorage.getItem('ep_users') || '[]');
-      const usersToLoad = (storedUsers && storedUsers.length > 0) ? storedUsers : defaultUsers;
+  const subMathId = 'sub-math-id';
+  const subSocialId = 'sub-social-id';
+  const subLangId = 'sub-lang-id';
 
-      return {
-        users: usersToLoad,
-        institutions: JSON.parse(localStorage.getItem('ep_instituciones') || '[]'),
-        subjects: JSON.parse(localStorage.getItem('ep_subjects') || '[]'),
-        semesters: JSON.parse(localStorage.getItem('ep_semesters') || '[]'),
-        parciales: JSON.parse(localStorage.getItem('ep_parciales') || '[]'),
-        exams: JSON.parse(localStorage.getItem('ep_exams') || '[]'),
-        submissions: JSON.parse(localStorage.getItem('ep_submissions') || '[]'),
-        gradeRecords: JSON.parse(localStorage.getItem('ep_notas') || '[]'),
-        assignments: JSON.parse(localStorage.getItem('ep_trabajos') || '[]'),
-      };
-    } catch (e) {
-      console.error('Failed to parse storage, loading defaults...', e);
-    }
-  }
-
-  const users: User[] = defaultUsers;
-
-  const subMathId = uid();
-  const subSocialId = uid();
-  const subLangId = uid();
-
-  const subjects: Subject[] = [
-    { id: subMathId, nombre: 'Matemáticas', codigo: 'MAT-101', docenteId: uDocenteId, creado: now() },
-    { id: subSocialId, nombre: 'Ciencias Sociales', codigo: 'SOC-102', docenteId: uDocenteId, creado: now() },
-    { id: subLangId, nombre: 'Lengua y Literatura', codigo: 'LEN-103', docenteId: uDocenteId, creado: now() },
+  const defaultSubjects: Subject[] = [
+    { id: subMathId, nombre: 'MATEMÁTICAS', codigo: 'MAT-101', docenteId: uDocenteId, creado: now() },
+    { id: subSocialId, nombre: 'CIENCIAS SOCIALES', codigo: 'SOC-102', docenteId: uDocenteId, creado: now() },
+    { id: subLangId, nombre: 'LENGUA Y LITERATURA', codigo: 'LEN-103', docenteId: uDocenteId, creado: now() },
   ];
 
-  const sem1Id = uid();
-  const sem2Id = uid();
+  const sem1Id = 'sem-1-id';
+  const sem2Id = 'sem-2-id';
 
-  const semesters: Semester[] = [
-    { id: sem1Id, nombre: 'Semestre 2026-I', codigo: 'SEM-26A', estado: 'activo', creado: now() },
-    { id: sem2Id, nombre: 'Semestre 2026-II', codigo: 'SEM-26B', estado: 'inactivo', creado: now() },
+  const defaultSemesters: Semester[] = [
+    { id: sem1Id, nombre: 'SEMESTRE 2026-I', codigo: 'SEM-26A', estado: 'activo', creado: now() },
+    { id: sem2Id, nombre: 'SEMESTRE 2026-II', codigo: 'SEM-26B', estado: 'inactivo', creado: now() },
   ];
 
-  const arc1Id = uid();
-  const arc2Id = uid();
+  const arc1Id = 'arc-1-id';
+  const arc2Id = 'arc-2-id';
 
-  const parciales: Parcial[] = [
-    { id: arc1Id, nombre: 'Primer Corte - 30%', semestre: sem1Id, asignatura: subMathId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-02-01', fechaFin: '2026-04-10', creado: now() },
-    { id: arc2Id, nombre: 'Segundo Corte - 30%', semestre: sem1Id, asignatura: subSocialId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-04-11', fechaFin: '2026-06-30', creado: now() },
+  const defaultParciales: Parcial[] = [
+    { id: arc1Id, nombre: 'PRIMER CORTE - 30%', semestre: sem1Id, asignatura: subMathId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-02-01', fechaFin: '2026-04-10', creado: now() },
+    { id: arc2Id, nombre: 'SEGUNDO CORTE - 30%', semestre: sem1Id, asignatura: subSocialId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-04-11', fechaFin: '2026-06-30', creado: now() },
   ];
 
-  const gradeRecords: GradeRecord[] = [
+  const defaultGradeRecords: GradeRecord[] = [
     {
-      id: uid(),
+      id: 'grade-1-id',
       estudianteId: uEstudiante1Id,
       asignaturaId: subMathId,
       parcialId: arc1Id,
@@ -128,12 +103,12 @@ export function getInitialState(): AppState {
       notaEV2: 4.7,
       notaTrabajo: 3.6,
       aprobado: true,
-      comentario: 'Excelente sustentación del análisis diferencial.',
+      comentario: 'EXCELENTE SUSTENTACIÓN DEL ANÁLISIS DIFERENCIAL.',
       creado: now(),
       actualizado: now(),
     },
     {
-      id: uid(),
+      id: 'grade-2-id',
       estudianteId: uEstudiante2Id,
       asignaturaId: subSocialId,
       parcialId: arc2Id,
@@ -142,17 +117,17 @@ export function getInitialState(): AppState {
       notaEV2: 3.0,
       notaTrabajo: 2.9,
       aprobado: false,
-      comentario: 'Requiere repasar los hitos del frente de reforma social colombiana.',
+      comentario: 'REQUIERE REPASAR LOS HITOS DEL FRENTE DE REFORMA SOCIAL COLOMBIANA.',
       creado: now(),
       actualizado: now(),
     },
   ];
 
-  const assignments: Assignment[] = [
+  const defaultAssignments: Assignment[] = [
     {
-      id: uid(),
-      titulo: 'Ensayo Crítico de Sociales',
-      descripcion: 'Redacta un análisis de 500 palabras sobre el impacto institucional del Frente Nacional.',
+      id: 'assignment-1-id',
+      titulo: 'ENSAYO CRÍTICO DE SOCIALES',
+      descripcion: 'REDACTA UN ANÁLISIS DE 500 PALABRAS SOBRE EL IMPACTO INSTITUCIONAL DEL FRENTE NACIONAL.',
       parcialId: arc2Id,
       puntos: 100,
       fechaEntrega: '2026-06-25',
@@ -161,27 +136,27 @@ export function getInitialState(): AppState {
     },
   ];
 
-  const institutions: Institution[] = [
+  const defaultInstitutions: Institution[] = [
     {
-      id: uid(),
-      nombre: 'Instituto Synapsis',
+      id: 'inst-1-id',
+      nombre: 'INSTITUTO SYNAPSIS',
       tipo: 'Colegio',
       codigo: 'NIT-322199',
-      ciudad: 'Bogotá D.C.',
-      direccion: 'Avenida El Dorado #68-12',
+      ciudad: 'BOGOTÁ D.C.',
+      direccion: 'AVENIDA EL DORADO #68-12',
       telefono: '+57 (1) 456-7890',
       email: 'contacto@synapsis.edu',
       creado: now(),
     },
   ];
 
-  const exams: Exam[] = [
+  const defaultExams: Exam[] = [
     {
-      id: uid(),
-      titulo: 'Álgebra básica y Ecuaciones',
+      id: 'exam-1-id',
+      titulo: 'ÁLGEBRA BÁSICA Y ECUACIONES',
       materia: 'Matemáticas',
       parcialId: arc1Id,
-      descripcion: 'Evaluación cronometrada de sistemas de ecuaciones de primer y segundo grado.',
+      descripcion: 'EVALUACIÓN CRONOMETRADA DE SISTEMAS DE ECUACIONES DE PRIMER Y SEGUNDO GRADO.',
       docenteId: uDocenteId,
       estado: 'activo',
       tiempo: 60,
@@ -192,16 +167,16 @@ export function getInitialState(): AppState {
       creado: now(),
       preguntas: [
         {
-          id: uid(),
-          texto: '¿Cuál es el valor de x que satisface la ecuación: 2x - 3 = 7?',
+          id: 'q1-id',
+          texto: '¿CUÁL ES EL VALOR DE X QUE SATISFACE LA ECUACIÓN: 2X - 3 = 7?',
           tipo: 'multiple',
           puntos: 25,
           opciones: ['x = 2', 'x = 5', 'x = 4', 'x = 10'],
           correctas: [1],
         },
         {
-          id: uid(),
-          texto: 'Resuelve el siguiente binomio al cuadrado: (a + b)².',
+          id: 'q2-id',
+          texto: 'RESUELVE EL SIGUIENTE BINOMIO AL CUADRADO: (A + B)².',
           tipo: 'multiple',
           puntos: 25,
           opciones: [
@@ -213,26 +188,84 @@ export function getInitialState(): AppState {
           correctas: [0],
         },
         {
-          id: uid(),
-          texto: '¿La fórmula cuadrática permite obtener las raíces de funciones polinómicas de grado 2?',
+          id: 'q3-id',
+          texto: '¿LA FÓRMULA CUADRÁTICA PERMITE OBTENER LAS RAÍCES DE FUNCIONES POLINÓMICAS DE GRADO 2?',
           tipo: 'tf',
           puntos: 25,
           opciones: ['Verdadero', 'Falso'],
           correctas: [0],
         },
-        {
-          id: uid(),
-          texto: 'Menciona una aplicación práctica de los sistemas de ecuaciones en problemas de optimización.',
-          tipo: 'abierta',
-          puntos: 25,
-          opciones: [],
-          correctas: [],
-        },
       ],
     },
   ];
 
-  const submissions: Submission[] = [];
+  return {
+    users: defaultUsers,
+    institutions: defaultInstitutions,
+    subjects: defaultSubjects,
+    semesters: defaultSemesters,
+    parciales: defaultParciales,
+    exams: defaultExams,
+    submissions: [],
+    gradeRecords: defaultGradeRecords,
+    assignments: defaultAssignments,
+    assignmentSubmissions: [],
+  };
+}
+
+export function getDeletedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem('ep_deleted_ids');
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+export function markAsDeleted(id: string) {
+  if (!id) return;
+  try {
+    const deleted = getDeletedIds();
+    deleted.add(id);
+    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(deleted)));
+  } catch (e) {
+    console.error('Failed to mark entity as deleted', e);
+  }
+}
+
+export function getInitialState(): AppState {
+  const defaults = buildDefaultSeedData();
+  const deletedIds = getDeletedIds();
+  const isInitialized = localStorage.getItem('ep_initialized') === 'true';
+
+  const loadCollection = (key: string, defaultItems: any[] = []) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        const loaded: any[] = JSON.parse(raw);
+        if (Array.isArray(loaded)) {
+          return loaded.filter(item => item && item.id && !deletedIds.has(item.id));
+        }
+      }
+      if (!isInitialized) {
+        return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
+      }
+      return [];
+    } catch (e) {
+      return !isInitialized ? defaultItems.filter(item => item && item.id && !deletedIds.has(item.id)) : [];
+    }
+  };
+
+  const users = loadCollection('ep_users', defaults.users);
+  const institutions = loadCollection('ep_instituciones', defaults.institutions);
+  const subjects = loadCollection('ep_subjects', defaults.subjects);
+  const semesters = loadCollection('ep_semesters', defaults.semesters);
+  const parciales = loadCollection('ep_parciales', defaults.parciales);
+  const exams = loadCollection('ep_exams', defaults.exams);
+  const submissions = loadCollection('ep_submissions', defaults.submissions);
+  const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
+  const assignments = loadCollection('ep_trabajos', defaults.assignments);
+  const assignmentSubmissions = loadCollection('ep_entregas_trabajos', defaults.assignmentSubmissions);
 
   const state: AppState = {
     users,
@@ -244,6 +277,7 @@ export function getInitialState(): AppState {
     submissions,
     gradeRecords,
     assignments,
+    assignmentSubmissions,
   };
 
   saveState(state);
@@ -251,14 +285,83 @@ export function getInitialState(): AppState {
 }
 
 export function saveState(state: AppState) {
-  localStorage.setItem('ep_users', JSON.stringify(state.users));
-  localStorage.setItem('ep_instituciones', JSON.stringify(state.institutions));
-  localStorage.setItem('ep_subjects', JSON.stringify(state.subjects));
-  localStorage.setItem('ep_semesters', JSON.stringify(state.semesters));
-  localStorage.setItem('ep_parciales', JSON.stringify(state.parciales));
-  localStorage.setItem('ep_exams', JSON.stringify(state.exams));
-  localStorage.setItem('ep_submissions', JSON.stringify(state.submissions));
-  localStorage.setItem('ep_notas', JSON.stringify(state.gradeRecords));
-  localStorage.setItem('ep_trabajos', JSON.stringify(state.assignments));
+  const deletedIds = getDeletedIds();
+
+  const filterAlive = (list: any[] = []) => {
+    if (!Array.isArray(list)) return [];
+    return list.filter(item => item && item.id && !deletedIds.has(item.id));
+  };
+
+  localStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
+  localStorage.setItem('ep_instituciones', JSON.stringify(filterAlive(state.institutions)));
+  localStorage.setItem('ep_subjects', JSON.stringify(filterAlive(state.subjects)));
+  localStorage.setItem('ep_semesters', JSON.stringify(filterAlive(state.semesters)));
+  localStorage.setItem('ep_parciales', JSON.stringify(filterAlive(state.parciales)));
+  localStorage.setItem('ep_exams', JSON.stringify(filterAlive(state.exams)));
+  localStorage.setItem('ep_submissions', JSON.stringify(filterAlive(state.submissions)));
+  localStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
+  localStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
+  localStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
   localStorage.setItem('ep_initialized', 'true');
 }
+
+export function mergeStates(local: AppState, remote: AppState): AppState {
+  const defaults = buildDefaultSeedData();
+  const deletedIds = getDeletedIds();
+  const merged: AppState = { ...remote };
+
+  const keys: (keyof AppState)[] = [
+    'users',
+    'institutions',
+    'subjects',
+    'semesters',
+    'parciales',
+    'exams',
+    'submissions',
+    'gradeRecords',
+    'assignments',
+    'assignmentSubmissions'
+  ];
+
+  keys.forEach((key) => {
+    let localList = ((local[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
+    let remoteList = ((remote[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
+
+    // Fall back to seed defaults only if both are empty and not initialized
+    const isInit = localStorage.getItem('ep_initialized') === 'true';
+    if (!isInit && localList.length === 0 && remoteList.length === 0 && defaults[key] && defaults[key].length > 0) {
+      localList = (defaults[key] as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
+    }
+
+    const itemMap = new Map<string, any>();
+
+    // 1. Remote items (not deleted)
+    remoteList.forEach((remoteItem: any) => {
+      if (remoteItem && remoteItem.id && !deletedIds.has(remoteItem.id)) {
+        itemMap.set(remoteItem.id, remoteItem);
+      }
+    });
+
+    // 2. Local items (not deleted)
+    localList.forEach((localItem: any) => {
+      if (!localItem || !localItem.id || deletedIds.has(localItem.id)) return;
+
+      if (!itemMap.has(localItem.id)) {
+        itemMap.set(localItem.id, localItem);
+      } else {
+        const remoteItem = itemMap.get(localItem.id);
+        const localTime = localItem.actualizado || localItem.creado || localItem.fecha || '';
+        const remoteTime = remoteItem.actualizado || remoteItem.creado || remoteItem.fecha || '';
+
+        if (localTime >= remoteTime) {
+          itemMap.set(localItem.id, localItem);
+        }
+      }
+    });
+
+    merged[key] = Array.from(itemMap.values()) as any;
+  });
+
+  return merged;
+}
+

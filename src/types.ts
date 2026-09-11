@@ -12,6 +12,9 @@ export interface User {
   creado: string;
   cedula?: string;
   celular?: string;
+  asignaturas?: string[];
+  semestre?: string;
+  codigo?: string;
 }
 
 export interface Subject {
@@ -84,6 +87,22 @@ export interface Trabajo {
 // Support alternative exported naming alias
 export type Assignment = Trabajo;
 
+export interface AssignmentSubmission {
+  id: string;
+  assignmentId: string;
+  estudianteId: string;
+  estudianteNombre: string;
+  fechaEntrega: string;
+  archivoNombre: string;
+  archivoUrl: string; // Base64 or URL
+  comentarioEstudiante?: string;
+  estado: 'pendiente' | 'entregado' | 'calificado';
+  calificacion?: number;
+  comentarioDocente?: string;
+  creado: string;
+  actualizado?: string;
+}
+
 export interface DocenteAsignacion {
   id: string;
   docenteId: string;
@@ -114,15 +133,26 @@ export interface Institution {
 export interface Question {
   id: string;
   texto: string;
-  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown';
+  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table';
   puntos: number;
-  opciones: string[];
-  correctas: number[]; // Index of correct option(s)
+  opciones: string[]; // Options / Caja de palabras (list of terms to match)
+  correctas: number[]; // Index of correct option(s) for multiple, tf, dropdown, checkbox
+  enunciados?: string[]; // Array of statements/definitions for matching type
+  matchCorrectos?: number[]; // Match indices corresponding to opciones for each enunciado
+  columnas?: string[]; // Encabezados de columnas para tabla
+  tableRows?: {
+    cells: {
+      tipo: 'texto' | 'blank';
+      valor: string; // Para celdas fijas
+      correctOptionIdx?: number; // Para espacios por llenar, apunta a la opciones
+    }[];
+  }[];
 }
 
 export interface Exam {
   id: string;
   titulo: string;
+  subtitulo?: string;
   materia: string;
   parcialId?: string | null;
   descripcion?: string;
@@ -134,7 +164,9 @@ export interface Exam {
   aleatorio: boolean;
   mostrarNota: boolean;
   creado: string;
+  actualizado?: string;
   preguntas: Question[];
+  bannerUrl?: string;
 }
 
 export interface Submission {

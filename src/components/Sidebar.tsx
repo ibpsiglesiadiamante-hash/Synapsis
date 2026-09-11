@@ -8,7 +8,7 @@ import {
   LayoutGrid, FileText, BarChart3, Clock, Milestone, 
   Users, School, BookOpen, Layers, GraduationCap, 
   ClipboardList, Scroll, Award, ChevronDown, ChevronRight,
-  CheckSquare, Megaphone, DollarSign, Calendar
+  CheckSquare, Megaphone, DollarSign, Calendar, Library, BookMarked, QrCode
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -18,9 +18,10 @@ interface SidebarProps {
   onPageChange: (pageId: string) => void;
   isOpen: boolean;
   onClose?: () => void;
+  onOpenShareModal?: () => void;
 }
 
-export default function Sidebar({ currentUser, activePage, onPageChange, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ currentUser, activePage, onPageChange, isOpen, onClose, onOpenShareModal }: SidebarProps) {
   const rol = currentUser.rol;
 
   // Collapsible Nav Groups State (persisted to localStorage)
@@ -34,6 +35,7 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
     return {
       principal: true,
       gestion: true,
+      recursos: true,
       docente: rol === 'docente' || rol === 'admin',
       estudiante: rol === 'estudiante' || rol === 'admin',
       admin: rol === 'admin',
@@ -140,6 +142,35 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
         )}
       </div>
 
+      {/* RECURSOS Y COMUNIDAD */}
+      <div className="nav-group mt-2">
+        <div 
+          onClick={() => toggleGroup('recursos')} 
+          className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors hover:bg-slate-100/40"
+        >
+          <span>Recursos y Comunidad</span>
+          {expandedGroups.recursos ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+        </div>
+        {expandedGroups.recursos && (
+          <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
+            <div 
+              onClick={() => onPageChange('educativo')} 
+              className={navItemClass('educativo')}
+            >
+              <Library className="w-[18px] h-[18px] shrink-0 text-indigo-500" />
+              <span>Biblioteca de Conocimiento</span>
+            </div>
+            <div 
+              onClick={() => onPageChange('biblia')} 
+              className={navItemClass('biblia')}
+            >
+              <BookMarked className="w-[18px] h-[18px] shrink-0 text-amber-600" />
+              <span>La Sagrada Biblia</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* DOCENTE */}
       {isDoc && (
         <div className="nav-group mt-2">
@@ -158,6 +189,13 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
               >
                 <FileText className="w-[18px] h-[18px] shrink-0" />
                 <span>Mis exámenes</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('parciales')} 
+                className={navItemClass('parciales')}
+              >
+                <Milestone className="w-[18px] h-[18px] shrink-0" />
+                <span>Mis parciales</span>
               </div>
               <div 
                 onClick={() => onPageChange('resultados')} 
@@ -281,6 +319,28 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
           )}
         </div>
       )}
+
+      {/* BOTÓN ENLACE OFICIAL Y CÓDIGO QR */}
+      {onOpenShareModal && (
+        <button
+          type="button"
+          onClick={onOpenShareModal}
+          className="mt-4 flex items-center justify-center gap-2 p-2.5 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 rounded-xl text-[11px] font-bold tracking-tight transition cursor-pointer select-none border border-indigo-200 shrink-0 shadow-xs"
+          title="Ver enlace oficial synapsis-edu.web.app y código QR"
+        >
+          <QrCode className="w-4 h-4 text-indigo-600 shrink-0" />
+          <span>Enlace Oficial & QR</span>
+        </button>
+      )}
+
+      {/* BOTÓN PARA CONTRAER MENÚ (DESKTOP/MOBILE) */}
+      <button
+        onClick={onClose}
+        className="mt-6 flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-150 hover:bg-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer select-none border border-slate-250 shrink-0"
+        title="Contraer menú para ganar espacio"
+      >
+        <span>← Ocultar Menú</span>
+      </button>
     </nav>
   );
 }

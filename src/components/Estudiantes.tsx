@@ -4,19 +4,22 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
-import { User } from '../types';
+import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
+import { deleteDocFromFirestore, saveDocToFirestore } from '../lib/firebase';
 
 interface EstudiantesProps {
   users: User[];
+  subjects: Subject[];
+  semesters: Semester[];
   onUpdateUsers: (updated: User[]) => void;
   onNavigateToHistory: (studentId: string) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
 export default function Estudiantes({ 
-  users, onUpdateUsers, onNavigateToHistory, toast 
+  users, subjects, semesters, onUpdateUsers, onNavigateToHistory, toast 
 }: EstudiantesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -32,21 +35,68 @@ export default function Estudiantes({
   const [celular, setCelular] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Pagination states & calculations
-  const itemsPerPage = 8;
+  // Linkage/enrollment modal states
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [linkingStudent, setLinkingStudent] = useState<User | null>(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState('');
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+
+  const handleOpenLinkModal = (st: User) => {
+    setLinkingStudent(st);
+    setSelectedSemesterId(st.semestre || '');
+    setSelectedSubjectIds(st.asignaturas || []);
+    setIsLinkModalOpen(true);
+  };
+
+  const handleSaveLinkage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkingStudent) return;
+
+    const nextUsers = users.map(u => {
+      if (u.id === linkingStudent.id) {
+        return {
+          ...u,
+          semestre: selectedSemesterId || undefined,
+          asignaturas: selectedSubjectIds,
+        };
+      }
+      return u;
+    });
+
+    onUpdateUsers(nextUsers);
+    toast(`Materias y período académico asignados correctamente a ${linkingStudent.nombre}`, 'success');
+    setIsLinkModalOpen(false);
+    setLinkingStudent(null);
+  };
+
+  const handleToggleSubject = (subId: string) => {
+    setSelectedSubjectIds(prev =>
+      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
+    );
+  };
+
+  // Batch import modal states
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [batchRawText, setBatchRawText] = useState('');
+
+  // Items per page option
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'all'>(25);
   const [currentPage, setCurrentPage] = useState(1);
 
   const estudiantes = users.filter(u => u.rol === 'estudiante');
 
   const filteredEstudiantes = estudiantes.filter(e => 
     e.nombre.toLowerCase().includes(query.toLowerCase()) || 
-    e.email.toLowerCase().includes(query.toLowerCase())
+    e.email.toLowerCase().includes(query.toLowerCase()) ||
+    (e.cedula && e.cedula.toLowerCase().includes(query.toLowerCase())) ||
+    (e.codigo && e.codigo.toLowerCase().includes(query.toLowerCase()))
   );
 
-  const totalPages = Math.ceil(filteredEstudiantes.length / itemsPerPage) || 1;
+  const activeItemsPerPage = itemsPerPage === 'all' ? (filteredEstudiantes.length || 1) : itemsPerPage;
+  const totalPages = Math.ceil(filteredEstudiantes.length / activeItemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;
 
-  const currentEstudiantes = filteredEstudiantes.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+  const currentEstudiantes = filteredEstudiantes.slice((activePage - 1) * activeItemsPerPage, activePage * activeItemsPerPage);
 
   const handleOpenCreateModal = () => {
     setEditingId(null);
@@ -80,10 +130,9 @@ export default function Estudiantes({
     // Determine final email
     let finalEmail = email.trim();
     if (!finalEmail) {
-      // Auto-generate clean, unique email based on student name and a random number
       const cleanName = nombre.trim().toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
-        .replace(/[^a-z0-9]/g, "."); // replace non-alphanumeric with dots
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, ".");
       const slug = cleanName.split('.').filter(Boolean).join('.');
       const randomNum = Math.floor(1000 + Math.random() * 9000);
       finalEmail = `${slug || 'estudiante'}.${randomNum}@instituto.edu.co`;
@@ -97,14 +146,16 @@ export default function Estudiantes({
           return;
         }
 
-        nextUsers[idx] = {
+        const updatedUser: User = {
           ...nextUsers[idx],
-          nombre: nombre.trim(),
-          email: finalEmail,
-          cedula: cedula.trim() || undefined,
-          celular: celular.trim() || undefined,
+          nombre: nombre.trim().toUpperCase(),
+          email: finalEmail.toLowerCase(),
+          cedula: cedula.trim().toUpperCase() || undefined,
+          celular: celular.trim().toUpperCase() || undefined,
           ...(pass ? { pass: pass.trim() } : {}),
         };
+        nextUsers[idx] = updatedUser;
+        saveDocToFirestore('users', updatedUser);
         onUpdateUsers(nextUsers);
         toast('Ficha del estudiante actualizada correctamente', 'success');
       }
@@ -114,31 +165,167 @@ export default function Estudiantes({
         return;
       }
 
-      // Automatically generate a 6-digit numeric/easy password
-      const automaticPass = `est${Math.floor(1000 + Math.random() * 9000)}`;
+      let automaticCode = '';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      do {
+        automaticCode = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+      } while (users.some(u => u.codigo === automaticCode));
 
       const newSt: User = {
         id: uid(),
-        nombre: nombre.trim(),
-        email: finalEmail,
-        pass: automaticPass,
+        nombre: nombre.trim().toUpperCase(),
+        email: finalEmail.toLowerCase(),
+        pass: automaticCode,
+        codigo: automaticCode,
         rol: 'estudiante',
         creado: now(),
-        cedula: cedula.trim() || undefined,
-        celular: celular.trim() || undefined,
+        cedula: cedula.trim().toUpperCase() || undefined,
+        celular: celular.trim().toUpperCase() || undefined,
       };
 
+      saveDocToFirestore('users', newSt);
       onUpdateUsers([...nextUsers, newSt]);
-      toast(`Estudiante registrado. Correo: ${finalEmail} | Contraseña: ${automaticPass}`, 'success');
+      toast(`Estudiante registrado. Correo: ${finalEmail} | Código/Contraseña: ${automaticCode}`, 'success');
     }
 
     setIsModalOpen(false);
   };
 
   const handleDelete = (id: string) => {
+    deleteDocFromFirestore('users', id);
     const nextUsers = users.filter(u => u.id !== id);
     onUpdateUsers(nextUsers);
     toast('Estudiante desvinculado del sistema correctamente', 'success');
+  };
+
+  // Batch import processing
+  const handleProcessBatchImport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchRawText.trim()) {
+      toast('Ingresa la lista de nombres para matricular en lote', 'error');
+      return;
+    }
+
+    const lines = batchRawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) {
+      toast('No se encontraron líneas válidas', 'error');
+      return;
+    }
+
+    const newUsersList: User[] = [];
+    let addedCount = 0;
+    const existingEmails = new Set(users.map(u => u.email.toLowerCase()));
+
+    lines.forEach((line) => {
+      const parts = line.split(/[,;\t|]+/).map(p => p.trim());
+      const studentName = parts[0];
+      if (!studentName || studentName.length < 2) return;
+
+      let customEmail = parts[1] || '';
+      let customCedula = parts[2] || '';
+      let customCelular = parts[3] || '';
+
+      const cleanName = studentName.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, ".");
+      const slug = cleanName.split('.').filter(Boolean).join('.');
+      
+      let finalEmail = customEmail ? customEmail.toLowerCase() : '';
+      if (!finalEmail || existingEmails.has(finalEmail)) {
+        let rand = Math.floor(1000 + Math.random() * 9000);
+        finalEmail = `${slug || 'estudiante'}.${rand}@instituto.edu.co`;
+        while (existingEmails.has(finalEmail)) {
+          rand = Math.floor(1000 + Math.random() * 9000);
+          finalEmail = `${slug || 'estudiante'}.${rand}@instituto.edu.co`;
+        }
+      }
+      existingEmails.add(finalEmail);
+
+      let automaticCode = '';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      do {
+        automaticCode = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+      } while (users.some(u => u.codigo === automaticCode) || newUsersList.some(u => u.codigo === automaticCode));
+
+      const newSt: User = {
+        id: uid(),
+        nombre: studentName.toUpperCase(),
+        email: finalEmail,
+        pass: automaticCode,
+        codigo: automaticCode,
+        rol: 'estudiante',
+        creado: now(),
+        cedula: customCedula ? customCedula.toUpperCase() : undefined,
+        celular: customCelular ? customCelular.toUpperCase() : undefined,
+      };
+
+      saveDocToFirestore('users', newSt);
+      newUsersList.push(newSt);
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      onUpdateUsers([...users, ...newUsersList]);
+      toast(`¡Éxito! Se matricularon ${addedCount} estudiantes correctamente.`, 'success');
+      setIsBatchModalOpen(false);
+      setBatchRawText('');
+    } else {
+      toast('No se pudieron agregar estudiantes. Revisa el formato de entrada.', 'warning');
+    }
+  };
+
+  // Export backup JSON of students
+  const handleExportBackup = () => {
+    const jsonStr = JSON.stringify(estudiantes, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `respaldo_estudiantes_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Copia de seguridad descargada correctamente.', 'success');
+  };
+
+  // Import backup JSON
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported) && imported.length > 0) {
+          const existingMap = new Map<string, User>();
+          users.forEach(u => existingMap.set(u.id, u));
+
+          imported.forEach((st: User) => {
+            if (st && st.nombre) {
+              const stId = st.id || uid();
+              const existing = existingMap.get(stId);
+              const mergedSt: User = {
+                ...existing,
+                ...st,
+                id: stId,
+                rol: 'estudiante',
+              };
+              existingMap.set(stId, mergedSt);
+              saveDocToFirestore('users', mergedSt);
+            }
+          });
+
+          onUpdateUsers(Array.from(existingMap.values()));
+          toast(`Se han restaurado/importado ${imported.length} estudiantes correctamente.`, 'success');
+        } else {
+          toast('El archivo JSON no contiene un listado de estudiantes válido.', 'error');
+        }
+      } catch (err) {
+        toast('Error al leer el archivo de copia de seguridad.', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
@@ -152,14 +339,43 @@ export default function Estudiantes({
             Gestiona la admisión, matrícula y consulta los historiales de notas correspondientes
           </div>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer shrink-0"
-          style={{ backgroundColor: 'var(--primary)' }}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Matricular estudiante</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsBatchModalOpen(true)}
+            className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold border border-slate-200 transition-all cursor-pointer text-xs"
+            title="Ingresa múltiples nombres a la vez"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Carga Masiva</span>
+          </button>
+
+          <button
+            onClick={handleExportBackup}
+            className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-slate-700 bg-white hover:bg-slate-50 font-bold border border-slate-200 transition-all cursor-pointer text-xs"
+            title="Descargar copia de seguridad en JSON"
+          >
+            <Download className="w-4 h-4 text-indigo-600" />
+            <span>Exportar Copia</span>
+          </button>
+
+          <label
+            className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-slate-700 bg-white hover:bg-slate-50 font-bold border border-slate-200 transition-all cursor-pointer text-xs"
+            title="Restaurar lista desde archivo JSON"
+          >
+            <Upload className="w-4 h-4 text-violet-600" />
+            <span>Restaurar Copia</span>
+            <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+          </label>
+
+          <button
+            onClick={handleOpenCreateModal}
+            className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer shrink-0 text-xs sm:text-sm"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Matricular estudiante</span>
+          </button>
+        </div>
       </div>
 
       {/* FILTER CONTROLS */}
@@ -168,13 +384,31 @@ export default function Estudiantes({
           <Search className="absolute left-2.5 top-2.5 w-4.5 h-4.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Buscar por nombre o correo..."
+            placeholder="Buscar por nombre, correo o cédula..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="w-full pl-9 p-2.5 text-xs font-semibold rounded-xl border border-slate-200 outline-none focus:border-indigo-550 bg-white"
           />
         </div>
-        <span className="text-slate-400 text-xs font-semibold font-mono">{filteredEstudiantes.length} estudiantes admitidos</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span>Mostrar:</span>
+            <select
+              value={itemsPerPage}
+              onChange={e => setItemsPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="p-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+            >
+              <option value={10}>10 por pág.</option>
+              <option value={25}>25 por pág.</option>
+              <option value={50}>50 por pág.</option>
+              <option value={100}>100 por pág.</option>
+              <option value="all">TODOS ({filteredEstudiantes.length})</option>
+            </select>
+          </div>
+          <span className="text-slate-500 text-xs font-bold font-mono bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+            Total: {filteredEstudiantes.length} estudiantes
+          </span>
+        </div>
       </div>
 
       <div className="card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden theme-bg-surface theme-border">
@@ -194,6 +428,7 @@ export default function Estudiantes({
                   <th className="py-3 px-4">Celular</th>
                   <th className="py-3 px-4">Código único</th>
                   <th className="py-3 px-4">Correo</th>
+                  <th className="py-3 px-4">Semestre / Materias</th>
                   <th className="py-3 px-4">Fecha Matrícula</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
@@ -220,16 +455,37 @@ export default function Estudiantes({
                     <td className="py-4 px-4 text-xs font-semibold text-slate-500">
                       {st.celular || <span className="text-slate-350 italic text-[11px] font-normal">No registrado</span>}
                     </td>
-                    <td className="py-4 px-4 font-mono text-xs font-bold text-slate-500">
-                      {st.id.substring(0,8).toUpperCase()}
+                    <td className="py-4 px-4">
+                      <span className="font-mono text-xs font-extrabold text-indigo-700 bg-indigo-50/50 px-2 py-1 rounded border border-indigo-100">
+                        {st.codigo || st.id.substring(0,4).toUpperCase()}
+                      </span>
                     </td>
-                    <td className="py-4 px-4 text-xs sm:text-sm text-slate-500">{st.email}</td>
+                    <td className="py-4 px-4 text-xs font-mono text-slate-600 lowercase whitespace-nowrap overflow-hidden text-ellipsis max-w-xs email-display" title={st.email.toLowerCase()}>{st.email.toLowerCase()}</td>
+                    <td className="py-4 px-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-violet-700 bg-violet-50/50 px-2 py-0.5 rounded border border-violet-100 max-w-max">
+                          {semesters.find(s => s.id === st.semestre)?.nombre || 'No asignado'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {st.asignaturas && st.asignaturas.length > 0 
+                            ? `${st.asignaturas.length} materia(s) vinculada(s)` 
+                            : 'Ninguna materia asociada'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-4 px-4 text-xs text-slate-400">{fmtDate(st.creado)}</td>
                     <td className="py-4 px-4 text-right">
                       <div className="inline-flex gap-1.5 items-center justify-end">
                         <button
+                          onClick={() => handleOpenLinkModal(st)}
+                          className="btn text-xs px-2.5 py-1.5 rounded border border-violet-205 bg-violet-50 hover:bg-violet-100 text-violet-700 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-sm"
+                        >
+                          <GraduationCap className="w-3.5 h-3.5 text-violet-600" />
+                          <span>Asignar</span>
+                        </button>
+                        <button
                           onClick={() => onNavigateToHistory(st.id)}
-                          className="btn text-xs px-2.5 py-1.5 rounded border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1"
+                          className="btn text-xs px-2.5 py-1.5 rounded border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1 cursor-pointer shrink-0"
                           title="Explorar notas e historial de exámenes"
                         >
                           <BookOpen className="w-3.5 h-3.5" />
@@ -276,12 +532,12 @@ export default function Estudiantes({
               </tbody>
             </table>
 
-            {filteredEstudiantes.length > itemsPerPage && (
+            {itemsPerPage !== 'all' && totalPages > 1 && (
               <div className="px-4 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3 theme-bg-surface">
                 <div className="text-xs text-slate-500 select-none">
-                  Mostrando <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{((activePage - 1) * itemsPerPage) + 1}</span> a{' '}
+                  Mostrando <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{((activePage - 1) * activeItemsPerPage) + 1}</span> a{' '}
                   <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
-                    {Math.min(activePage * itemsPerPage, filteredEstudiantes.length)}
+                    {Math.min(activePage * activeItemsPerPage, filteredEstudiantes.length)}
                   </span>{' '}
                   de <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{filteredEstudiantes.length}</span> estudiantes
                 </div>
@@ -395,9 +651,9 @@ export default function Estudiantes({
                 </div>
               ) : (
                 <div className="form-group p-3.5 bg-slate-50 rounded-xl border border-dashed border-slate-200 theme-bg-surface select-none">
-                  <span className="text-[10px] font-bold text-indigo-600 block mb-1 tracking-wider font-mono">🔐 SEGURIDAD AUTOMÁTICA</span>
+                  <span className="text-[10px] font-bold text-indigo-600 block mb-1 tracking-wider font-mono">🔐 CÓDIGO ÚNICO AUTOMÁTICO</span>
                   <p className="text-[11px] text-slate-500 leading-normal font-sans font-medium">
-                    La contraseña se generará de forma automática y segura tras la matrícula (ej: <span className="font-mono font-bold text-slate-700">est3928</span>).
+                    Se generará un código alfanumérico aleatorio de 4 dígitos (ej: <span className="font-mono font-bold text-slate-700">X9B2</span>) que le servirá al estudiante como usuario de acceso para el portal y para presentar exámenes.
                   </p>
                 </div>
               )}
@@ -416,6 +672,167 @@ export default function Estudiantes({
                   style={{ backgroundColor: 'var(--primary)' }}
                 >
                   {editingId ? 'Guardar cambios' : 'Matricular alumno'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VINCULACIÓN ACADÉMICA (ASIGNATURAS Y SEMESTRE) */}
+      {isLinkModalOpen && linkingStudent && (
+        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-[200] p-4 text-left animate-fade-in">
+          <div className="modal bg-white rounded-3xl shadow-2xl w-full max-w-md theme-bg-surface overflow-hidden">
+            <div className="modal-header border-b border-slate-100 p-5 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="modal-title font-extrabold text-slate-900 text-base md:text-lg">
+                  Asignación Académica
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium">Vincula materias y ciclos activos a {linkingStudent.nombre}</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsLinkModalOpen(false);
+                  setLinkingStudent(null);
+                }} 
+                className="modal-close bg-white border border-slate-200 hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLinkage} className="modal-body p-6 space-y-5">
+              {/* Semester Selection */}
+              <div className="form-group flex flex-col font-sans">
+                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
+                  Ciclo o Semestre Académico <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={selectedSemesterId}
+                  onChange={e => setSelectedSemesterId(e.target.value)}
+                  className="form-control w-full p-2.5 border rounded-xl text-xs sm:text-sm focus:outline-cyan-500 bg-white"
+                >
+                  <option value="">Selecciona un semestre o corte académico...</option>
+                  {semesters.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre} {s.estado === 'activo' ? ' (Activo)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subjects/Asignaturas checklist */}
+              <div className="form-group flex flex-col font-sans">
+                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">
+                  Selección de Materias / Asignaturas
+                </label>
+                
+                {subjects.length === 0 ? (
+                  <div className="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400">
+                    No hay asignaturas registradas en el catálogo. Registra materias primero en la pestaña correspondiente.
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 bg-white p-2 space-y-1">
+                    {subjects.map(sub => {
+                      const isChecked = selectedSubjectIds.includes(sub.id);
+                      return (
+                        <label 
+                          key={sub.id} 
+                          className={`flex items-center gap-3 p-2.5 rounded-lg text-xs sm:text-sm cursor-pointer hover:bg-slate-50 transition ${
+                            isChecked ? 'bg-indigo-50/30' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSubject(sub.id)}
+                            className="w-4 h-4 rounded text-indigo-650 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-800 truncate">{sub.nombre}</p>
+                            {sub.codigo && <p className="font-mono text-[9px] text-slate-400 uppercase">{sub.codigo}</p>}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-400 font-medium mt-1.5 flex items-center gap-1.5">
+                  <span>💡 El estudiante podrá visualizar trabajos y resolver exámenes pertenecientes a las materias vinculadas.</span>
+                </p>
+              </div>
+
+              <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4 mt-6 bg-slate-50 rounded-b-3xl -mx-6 -mb-6 p-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLinkModalOpen(false);
+                    setLinkingStudent(null);
+                  }}
+                  className="btn btn-secondary px-4 py-2 border rounded-xl hover:bg-slate-150 text-slate-707 bg-white cursor-pointer text-xs sm:text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary px-5 py-2 text-white font-bold rounded-xl cursor-pointer text-xs sm:text-sm"
+                  style={{ backgroundColor: 'var(--primary)' }}
+                >
+                  Guardar Asignación
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* BATCH IMPORT DIALOG */}
+      {isBatchModalOpen && (
+        <div className="modal-overlay fixed inset-0 bg-black/45 flex items-center justify-center z-[200] p-4 text-left">
+          <div className="modal bg-white rounded-2xl shadow-xl w-full max-w-lg theme-bg-surface overflow-hidden">
+            <div className="modal-header border-b border-slate-100 p-4.5 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
+                <h3 className="modal-title font-bold text-slate-900 border-none text-base">
+                  Carga Masiva de Estudiantes
+                </h3>
+              </div>
+              <button onClick={() => setIsBatchModalOpen(false)} className="modal-close hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-705 transition cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleProcessBatchImport} className="modal-body p-5 space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Pega la lista de estudiantes (un nombre por línea). Opcionalmente puedes incluir correo o cédula separados por comas o tabulaciones.
+              </p>
+
+              <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl text-[11px] text-indigo-900 font-mono space-y-1">
+                <p className="font-bold">Ejemplo:</p>
+                <p>Carlos Andrés Pérez</p>
+                <p>Ana Isabel Rodríguez, ana@instituto.edu.co, 10203040</p>
+              </div>
+
+              <textarea
+                rows={8}
+                required
+                value={batchRawText}
+                onChange={e => setBatchRawText(e.target.value)}
+                placeholder="Pega la lista aquí (un estudiante por línea)..."
+                className="w-full p-3 text-xs font-mono border border-slate-200 rounded-xl outline-none focus:border-indigo-500 bg-white"
+              />
+
+              <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsBatchModalOpen(false)}
+                  className="btn px-4 py-2 border rounded-xl hover:bg-slate-100 text-slate-700 bg-white cursor-pointer text-xs font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn px-5 py-2 text-white font-bold rounded-xl cursor-pointer text-xs bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                >
+                  Procesar y Matricular Todos
                 </button>
               </div>
             </form>

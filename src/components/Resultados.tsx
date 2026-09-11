@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { 
   BarChart3, Users, Award, Percent, Calendar, 
-  ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw 
+  ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search
 } from 'lucide-react';
 import { User, Exam, Submission } from '../types';
 import { avatarColor, avatarLetter, fmtDate, fmtTime, now } from '../lib/db';
@@ -25,12 +25,35 @@ export default function Resultados({
 }: ResultadosProps) {
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
+  const [showDangerZone, setShowDangerZone] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Local grading scores & comment forms
   const [manualScores, setManualScores] = useState<Record<string, number>>({});
   const [manualComments, setManualComments] = useState<Record<string, string>>({});
 
-  const myExams = exams.filter(e => e.docenteId === currentUser.id || currentUser.rol === 'admin');
+  const myExams = exams
+    .filter(e => e.docenteId === currentUser.id || currentUser.rol === 'admin')
+    .filter(e => {
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      const matchesExam = e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q);
+      if (matchesExam) return true;
+      
+      // Check if student name matches
+      const examSubs = submissions.filter(s => s.examenId === e.id);
+      return examSubs.some(s => {
+        const student = users.find(u => u.id === s.estudianteId);
+        const name = student ? student.nombre : (s.estudianteNombre || '');
+        return name.toLowerCase().includes(q);
+      });
+    });
+
+  const examsPerPage = 4;
+  const totalPages = Math.ceil(myExams.length / examsPerPage) || 1;
+  const currentActivePage = Math.min(currentPage, totalPages);
+  const paginatedExams = myExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
   
   const handleOpenGradingModal = (subId: string) => {
     const sub = submissions.find(s => s.id === subId);
@@ -80,6 +103,77 @@ export default function Resultados({
         } else {
           incorrectCount++;
         }
+      } else if (q.tipo === 'matching') {
+        const userMatchedObj = ans || {};
+        const matchesList = q.matchCorrectos || [];
+        const enunciadosList = q.enunciados || [];
+        let matchesCorrectSum = 0;
+        
+        enunciadosList.forEach((_, eIdx) => {
+          const userVal = userMatchedObj[eIdx];
+          const correctVal = matchesList[eIdx];
+          if (userVal !== undefined && userVal !== '' && Number(userVal) === Number(correctVal)) {
+            matchesCorrectSum++;
+          }
+        });
+        
+        const fraction = enunciadosList.length > 0 ? (matchesCorrectSum / enunciadosList.length) : 0;
+        autoSum += q.puntos * fraction;
+        
+        if (matchesCorrectSum === enunciadosList.length) {
+          correctCount++;
+        } else {
+          incorrectCount++;
+        }
+      } else if (q.tipo === 'table') {
+        const userAnswersObj = ans || {};
+        let totalBlanksCount = 0;
+        let correctBlanksCount = 0;
+
+        // Group elements by column index to validate dynamically by category column
+        const colBlanksConfig: Record<number, number[]> = {};
+        const colBlanksStudentAnswers: Record<number, number[]> = {};
+
+        (q.tableRows || []).forEach((row, rIdx) => {
+          row.cells.forEach((cell, cIdx) => {
+            if (cell.tipo === 'blank') {
+              totalBlanksCount++;
+              const correctVal = cell.correctOptionIdx ?? 0;
+              if (!colBlanksConfig[cIdx]) colBlanksConfig[cIdx] = [];
+              colBlanksConfig[cIdx].push(correctVal);
+
+              const userVal = userAnswersObj[`${rIdx}-${cIdx}`];
+              if (userVal !== undefined && userVal !== '') {
+                if (!colBlanksStudentAnswers[cIdx]) colBlanksStudentAnswers[cIdx] = [];
+                colBlanksStudentAnswers[cIdx].push(Number(userVal));
+              }
+            }
+          });
+        });
+
+        // Evaluate column-by-column (Flexible category matching)
+        Object.keys(colBlanksConfig).forEach((keyStr) => {
+          const cIdx = Number(keyStr);
+          const allowed = [...colBlanksConfig[cIdx]];
+          const studentAnswers = colBlanksStudentAnswers[cIdx] || [];
+
+          studentAnswers.forEach((val) => {
+            const indexInAllowed = allowed.indexOf(val);
+            if (indexInAllowed !== -1) {
+              correctBlanksCount++;
+              allowed.splice(indexInAllowed, 1);
+            }
+          });
+        });
+
+        const fraction = totalBlanksCount > 0 ? (correctBlanksCount / totalBlanksCount) : 0;
+        autoSum += q.puntos * fraction;
+
+        if (totalBlanksCount > 0 && correctBlanksCount === totalBlanksCount) {
+          correctCount++;
+        } else {
+          incorrectCount++;
+        }
       } else if (q.tipo === 'checkbox') {
         const answersList = ans || [];
         const correctList = q.correctas || [];
@@ -125,24 +219,103 @@ export default function Resultados({
 
   return (
     <div className="page-resultados animate-fade-in pb-12">
-      <div className="page-header mb-6">
-        <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
-          Resultados de evaluaciones
-        </h2>
-        <div className="page-sub text-sm font-medium mt-1 text-slate-500">
-          Revisa estadísticas, entregas de estudiantes y califica manualmente respuestas abiertas
+      <div className="page-header mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
+            Resultados de evaluaciones
+          </h2>
+          <div className="page-sub text-sm font-medium mt-1 text-slate-500">
+            Revisa estadísticas, entregas de estudiantes y califica manualmente respuestas abiertas
+          </div>
+        </div>
+        {currentUser.rol === 'admin' && (
+          <button
+            onClick={() => {
+              setShowDangerZone(!showDangerZone);
+              if (!showDangerZone) {
+                toast('Botones de eliminación de historial habilitados temporalmente.', 'warning');
+              }
+            }}
+            className={`px-3 py-1.5 border text-xs font-extrabold rounded-xl transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shrink-0 select-none ${
+              showDangerZone 
+                ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-450' 
+                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>{showDangerZone ? '🔒 Desactivar Limpieza' : '🛠️ Modo Limpieza'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Caja de Búsqueda de Evaluaciones/Estudiantes */}
+      <div className="mb-6 flex flex-col md:flex-row items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border justify-between">
+        <div className="relative w-full md:max-w-md flex-1">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+            <Search className="w-4 h-4" />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por título de examen, materia o nombre del estudiante..."
+            className="w-full pl-10 pr-9 py-2 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-800 transition duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-150"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer font-extrabold select-none text-xs transition"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 self-start md:self-auto text-xs font-semibold text-slate-500 bg-slate-50/70 py-1.5 px-3 rounded-lg border border-slate-100 select-none">
+          <span>Evaluaciones encontradas: </span>
+          <span className="font-extrabold text-indigo-700">{myExams.length}</span>
         </div>
       </div>
 
+      {currentUser.rol === 'admin' && showDangerZone && submissions.length > 0 && (
+        <div className="mb-6 p-4 rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/20 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+          <div className="space-y-1">
+            <span className="text-xs font-black text-rose-700 uppercase tracking-widest block select-none">
+              ⚠️ ZONA DE SEGURIDAD / ELIMINACIÓN HISTORIAL (ADMINISTRADOR)
+            </span>
+            <p className="text-[11px] font-semibold text-rose-600 leading-relaxed max-w-2xl">
+              Estás en Modo Limpieza. Ahora puedes ver los botones ocultos para eliminar entregas individuales por estudiante debajo, limpiar un parcial completo, o borrar todo el historial masivamente.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm('🚨 ¡ATENCIÓN! ¿Estás totalmente seguro de que deseas eliminar absolutamente TODO el historial de entregas de todos los exámenes del sistema? Esta acción no se puede deshacer.')) {
+                onUpdateSubmissions([]);
+                toast('Se ha eliminado por completo todo el historial de entregas.', 'success');
+                setShowDangerZone(false);
+              }
+            }}
+            className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Eliminar Todo el Historial</span>
+          </button>
+        </div>
+      )}
+
       {myExams.length === 0 ? (
-        <div className="card bg-white p-8 border rounded-2xl text-center flex flex-col items-center">
-          <BarChart3 className="w-12 h-12 text-slate-350 mb-3" />
-          <h4 className="font-bold text-slate-700">Sin estadísticas disponibles</h4>
-          <p className="text-xs text-slate-400 mt-1">Cuando tengas exámenes creados con entregas aparecerán aquí</p>
+        <div className="card bg-white p-8 border rounded-2xl text-center flex flex-col items-center justify-center">
+          <Search className="w-10 h-10 text-slate-350 mb-3" />
+          <h4 className="font-bold text-slate-700">
+            {searchQuery ? 'No se encontraron resultados' : 'Sin estadísticas disponibles'}
+          </h4>
+          <p className="text-xs text-slate-400 mt-1">
+            {searchQuery ? 'Prueba ajustando el texto de tu búsqueda o busca un estudiante diferente.' : 'Cuando tengas exámenes creados con entregas aparecerán aquí.'}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {myExams.map(exam => {
+          {paginatedExams.map(exam => {
             const examSubs = submissions.filter(s => s.examenId === exam.id);
             const totalScore = examSubs.reduce((acc, current) => acc + current.puntaje, 0);
             const avgScore = examSubs.length ? Math.round(totalScore / examSubs.length) : 0;
@@ -150,7 +323,6 @@ export default function Resultados({
 
             return (
               <div key={exam.id} className="card bg-white p-5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border">
-                {/* Header info */}
                 <div className="flex justify-between items-start gap-4 mb-4 border-b border-slate-100 pb-3">
                   <div>
                     <h3 className="text-lg font-bold text-slate-800" style={{ color: 'var(--gray-900)' }}>{exam.titulo}</h3>
@@ -158,13 +330,31 @@ export default function Resultados({
                       {exam.materia} · {exam.preguntas.length} preguntas · {examSubs.length} entregas
                     </div>
                   </div>
-                  <span className={`inline-flex px-2 py-0.5 text-xs font-bold border rounded-full ${
-                    exam.estado === 'activo' 
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-100' 
-                      : 'bg-slate-50 text-slate-600 border-slate-200'
-                  }`}>
-                    {exam.estado}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {currentUser.rol === 'admin' && showDangerZone && examSubs.length > 0 && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`¿Estás seguro de que deseas eliminar todas las entregas (${examSubs.length}) para el examen "${exam.titulo}"? Esta acción no se puede deshacer.`)) {
+                            const updated = submissions.filter(s => s.examenId !== exam.id);
+                            onUpdateSubmissions(updated);
+                            toast(`Se han eliminado las entregas para el examen "${exam.titulo}"`, 'success');
+                          }
+                        }}
+                        className="px-2.5 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-rose-100 hover:border-rose-300 rounded-lg text-xs font-extrabold flex items-center gap-1 cursor-pointer transition animate-fade-in"
+                        title="Eliminar historial completo de este examen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Limpiar entregas</span>
+                      </button>
+                    )}
+                    <span className={`inline-flex px-2 py-0.5 text-xs font-bold border rounded-full ${
+                      exam.estado === 'activo' 
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-100' 
+                        : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}>
+                      {exam.estado}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Score Stats boxes */}
@@ -244,12 +434,29 @@ export default function Resultados({
                                 {fmtDate(s.fecha)} {fmtTime(s.fecha)}
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <button 
-                                  onClick={() => handleOpenGradingModal(s.id)}
-                                  className="btn btn-secondary text-xs px-2.5 py-1 rounded border hover:bg-slate-50"
-                                >
-                                  Ver respuestas
-                                </button>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button 
+                                    onClick={() => handleOpenGradingModal(s.id)}
+                                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-705 text-xs font-bold rounded-lg transition duration-150 cursor-pointer"
+                                  >
+                                    Ver respuestas
+                                  </button>
+                                  {currentUser.rol === 'admin' && showDangerZone && (
+                                    <button 
+                                      onClick={() => {
+                                        if (window.confirm(`¿Seguro que deseas eliminar el intento de ${stName}? Esta acción no se puede deshacer.`)) {
+                                          const updated = submissions.filter(sub => sub.id !== s.id);
+                                          onUpdateSubmissions(updated);
+                                          toast(`Intento de ${stName} eliminado con éxito`, 'success');
+                                        }
+                                      }}
+                                      className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-transparent hover:border-rose-105 rounded-lg transition cursor-pointer"
+                                      title="Eliminar este intento"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -261,6 +468,33 @@ export default function Resultados({
               </div>
             );
           })}
+
+          {myExams.length > 4 && (
+            <div className="flex items-center justify-between p-4.5 rounded-2xl border border-slate-200 bg-white shadow-sm theme-bg-surface theme-border">
+              <span className="text-xs font-semibold text-slate-400">
+                Mostrando { (currentActivePage - 1) * 4 + 1 } a { Math.min(currentActivePage * 4, myExams.length) } de { myExams.length } evaluaciones
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-500 mr-2">
+                  Página {currentActivePage} de {totalPages}
+                </span>
+                <button
+                  disabled={currentActivePage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                >
+                  Anterior
+                </button>
+                <button
+                  disabled={currentActivePage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -321,25 +555,164 @@ export default function Resultados({
                   const studentAns = activeSub.respuestas[q.id];
                   let isCorrect: boolean | null = null;
                   let readableAnsText = '';
+                  let matchingDetails: { enunciado: string; correctTerm: string; studentTerm: string; isItemCorrect: boolean }[] = [];
+                  let tableDetails: { filaIdx: number; colIdx: number; colName: string; correctTerm: string; studentTerm: string; isItemCorrect: boolean }[] = [];
 
                   if (q.tipo === 'abierta') {
                     readableAnsText = studentAns || 'Sin respuesta';
                   } else if (q.tipo === 'multiple' || q.tipo === 'tf' || q.tipo === 'dropdown') {
                     const idx = Number(studentAns);
                     isCorrect = q.correctas.includes(idx);
-                    readableAnsText = q.opciones[idx] || 'Sin respuesta';
+                    readableAnsText = (q.tipo === 'tf' ? ['Verdadero', 'Falso'][idx] : q.opciones[idx]) || 'Sin respuesta';
                   } else if (q.tipo === 'checkbox') {
                     const selected = studentAns || [];
                     isCorrect = JSON.stringify([...selected].sort()) === JSON.stringify([...q.correctas].sort());
                     readableAnsText = selected.map((s: number) => q.opciones[s]).join(', ') || 'Sin respuesta';
                   } else if (q.tipo === 'escala') {
                     readableAnsText = studentAns ? `Puntaje: ${studentAns}` : 'Sin responder';
+                  } else if (q.tipo === 'matching') {
+                    const userMatchedObj = studentAns || {};
+                    const matchesList = q.matchCorrectos || [];
+                    const enunciadosList = q.enunciados || [];
+                    let correctCountMatches = 0;
+
+                    matchingDetails = enunciadosList.map((enun, eIdx) => {
+                      const correctIdx = matchesList[eIdx];
+                      const studentIdx = userMatchedObj[eIdx];
+                      const correctTerm = q.opciones[correctIdx] || '—';
+                      const studentTerm = studentIdx !== undefined && studentIdx !== '' ? q.opciones[studentIdx] : 'Sin responder';
+                      const isItemCorrect = studentIdx !== undefined && studentIdx !== '' && Number(studentIdx) === Number(correctIdx);
+                      if (isItemCorrect) correctCountMatches++;
+                      return { enunciado: enun, correctTerm, studentTerm, isItemCorrect };
+                    });
+
+                    isCorrect = correctCountMatches === enunciadosList.length;
+                    readableAnsText = `${correctCountMatches} de ${enunciadosList.length} correctas`;
+                  } else if (q.tipo === 'table') {
+                    const userAnswersObj = studentAns || {};
+                    let totalBlanksCount = 0;
+                    let correctBlanksCount = 0;
+
+                    // Group all valid options allowed for each column
+                    const allowedByCol: Record<number, number[]> = {};
+                    (q.tableRows || []).forEach((row) => {
+                      row.cells.forEach((cell, cIdx) => {
+                        if (cell.tipo === 'blank') {
+                          if (!allowedByCol[cIdx]) allowedByCol[cIdx] = [];
+                          allowedByCol[cIdx].push(cell.correctOptionIdx ?? 0);
+                        }
+                      });
+                    });
+
+                    // Track used ones per column to avoid duplicate scoring
+                    const consumedByCol: Record<number, number[]> = {};
+
+                    (q.tableRows || []).forEach((row, rIdx) => {
+                      row.cells.forEach((cell, cIdx) => {
+                        if (cell.tipo === 'blank') {
+                          totalBlanksCount++;
+                          const colName = (q.columnas || [])[cIdx] || `Columna ${cIdx + 1}`;
+                          const correctIdx = cell.correctOptionIdx ?? 0;
+                          const studentIdx = userAnswersObj[`${rIdx}-${cIdx}`];
+                          const correctTerm = q.opciones[correctIdx] || '—';
+                          const studentTerm = studentIdx !== undefined && studentIdx !== '' ? q.opciones[studentIdx] : 'Sin responder';
+                          
+                          let isItemCorrect = false;
+                          if (studentIdx !== undefined && studentIdx !== '') {
+                            const sVal = Number(studentIdx);
+                            const allowed = allowedByCol[cIdx] || [];
+                            const consumed = consumedByCol[cIdx] || [];
+                            const allowCount = allowed.filter(v => v === sVal).length;
+                            const consumeCount = consumed.filter(v => v === sVal).length;
+                            if (allowCount > consumeCount) {
+                              if (!consumedByCol[cIdx]) consumedByCol[cIdx] = [];
+                              consumedByCol[cIdx].push(sVal);
+                              isItemCorrect = true;
+                              correctBlanksCount++;
+                            }
+                          }
+
+                          tableDetails.push({
+                            filaIdx: rIdx,
+                            colIdx: cIdx,
+                            colName,
+                            correctTerm,
+                            studentTerm,
+                            isItemCorrect
+                          });
+                        }
+                      });
+                    });
+
+                    isCorrect = totalBlanksCount > 0 && correctBlanksCount === totalBlanksCount;
+                    readableAnsText = `${correctBlanksCount} de ${totalBlanksCount} correctas`;
                   }
 
                   const isTextGraded = q.tipo === 'abierta' || q.tipo === 'escala';
                   const earnedPoints = isTextGraded 
                     ? (manualScores[q.id] !== undefined ? manualScores[q.id] : 0) 
-                    : (isCorrect ? q.puntos : 0);
+                    : (q.tipo === 'matching' 
+                        ? (() => {
+                          const userMatchedObj = studentAns || {};
+                          const matchesList = q.matchCorrectos || [];
+                          const enunciadosList = q.enunciados || [];
+                          let matchesCorrectSum = 0;
+                          enunciadosList.forEach((_, eIdx) => {
+                            const userVal = userMatchedObj[eIdx];
+                            const correctVal = matchesList[eIdx];
+                            if (userVal !== undefined && userVal !== '' && Number(userVal) === Number(correctVal)) {
+                              matchesCorrectSum++;
+                            }
+                          });
+                          const fraction = enunciadosList.length > 0 ? (matchesCorrectSum / enunciadosList.length) : 0;
+                          return Math.round(q.puntos * fraction);
+                        })()
+                        : (q.tipo === 'table'
+                            ? (() => {
+                              const userAnswersObj = studentAns || {};
+                              let totalBlanksCount = 0;
+                              let correctBlanksCount = 0;
+
+                              const colBlanksConfig: Record<number, number[]> = {};
+                              const colBlanksStudentAnswers: Record<number, number[]> = {};
+
+                              (q.tableRows || []).forEach((row, rIdx) => {
+                                row.cells.forEach((cell, cIdx) => {
+                                  if (cell.tipo === 'blank') {
+                                    totalBlanksCount++;
+                                    const correctVal = cell.correctOptionIdx ?? 0;
+                                    if (!colBlanksConfig[cIdx]) colBlanksConfig[cIdx] = [];
+                                    colBlanksConfig[cIdx].push(correctVal);
+
+                                    const userVal = userAnswersObj[`${rIdx}-${cIdx}`];
+                                    if (userVal !== undefined && userVal !== '') {
+                                      if (!colBlanksStudentAnswers[cIdx]) colBlanksStudentAnswers[cIdx] = [];
+                                      colBlanksStudentAnswers[cIdx].push(Number(userVal));
+                                    }
+                                  }
+                                });
+                              });
+
+                              Object.keys(colBlanksConfig).forEach((keyStr) => {
+                                const cIdx = Number(keyStr);
+                                const allowed = [...colBlanksConfig[cIdx]];
+                                const studentAnswers = colBlanksStudentAnswers[cIdx] || [];
+
+                                studentAnswers.forEach((val) => {
+                                  const indexInAllowed = allowed.indexOf(val);
+                                  if (indexInAllowed !== -1) {
+                                    correctBlanksCount++;
+                                    allowed.splice(indexInAllowed, 1);
+                                  }
+                                });
+                              });
+
+                              const fraction = totalBlanksCount > 0 ? (correctBlanksCount / totalBlanksCount) : 0;
+                              return Math.round(q.puntos * fraction);
+                            })()
+                            : (isCorrect ? q.puntos : 0)
+                          )
+                      );
 
                   const bannerBg = isTextGraded 
                     ? 'bg-slate-50 border-slate-205'
@@ -358,7 +731,7 @@ export default function Resultados({
                         <span className="font-bold text-indigo-700">Puntos: {earnedPoints} / {q.puntos}</span>
                       </div>
                       
-                      <p className="font-bold text-slate-900 leading-snug mb-2.5">{q.texto}</p>
+                      <p className="font-bold text-slate-900 leading-snug mb-2.5 whitespace-pre-wrap">{q.texto}</p>
                       
                       <div className="flex items-start gap-1 p-2 bg-white rounded border border-slate-100 mt-2 font-medium">
                         {isTextGraded ? (
@@ -368,11 +741,93 @@ export default function Resultados({
                         ) : (
                           <span className="text-rose-600 font-bold mr-1">❌</span>
                         )}
-                        <span className="flex-1 italic">{readableAnsText}</span>
+                        <span className="flex-1 italic whitespace-pre-wrap">{readableAnsText}</span>
                       </div>
 
+                      {/* If matching question, present a detailed side-by-side matches breakdown */}
+                      {q.tipo === 'matching' && matchingDetails.length > 0 && (
+                        <div className="mt-3 space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/20 dark:border-slate-800">
+                          <div className="text-[10px] font-extrabold text-slate-400 dark:text-slate-505 uppercase tracking-wide mb-2.5 block text-left">
+                            Análisis de Relación de Conceptos:
+                          </div>
+                          <div className="space-y-1.5">
+                            {matchingDetails.map((item, itemIdx) => (
+                              <div 
+                                key={itemIdx} 
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-3 p-2.5 rounded-lg border bg-white shadow-sm font-medium text-left transition ${
+                                  item.isItemCorrect 
+                                    ? 'border-emerald-100 dark:border-emerald-900/30' 
+                                    : 'border-rose-100 dark:border-rose-950/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-1.5 flex-1 min-w-0">
+                                  <span className="text-slate-400 font-extrabold shrink-0">{itemIdx + 1}.</span>
+                                  <span className="text-slate-700 dark:text-slate-200 font-semibold whitespace-pre-wrap">{item.enunciado}</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                                    item.isItemCorrect 
+                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' 
+                                      : 'bg-rose-55 text-rose-700 dark:bg-rose-950/40 dark:text-rose-405'
+                                  }`}>
+                                    Elegiste: {item.studentTerm}
+                                  </span>
+                                  {!item.isItemCorrect && (
+                                    <span className="text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">
+                                      Correcta: {item.correctTerm}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* If table question, present a detailed side-by-side matches breakdown */}
+                      {q.tipo === 'table' && tableDetails.length > 0 && (
+                        <div className="mt-3 space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/20 dark:border-slate-800">
+                          <div className="text-[10px] font-extrabold text-slate-400 dark:text-slate-505 uppercase tracking-wide mb-2.5 block text-left">
+                            Análisis de Respuestas en la Tabla:
+                          </div>
+                          <div className="space-y-1.5">
+                            {tableDetails.map((item, itemIdx) => (
+                              <div 
+                                key={itemIdx} 
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-3 p-2.5 rounded-lg border bg-white shadow-sm font-medium text-left transition ${
+                                  item.isItemCorrect 
+                                    ? 'border-emerald-100 dark:border-emerald-900/30' 
+                                    : 'border-rose-100 dark:border-rose-950/30'
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-slate-400 font-extrabold shrink-s mr-1.5 text-[10px]">Espacio {itemIdx + 1}:</span>
+                                  <span className="text-slate-705 dark:text-slate-300">
+                                    Fila {item.filaIdx + 1} · Columna <span className="text-indigo-600 font-bold dark:text-cyan-400">{item.colName}</span>
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                                    item.isItemCorrect 
+                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' 
+                                      : 'bg-rose-55 text-rose-700 dark:bg-rose-950/40 dark:text-rose-405'
+                                  }`}>
+                                    Pusiste: {item.studentTerm}
+                                  </span>
+                                  {!item.isItemCorrect && (
+                                    <span className="text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">
+                                      Correcta: {item.correctTerm}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Expected correct options if wrong */}
-                      {!isTextGraded && isCorrect === false && (
+                      {!isTextGraded && q.tipo !== 'matching' && q.tipo !== 'table' && isCorrect === false && (
                         <div className="mt-2 text-[10px] text-emerald-600 font-bold">
                           ✓ Correcta: {q.correctas.map(idx => q.opciones[idx]).join(' + ')}
                         </div>

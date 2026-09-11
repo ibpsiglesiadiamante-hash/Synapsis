@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { FileSpreadsheet, Plus, Trash2, Edit2, Search, UserCheck, AlertCircle, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { User, Subject, Parcial, GradeRecord } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
+import { SearchableSelect } from './SearchableSelect';
 
 interface RegistroNotasProps {
   gradeRecords: GradeRecord[];
@@ -15,11 +16,22 @@ interface RegistroNotasProps {
   parciales: Parcial[];
   onUpdateGradeRecords: (updated: GradeRecord[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  currentUser?: User;
 }
 
 export default function RegistroNotas({ 
-  gradeRecords, users, subjects, parciales, onUpdateGradeRecords, toast 
+  gradeRecords, users, subjects, parciales, onUpdateGradeRecords, toast, currentUser 
 }: RegistroNotasProps) {
+  const isTeacher = currentUser?.rol === 'docente';
+  const allMyUserIds = (users && currentUser)
+    ? users.filter(u => u.nombre === currentUser.nombre || u.email.toLowerCase() === currentUser.email.toLowerCase()).map(u => u.id)
+    : (currentUser ? [currentUser.id] : []);
+
+  const teacherSubjects = isTeacher 
+    ? subjects.filter(s => (s.docenteId && allMyUserIds.includes(s.docenteId)) || currentUser?.asignaturas?.includes(s.id))
+    : subjects;
+  const teacherSubjectIds = teacherSubjects.map(s => s.id);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -41,13 +53,20 @@ export default function RegistroNotas({
 
   const estudiantes = users.filter(u => u.rol === 'estudiante');
 
-  const filteredRecords = gradeRecords.filter(r => {
-    const student = users.find(u => u.id === r.estudianteId);
-    const sub = subjects.find(s => s.id === r.asignaturaId);
-    const matchQuery = (student?.nombre || '').toLowerCase().includes(query.toLowerCase()) || 
-                       (sub?.nombre || '').toLowerCase().includes(query.toLowerCase());
-    return matchQuery;
-  });
+  const filteredRecords = gradeRecords
+    .filter(r => {
+      if (isTeacher) {
+        return teacherSubjectIds.includes(r.asignaturaId);
+      }
+      return true;
+    })
+    .filter(r => {
+      const student = users.find(u => u.id === r.estudianteId);
+      const sub = subjects.find(s => s.id === r.asignaturaId);
+      const matchQuery = (student?.nombre || '').toLowerCase().includes(query.toLowerCase()) || 
+                         (sub?.nombre || '').toLowerCase().includes(query.toLowerCase());
+      return matchQuery;
+    });
 
   // Pagination states & calculations
   const itemsPerPage = 8;
@@ -60,10 +79,10 @@ export default function RegistroNotas({
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setEstudianteId(estudiantes[0]?.id || '');
-    const firstSubId = subjects[0]?.id || '';
+    const firstSubId = teacherSubjects[0]?.id || '';
     setAsignaturaId(firstSubId);
     
-    const matchingParcs = parciales.filter(p => p.asignatura === firstSubId);
+    const matchingParcs = firstSubId ? parciales.filter(p => p.asignatura === firstSubId) : [];
     setParcialId(matchingParcs[0]?.id || '');
     
     setNotaEV1(3.0);
@@ -306,10 +325,10 @@ export default function RegistroNotas({
                           >
                             {avatarLetter(stName)}
                           </div>
-                          <span className="text-slate-805 font-bold" style={{ color: 'var(--gray-900)' }}>{stName}</span>
+                          <span className="text-slate-800 font-bold" style={{ color: 'var(--gray-900)' }}>{stName}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-xs font-bold text-indigo-705">
+                      <td className="py-4 px-4 text-xs font-bold text-indigo-700">
                         {sub ? sub.nombre : '—'}
                       </td>
                       <td className="py-4 px-4 text-xs text-slate-500">
@@ -436,42 +455,43 @@ export default function RegistroNotas({
               <h3 className="modal-title font-bold text-slate-900 border-none">
                 {editingId ? 'Editar calificación' : 'Registrar calificación'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="modal-close hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-705 transition">✕</button>
+              <button onClick={() => setIsModalOpen(false)} className="modal-close hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition">✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="modal-body p-5 space-y-4">
               <div className="form-group flex flex-col">
                 <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Seleccionar estudiante <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
+                  options={estudiantes.map(e => ({
+                    value: e.id,
+                    label: e.nombre,
+                    subLabel: e.email
+                  }))}
                   value={estudianteId}
-                  onChange={e => setEstudianteId(e.target.value)}
-                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-600 bg-white cursor-pointer"
-                >
-                  <option value="">-- Escoger estudiante --</option>
-                  {estudiantes.map(e => (
-                    <option key={e.id} value={e.id}>{e.nombre} ({e.email})</option>
-                  ))}
-                </select>
+                  onChange={val => setEstudianteId(val)}
+                  placeholder="-- Escoger estudiante --"
+                  id="grade-student-select"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group flex flex-col">
                   <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Asignatura <span className="text-red-500">*</span></label>
-                  <select
+                  <SearchableSelect
+                    options={teacherSubjects.map(s => ({
+                      value: s.id,
+                      label: s.nombre,
+                      subLabel: s.codigo ? `Código: ${s.codigo}` : undefined
+                    }))}
                     value={asignaturaId}
-                    onChange={e => {
-                      const selSubId = e.target.value;
-                      setAsignaturaId(selSubId);
-                      const filtered = parciales.filter(p => p.asignatura === selSubId);
+                    onChange={val => {
+                      setAsignaturaId(val);
+                      const filtered = parciales.filter(p => p.asignatura === val);
                       setParcialId(filtered[0]?.id || '');
                     }}
-                    className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-600 bg-white cursor-pointer"
-                  >
-                    <option value="">-- Escoger materia --</option>
-                    {subjects.map(s => (
-                      <option key={s.id} value={s.id}>{s.nombre}</option>
-                    ))}
-                  </select>
+                    placeholder="-- Escoger materia --"
+                    id="grade-subject-select"
+                  />
                 </div>
                 <div className="form-group flex flex-col">
                   <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Parcial / Corte <span className="text-red-500">*</span></label>
@@ -490,7 +510,7 @@ export default function RegistroNotas({
               </div>
 
               <div className="space-y-4 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <span className="text-[10px] font-black text-indigo-750 uppercase tracking-widest block mb-2 font-sans">Componentes de Calificación</span>
+                <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest block mb-2 font-sans">Componentes de Calificación</span>
                 
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="form-group flex flex-col">

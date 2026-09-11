@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout } from 'lucide-react';
+import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout, QrCode, Share2, RefreshCw, Cloud } from 'lucide-react';
 import { User } from '../types';
 import { avatarColor, avatarLetter } from '../lib/db';
 import { bioCosmicSynth } from '../lib/audioEngine';
@@ -16,6 +16,9 @@ interface HeaderProps {
   onLogout: () => void;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  onOpenShareModal?: () => void;
+  onSyncFirebase?: () => void;
+  isSyncing?: boolean;
 }
 
 export default function Header({ 
@@ -24,7 +27,10 @@ export default function Header({
   onThemeChange, 
   onLogout,
   sidebarOpen,
-  onToggleSidebar
+  onToggleSidebar,
+  onOpenShareModal,
+  onSyncFirebase,
+  isSyncing = false
 }: HeaderProps) {
   const roleLabel = {
     admin: 'Administrador',
@@ -71,7 +77,7 @@ export default function Header({
 
       <div className="flex items-center gap-3">
         {/* Bio-Cosmic Soundscapes Panel */}
-        {theme === 'theme-cosmos' && (
+        {theme === 'theme-cyber' && (
           <button
             onClick={handleToggleMusic}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold select-none transition-all duration-300 shadow-sm cursor-pointer ${
@@ -82,7 +88,7 @@ export default function Header({
             style={{
               boxShadow: isMusicPlaying ? '0 0 8px rgba(16, 185, 129, 0.25)' : 'none'
             }}
-            title={isMusicPlaying ? 'Silenciar sintonía del cosmos' : 'Activar sintonía relajante del cosmos'}
+            title={isMusicPlaying ? 'Silenciar sintonía cyber' : 'Activar sintonía cyber matrix'}
           >
             {isMusicPlaying ? (
               <Volume2 className="w-3.5 h-3.5 animate-bounce" />
@@ -91,27 +97,52 @@ export default function Header({
             )}
             <span className="hidden md:flex items-center gap-1 font-medium font-sans">
               <Sparkles className="w-3 h-3 text-cyan-400" />
-              <span>Sintonía Cósmica</span>
+              <span>Sintonía Cyber</span>
             </span>
           </button>
         )}
 
-        {/* Theme Selector */}
+        {/* Quick QR & Short URL Share Button */}
+        {onOpenShareModal && (
+          <button
+            type="button"
+            onClick={onOpenShareModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            title="Ver enlace oficial synapsis-edu.web.app y código QR"
+          >
+            <QrCode className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Enlace & QR</span>
+          </button>
+        )}
+
+        {/* Firebase Synchronization Status & Trigger */}
+        {onSyncFirebase && (
+          <button
+            type="button"
+            onClick={onSyncFirebase}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60"
+            title="Sincronizar datos con Firebase (ai-studio-applet-webapp)"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Firebase'}</span>
+          </button>
+        )}
+
+        {/* Theme Selector - Exclusively Two Themes */}
         <div className="relative">
           <select
             id="themeSelector"
             value={theme}
             onChange={(e) => onThemeChange(e.target.value)}
-            className="form-control text-sm pr-8 pl-3 py-1.5 rounded-lg border border-slate-200 outline-none cursor-pointer text-slate-700 bg-white"
+            className="form-control text-sm pr-8 pl-3 py-1.5 rounded-lg border border-slate-200 outline-none cursor-pointer text-slate-700 bg-white font-medium"
             style={{
               borderColor: 'var(--gray-200)',
               color: 'var(--gray-700)',
             }}
           >
-            <option value="theme-default">Tema: Predeterminado</option>
-            <option value="theme-gray">Tema: Gris profesional</option>
-            <option value="theme-blue">Tema: Azul profesional</option>
-            <option value="theme-cosmos">Tema: Cosmos & Naturaleza 🪐</option>
+            <option value="theme-academia">🏛 Academia Clásica (Gris Slate Medio-Oscuro)</option>
+            <option value="theme-cyber">⚡ Cyber Matrix (Cuadrícula Neón)</option>
           </select>
         </div>
 

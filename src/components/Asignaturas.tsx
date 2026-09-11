@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, BookOpen, GraduationCap, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, BookOpen, GraduationCap, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Subject, User } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
 
@@ -25,13 +25,29 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
   const [docenteId, setDocenteId] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Pagination states & calculations
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter subjects based on search query
+  const filteredSubjects = subjects.filter(sub => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const doc = users.find(u => u.id === sub.docenteId);
+    const docName = doc ? doc.nombre : '';
+    return (
+      sub.nombre.toLowerCase().includes(q) ||
+      (sub.codigo || '').toLowerCase().includes(q) ||
+      docName.toLowerCase().includes(q)
+    );
+  });
+
+  // Pagination states & calculations based on filtered list
   const itemsPerPage = 7;
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(subjects.length / itemsPerPage) || 1;
+  const totalPages = Math.ceil(filteredSubjects.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;
 
-  const currentSubjects = subjects.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+  const currentSubjects = filteredSubjects.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
   const docentes = users.filter(u => u.rol === 'docente' || u.rol === 'admin');
 
@@ -115,12 +131,51 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
         </button>
       </div>
 
+      {/* Caja de Búsqueda de Asignaturas */}
+      <div className="mb-6 flex flex-col md:flex-row items-center gap-4 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border justify-between">
+        <div className="relative w-full md:max-w-md flex-1">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+            <Search className="w-4 h-4" />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Buscar por nombre de asignatura, código o docente..."
+            className="w-full pl-10 pr-9 py-2.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-800 transition duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-150"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer font-extrabold select-none text-xs transition"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 self-start md:self-auto text-xs font-semibold text-slate-500 bg-slate-50/70 py-1.5 px-3 rounded-lg border border-slate-100 select-none">
+          <span>Materias encontradas: </span>
+          <span className="font-extrabold text-indigo-700">{filteredSubjects.length}</span>
+        </div>
+      </div>
+
       <div className="card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden theme-bg-surface theme-border">
-        {subjects.length === 0 ? (
+        {filteredSubjects.length === 0 ? (
           <div className="empty py-12 text-center text-slate-500 flex flex-col items-center">
             <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
-            <h4 className="font-bold text-slate-750">No hay asignaturas en el catálogo</h4>
-            <button onClick={handleOpenCreateModal} className="text-xs text-indigo-600 hover:underline mt-2">Crear la primera materia ahora</button>
+            <h4 className="font-bold text-slate-750">
+              {searchQuery ? 'No se encontraron materias' : 'No hay asignaturas en el catálogo'}
+            </h4>
+            <p className="text-xs text-slate-400 mt-1">
+              {searchQuery ? 'Prueba cambiando los términos de búsqueda o registrando una nueva materia.' : 'Crea la primera materia utilizando el botón superior.'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto w-full">
@@ -205,14 +260,14 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
               </tbody>
             </table>
 
-            {subjects.length > itemsPerPage && (
+            {filteredSubjects.length > itemsPerPage && (
               <div className="px-4 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3 theme-bg-surface">
                 <div className="text-xs text-slate-500 select-none">
                   Mostrando <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{((activePage - 1) * itemsPerPage) + 1}</span> a{' '}
                   <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>
-                    {Math.min(activePage * itemsPerPage, subjects.length)}
+                    {Math.min(activePage * itemsPerPage, filteredSubjects.length)}
                   </span>{' '}
-                  de <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{subjects.length}</span> asignaturas
+                  de <span className="font-semibold" style={{ color: 'var(--gray-900)' }}>{filteredSubjects.length}</span> asignaturas
                 </div>
                 <div className="flex items-center gap-1.5 font-sans">
                   <button

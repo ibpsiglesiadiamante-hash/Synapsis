@@ -12,7 +12,15 @@ import {
   LogOut, 
   Menu, 
   Sparkles,
-  School
+  School,
+  ChevronRight,
+  QrCode,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  ArrowRight,
+  BookOpen,
+  Globe
 } from 'lucide-react';
 
 import { 
@@ -24,21 +32,25 @@ import {
   Semester, 
   Parcial, 
   GradeRecord, 
-  Assignment 
+  Assignment,
+  AssignmentSubmission
 } from './types';
 
 import { 
   getInitialState, 
   saveState, 
   avatarColor, 
-  avatarLetter 
+  avatarLetter,
+  mergeStates
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
   fetchFullStateFromFirestore, 
   seedFirestore, 
   syncToFirestore, 
-  initializeSyncCache 
+  initializeSyncCache,
+  fullBidirectionalSync,
+  registerDeletedId
 } from './lib/firebase';
 
 import Header from './components/Header';
@@ -64,6 +76,9 @@ import Boletines from './components/Boletines';
 import Agenda from './components/Agenda';
 import Tablon from './components/Tablon';
 import Finanzas from './components/Finanzas';
+import Educativo from './components/Educativo';
+import Biblia from './components/Biblia';
+import ShareAppModal from './components/ShareAppModal';
 
 export default function App() {
   // Database States
@@ -78,14 +93,18 @@ export default function App() {
         const remoteDb = await fetchFullStateFromFirestore();
         if (remoteDb) {
           console.log('Successfully loaded state from Cloud Firestore.');
-          setDb(remoteDb);
-          initializeSyncCache(remoteDb);
+          const localDb = getInitialState();
+          const mergedDb = mergeStates(localDb, remoteDb);
+          setDb(mergedDb);
+          saveState(mergedDb);
+          initializeSyncCache(mergedDb);
         } else {
           // No remote database found, let's seed with current default list
           console.log('Firestore dataset is empty. Writing initial educational seed...');
           const localSeed = getInitialState();
           await seedFirestore(localSeed);
           setDb(localSeed);
+          saveState(localSeed);
           initializeSyncCache(localSeed);
         }
       } catch (err) {
@@ -107,28 +126,66 @@ export default function App() {
   });
 
   // UI States
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<'theme-default' | 'theme-gray' | 'theme-blue' | 'theme-cosmos'>(() => {
-    const saved = localStorage.getItem('synapsis-theme');
-    return (saved as 'theme-default' | 'theme-gray' | 'theme-blue' | 'theme-cosmos') || 'theme-default';
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    return localStorage.getItem('synapsis_activeTab') || 'dashboard';
+  });
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('synapsis_sidebarOpen');
+    return saved !== null ? saved === 'true' : true;
   });
 
-  // Automatically start bio-cosmic soundtrack when theme is theme-cosmos under interaction bounds, or mute otherwise
   useEffect(() => {
-    if (theme === 'theme-cosmos') {
-      bioCosmicSynth.togglePlay(true);
-    } else {
+    localStorage.setItem('synapsis_sidebarOpen', String(sidebarOpen));
+  }, [sidebarOpen]);
+
+  const [theme, setTheme] = useState<'theme-academia' | 'theme-cyber'>(() => {
+    const saved = localStorage.getItem('synapsis-theme');
+    if (saved === 'theme-cyber' || saved === 'theme-cosmos' || saved === 'theme-cosmos-contraste') {
+      return 'theme-cyber';
+    }
+    return 'theme-academia';
+  });
+
+  // Automatically manage ambient soundtrack when theme changes
+  useEffect(() => {
+    if (theme !== 'theme-cyber') {
       bioCosmicSynth.togglePlay(false);
     }
   }, [theme]);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
-  const [activeTakeExamId, setActiveTakeExamId] = useState<string | null>(null);
-  const [activeEditExamId, setActiveEditExamId] = useState<string | null>(null);
+  const [activeTakeExamId, setActiveTakeExamId] = useState<string | null>(() => {
+    return localStorage.getItem('synapsis_activeTakeExamId');
+  });
+  const [activeEditExamId, setActiveEditExamId] = useState<string | null>(() => {
+    return localStorage.getItem('synapsis_activeEditExamId');
+  });
 
   // Login form states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Persist current active tab and active exam actions
+  useEffect(() => {
+    localStorage.setItem('synapsis_activeTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTakeExamId) {
+      localStorage.setItem('synapsis_activeTakeExamId', activeTakeExamId);
+    } else {
+      localStorage.removeItem('synapsis_activeTakeExamId');
+    }
+  }, [activeTakeExamId]);
+
+  useEffect(() => {
+    if (activeEditExamId) {
+      localStorage.setItem('synapsis_activeEditExamId', activeEditExamId);
+    } else {
+      localStorage.removeItem('synapsis_activeEditExamId');
+    }
+  }, [activeEditExamId]);
 
   // Persist DB state changes to local storage & Cloud Firestore
   useEffect(() => {
@@ -146,14 +203,38 @@ export default function App() {
   // Adjust theme class on html/body element
   useEffect(() => {
     document.body.className = `${theme} font-sans min-h-screen transition-all duration-200`;
+    document.documentElement.className = theme;
   }, [theme]);
 
   // Quick helper toast
-  const showToast = (msg: string, type: 'success' | 'error' | 'warning') => {
+  const showToast = (msg: string, type: 'success' | 'error' | 'warning' | 'info') => {
     setToast({ msg, type });
     setTimeout(() => {
       setToast(null);
-    }, 3800);
+    }, 4200);
+  };
+
+  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+
+  const handleManualSync = async () => {
+    setIsSyncingFirebase(true);
+    try {
+      showToast('Sincronizando datos con Cloud Firestore...', 'info');
+      const result = await fullBidirectionalSync(db);
+      if (result && result.success) {
+        setDb(result.mergedState);
+        showToast(`¡Sincronización exitosa! ${result.pushedCount} registros sincronizados con Firebase.`, 'success');
+        return result;
+      } else {
+        showToast('Aviso de sincronización: los datos continúan seguros localmente.', 'warning');
+        return result;
+      }
+    } catch (err) {
+      console.error('Manual sync failed', err);
+      showToast('Error en la sincronización con Firebase.', 'error');
+    } finally {
+      setIsSyncingFirebase(false);
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -161,7 +242,15 @@ export default function App() {
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPass = loginPass.trim();
 
-    let matchedUser = db.users.find(u => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
+    let matchedUser = db.users.find(u => {
+      const userEmail = (u.email || '').trim().toLowerCase();
+      const userCode = (u.codigo || u.id.substring(0, 4)).trim().toLowerCase();
+      const passMatch = u.pass === cleanPass || 
+                        (u.pass || '').toLowerCase() === cleanPass.toLowerCase() || 
+                        userCode === cleanPass.toLowerCase();
+      return (userEmail === cleanEmail || userCode === cleanEmail) && passMatch;
+    });
+
     if (!matchedUser) {
       // Fallback self-healing system for demonstration/seed users
       const defaultUsers: User[] = [
@@ -170,7 +259,14 @@ export default function App() {
         { id: 'estudiante1-fallback-id', nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
         { id: 'estudiante2-fallback-id', nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
       ];
-      const fallbackUser = defaultUsers.find(u => u.email.toLowerCase() === cleanEmail && u.pass === cleanPass);
+      const fallbackUser = defaultUsers.find(u => {
+        const userEmail = (u.email || '').trim().toLowerCase();
+        const userCode = u.id.substring(0, 4).trim().toLowerCase();
+        const passMatch = u.pass === cleanPass || 
+                          (u.pass || '').toLowerCase() === cleanPass.toLowerCase() || 
+                          userCode === cleanPass.toLowerCase();
+        return (userEmail === cleanEmail || userCode === cleanEmail) && passMatch;
+      });
       if (fallbackUser) {
         matchedUser = fallbackUser;
         updateUsers([...db.users, fallbackUser]);
@@ -178,7 +274,7 @@ export default function App() {
     }
 
     if (!matchedUser) {
-      showToast('Credenciales incorrectas. Verifica el correo y la contraseña.', 'error');
+      showToast('Credenciales incorrectas. Verifica tu correo/código y contraseña.', 'error');
       return;
     }
 
@@ -233,16 +329,76 @@ export default function App() {
     showToast('Sesión cerrada correctamente', 'success');
   };
 
-  // State Updates proxies to keep master DB in sync
-  const updateUsers = (next: User[]) => setDb(prev => ({ ...prev, users: next }));
-  const updateInstitutions = (next: Institution[]) => setDb(prev => ({ ...prev, institutions: next }));
-  const updateSubjects = (next: Subject[]) => setDb(prev => ({ ...prev, subjects: next }));
-  const updateSemesters = (next: Semester[]) => setDb(prev => ({ ...prev, semesters: next }));
-  const updateParciales = (next: Parcial[]) => setDb(prev => ({ ...prev, parciales: next }));
-  const updateExams = (next: Exam[]) => setDb(prev => ({ ...prev, exams: next }));
-  const updateSubmissions = (next: Submission[]) => setDb(prev => ({ ...prev, submissions: next }));
-  const updateGradeRecords = (next: GradeRecord[]) => setDb(prev => ({ ...prev, gradeRecords: next }));
-  const updateAssignments = (next: Assignment[]) => setDb(prev => ({ ...prev, assignments: next }));
+  // State Updates proxies to keep master DB and Firestore in sync, permanently registering any deletions
+  const syncDeletions = <T extends { id: string }>(collName: string, previousList: T[] = [], newList: T[] = []) => {
+    const newIds = new Set(newList.map(item => item.id));
+    previousList.forEach(item => {
+      if (item && item.id && !newIds.has(item.id)) {
+        registerDeletedId(item.id, collName);
+      }
+    });
+  };
+
+  const updateUsers = (next: User[]) => setDb(prev => {
+    syncDeletions('users', prev.users, next);
+    const updated = { ...prev, users: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateInstitutions = (next: Institution[]) => setDb(prev => {
+    syncDeletions('institutions', prev.institutions, next);
+    const updated = { ...prev, institutions: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateSubjects = (next: Subject[]) => setDb(prev => {
+    syncDeletions('subjects', prev.subjects, next);
+    const updated = { ...prev, subjects: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateSemesters = (next: Semester[]) => setDb(prev => {
+    syncDeletions('semesters', prev.semesters, next);
+    const updated = { ...prev, semesters: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateParciales = (next: Parcial[]) => setDb(prev => {
+    syncDeletions('parciales', prev.parciales, next);
+    const updated = { ...prev, parciales: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateExams = (next: Exam[]) => setDb(prev => {
+    syncDeletions('exams', prev.exams, next);
+    const updated = { ...prev, exams: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateSubmissions = (next: Submission[]) => setDb(prev => {
+    syncDeletions('submissions', prev.submissions, next);
+    const updated = { ...prev, submissions: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateGradeRecords = (next: GradeRecord[]) => setDb(prev => {
+    syncDeletions('gradeRecords', prev.gradeRecords, next);
+    const updated = { ...prev, gradeRecords: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateAssignments = (next: Assignment[]) => setDb(prev => {
+    syncDeletions('assignments', prev.assignments, next);
+    const updated = { ...prev, assignments: next };
+    saveState(updated);
+    return updated;
+  });
+  const updateAssignmentSubmissions = (next: AssignmentSubmission[]) => setDb(prev => {
+    syncDeletions('assignmentSubmissions', prev.assignmentSubmissions, next);
+    const updated = { ...prev, assignmentSubmissions: next };
+    saveState(updated);
+    return updated;
+  });
 
   // Dynamic panel mapper
   const renderActivePanel = () => {
@@ -289,6 +445,7 @@ export default function App() {
             onOpenBuilder={(id) => setActiveEditExamId(id)}
             onUpdateExams={updateExams}
             toast={showToast}
+            users={db.users}
           />
         );
       case 'resultados':
@@ -324,6 +481,8 @@ export default function App() {
           <Usuarios
             currentUser={currentUser}
             users={db.users}
+            subjects={db.subjects}
+            semesters={db.semesters}
             onUpdateUsers={updateUsers}
             toast={showToast}
           />
@@ -361,6 +520,8 @@ export default function App() {
             subjects={db.subjects}
             onUpdateParciales={updateParciales}
             toast={showToast}
+            currentUser={currentUser}
+            users={db.users}
           />
         );
       case 'registroNotas':
@@ -372,6 +533,7 @@ export default function App() {
             parciales={db.parciales}
             onUpdateGradeRecords={updateGradeRecords}
             toast={showToast}
+            currentUser={currentUser}
           />
         );
       case 'trabajos':
@@ -381,8 +543,11 @@ export default function App() {
             assignments={db.assignments}
             parciales={db.parciales}
             subjects={db.subjects}
+            assignmentSubmissions={db.assignmentSubmissions || []}
             onUpdateAssignments={updateAssignments}
+            onUpdateAssignmentSubmissions={updateAssignmentSubmissions}
             toast={showToast}
+            users={db.users}
           />
         );
       case 'historialAcademico':
@@ -400,6 +565,8 @@ export default function App() {
         return (
           <Estudiantes
             users={db.users}
+            subjects={db.subjects}
+            semesters={db.semesters}
             onUpdateUsers={updateUsers}
             onNavigateToHistory={(stId) => {
               // Quick linkage
@@ -458,6 +625,18 @@ export default function App() {
             toast={showToast}
           />
         );
+      case 'educativo':
+        return (
+          <Educativo
+            currentUser={currentUser}
+            subjects={db.subjects}
+            toast={showToast}
+          />
+        );
+      case 'biblia':
+        return (
+          <Biblia />
+        );
       default:
         return <div className="p-6">Página aún no implementada: {activeTab}</div>;
     }
@@ -493,10 +672,12 @@ export default function App() {
             toast.type === 'success' 
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
               : toast.type === 'error' 
-                ? 'bg-rose-50 text-rose-800 border-rose-220 font-bold' 
-                : 'bg-amber-50 text-amber-800 border-amber-250'
+                ? 'bg-rose-50 text-rose-800 border-rose-200 font-bold' 
+                : toast.type === 'info'
+                  ? 'bg-indigo-50 text-indigo-900 border-indigo-200 shadow-indigo-100'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
           }`}>
-            <span>{toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '⚠'}</span>
+            <span>{toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : toast.type === 'info' ? 'ℹ' : '⚠'}</span>
             <span>{toast.msg}</span>
           </div>
         </div>
@@ -504,94 +685,172 @@ export default function App() {
 
       {/* RENDER LOGIN IF NO SESSION */}
       {!currentUser ? (
-        <div id="loginPage" className="min-h-screen w-full flex items-center justify-center p-4 bg-slate-950 relative overflow-hidden flex-col">
-          {/* Nebula dust effects on Login container */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(6,182,212,0.15),transparent_50%)] pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(16,185,129,0.12),transparent_50%)] pointer-events-none" />
-          <div className="stars-overlay !opacity-50" />
+        <div id="loginPage" className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#090d16] relative overflow-hidden flex-col select-none">
+          {/* Subtle modern ambient background lighting */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-indigo-500/15 via-blue-600/5 to-transparent blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/5 blur-3xl pointer-events-none" />
+          
+          {/* Subtle engineering grid backdrop */}
+          <div 
+            className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)',
+              backgroundSize: '28px 28px'
+            }}
+          />
 
-          <div className="w-full max-w-sm bg-slate-900/75 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-800/80 p-6 sm:p-8 flex flex-col text-center animate-fade-in relative overflow-hidden">
+          {/* Institutional Status Pill */}
+          <div className="mb-5 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-800/80 backdrop-blur-md text-slate-300 text-xs shadow-sm">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-medium text-[11px] text-slate-300">Campus Virtual Conectado</span>
+            <span className="text-slate-600">·</span>
+            <span className="font-mono text-[10px] text-indigo-400 font-semibold">synapsis-edu.web.app</span>
+          </div>
+
+          {/* Main Card */}
+          <div className="w-full max-w-[420px] bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-7 sm:p-8 flex flex-col text-left animate-fade-in relative z-10 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-indigo-500/40 before:to-transparent">
             
             {/* Header Brand */}
-            <div className="mx-auto w-12 h-12 bg-gradient-to-tr from-cyan-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-4 text-white shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse">
-              <School className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3.5 mb-5 pb-5 border-b border-slate-800/80">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 ring-1 ring-white/10 shrink-0">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight leading-tight">
+                  Synapsis
+                </h1>
+                <p className="text-[11px] font-semibold text-indigo-400 tracking-wide uppercase font-sans">
+                  Campus Virtual Universitario
+                </p>
+                <p className="text-[11px] text-slate-400 font-normal mt-0.5 leading-snug">
+                  Gestión académica, evaluaciones y calificaciones
+                </p>
+              </div>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight font-sans">
-              Synapsis
-            </h1>
-            <p className="text-[11px] text-cyan-400 font-bold mt-1 tracking-widest uppercase font-mono">
-              Portal Bio-Cósmico
-            </p>
-            <p className="text-xs text-slate-400 font-medium mt-2 max-w-[240px] mx-auto leading-relaxed">
-              Descubre, aprende y evalúa en conexión con el universo y el conocimiento
-            </p>
-
-            <form onSubmit={handleLogin} className="mt-6 space-y-4 text-left">
-              <div className="form-group">
-                <label className="text-[10px] font-bold text-slate-405 uppercase tracking-wider block mb-1 font-sans">Correo institucional</label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-501" />
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5 font-sans">
+                  Correo Institucional o Código
+                </label>
+                <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/60 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                  <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input 
-                    type="email" 
+                    type="text" 
+                    name="email"
+                    id="email"
                     required
                     value={loginEmail}
                     onChange={e => setLoginEmail(e.target.value)}
-                    placeholder="ej: admin@synapsis.edu"
-                    className="w-full pl-9 p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/60 text-white text-sm outline-none focus:border-cyan-500 placeholder-slate-500"
+                    placeholder="usuario@synapsis.edu o código"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="text-[10px] font-bold text-slate-405 uppercase tracking-wider block mb-1 font-sans">Contraseña única</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-551" />
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-300 font-sans">
+                    Contraseña
+                  </label>
+                </div>
+                <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/60 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                  <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
                   <input 
-                    type="password" 
+                    type={showPassword ? "text" : "password"}
                     required
                     value={loginPass}
                     onChange={e => setLoginPass(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 p-2.5 rounded-xl border border-slate-800/80 bg-slate-950/60 text-white text-sm outline-none focus:border-cyan-500"
+                    className="w-full pl-10 pr-10 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
+                    title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
               <button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 p-3 text-white rounded-xl font-bold tracking-wide mt-3 text-sm shadow-[0_0_15px_rgba(6,182,212,0.15)] transform active:scale-95 transition-all duration-200 cursor-pointer"
+                className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer group"
               >
-                Iniciar sesión portal
+                <span>Acceder al Portal</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </form>
 
-            {/* Quick credentials options to facilitate evaluations */}
-            <div className="mt-6 pt-5 border-t border-slate-800/80 text-left">
-              <span className="text-[10px] font-bold text-slate-450 uppercase tracking-widest block mb-2.5 text-center font-mono">Simuladores de Acceso</span>
-              <div className="grid grid-cols-3 gap-1.5 text-center">
+            {/* Quick Demo Access Badges */}
+            <div className="mt-6 pt-5 border-t border-slate-800">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  Acceso Rápido por Rol
+                </span>
+                <span className="text-[10px] text-slate-500">1-clic demo</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <button 
+                  type="button"
                   onClick={() => handleQuickLogin('admin@synapsis.edu', 'admin123')}
-                  className="p-1 px-1.5 rounded-lg border border-slate-800 bg-slate-950 text-cyan-400 hover:text-cyan-300 hover:border-cyan-800/80 tracking-tight text-[10px] font-bold transition-all cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-indigo-950/40 hover:border-indigo-600/60 text-slate-300 hover:text-indigo-300 transition-all cursor-pointer group shadow-xs"
                 >
-                  Admin
+                  <ShieldCheck className="w-4 h-4 text-indigo-400 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-semibold">Admin</span>
+                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Control total</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={() => handleQuickLogin('juan.docente@synapsis.edu', 'docente123')}
-                  className="p-1 px-1.5 rounded-lg border border-slate-800 bg-slate-950 text-emerald-400 hover:text-emerald-300 hover:border-emerald-800/80 tracking-tight text-[10px] font-bold transition-all cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-emerald-950/40 hover:border-emerald-600/60 text-slate-300 hover:text-emerald-300 transition-all cursor-pointer group shadow-xs"
                 >
-                  Docente
+                  <GraduationCap className="w-4 h-4 text-emerald-400 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-semibold">Docente</span>
+                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Evaluador</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={() => handleQuickLogin('maria.estudiante@synapsis.edu', 'estudiante123')}
-                  className="p-1 px-1.5 rounded-lg border border-slate-800 bg-slate-950 text-purple-400 hover:text-purple-300 hover:border-purple-800/80 tracking-tight text-[10px] font-bold transition-all cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-blue-950/40 hover:border-blue-600/60 text-slate-300 hover:text-blue-300 transition-all cursor-pointer group shadow-xs"
                 >
-                  Estudiante
+                  <BookOpen className="w-4 h-4 text-blue-400 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-semibold">Estudiante</span>
+                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Exámenes</span>
+                </button>
+              </div>
+
+              {/* Share & QR Access Button */}
+              <div className="mt-4 pt-3.5 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/50 hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all cursor-pointer shadow-xs group"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span className="truncate font-mono text-[11px] text-indigo-300">synapsis-edu.web.app</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-slate-200 shrink-0 font-medium">
+                    <QrCode className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Ver QR</span>
+                  </div>
                 </button>
               </div>
             </div>
 
           </div>
+
+          {/* Institutional copyright note */}
+          <p className="mt-6 text-[11px] text-slate-500 font-medium text-center">
+            Synapsis Educational OS · Conexión Segura SSL · Firebase Firestore
+          </p>
         </div>
       ) : (
         /* ENTIRE APPLICATION DASHBOARD VIEWPORT LAYOUT */
@@ -605,6 +864,9 @@ export default function App() {
             onLogout={handleLogout}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(prev => !prev)}
+            onOpenShareModal={() => setIsShareModalOpen(true)}
+            onSyncFirebase={handleManualSync}
+            isSyncing={isSyncingFirebase}
           />
 
           <div className="flex-1 flex relative pt-[60px]">
@@ -623,6 +885,7 @@ export default function App() {
               activePage={activeTab}
               isOpen={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
+              onOpenShareModal={() => setIsShareModalOpen(true)}
               onPageChange={(tab) => {
                 setActiveTab(tab);
                 setActiveEditExamId(null); // clear builder state on page navigate
@@ -639,6 +902,17 @@ export default function App() {
               {renderActivePanel()}
             </main>
           </div>
+
+          {/* FLOATING ACTION BUTTON TO SHOW COLLAPSED SIDEBAR */}
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="fixed bottom-6 left-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl p-4 rounded-full cursor-pointer transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95 border-2 border-white focus:outline-none"
+              title="Mostrar menú de navegación"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
 
           {/* ACTIVE TEST OVERLAY TAKING PORTAL PANEL */}
           {activeTakeExamId && (
@@ -663,6 +937,14 @@ export default function App() {
 
         </div>
       )}
+
+      {/* SHARE APP & QR CODE MODAL */}
+      <ShareAppModal 
+        isOpen={isShareModalOpen} 
+        onClose={() => setIsShareModalOpen(false)} 
+        onSyncFirebase={handleManualSync}
+        isSyncing={isSyncingFirebase}
+      />
 
     </div>
   );

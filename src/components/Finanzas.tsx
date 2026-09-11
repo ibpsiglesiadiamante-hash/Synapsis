@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
+import { SearchableSelect } from './SearchableSelect';
+import { saveDocToFirestore, fetchCollectionFromFirestore, deleteDocFromFirestore } from '../lib/firebase';
 
 interface PaymentRecord {
   id: string;
@@ -57,111 +59,156 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
   const [invoiceForMock, setInvoiceForMock] = useState<PaymentRecord | null>(null);
 
   // Pagination states
-  const itemsPerPage = 8;
+  const itemsPerPage = 5;
   const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPage, setStudentsPage] = useState(1);
+  const studentsPerPage = 5;
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Initial load + seed data
   useEffect(() => {
-    // 1. Load payment ledger
-    const savedPayments = localStorage.getItem('ep_finanzas');
-    if (savedPayments) {
+    async function loadData() {
+      // 1. Load payment ledger from Firestore
+      let loadedPayments: PaymentRecord[] = [];
       try {
-        setPayments(JSON.parse(savedPayments));
-      } catch (e) {
-        console.error('Error parsing payments', e);
+        loadedPayments = await fetchCollectionFromFirestore<PaymentRecord>('payments');
+      } catch (err) {
+        console.error('Error loading payments from Firestore', err);
       }
-    } else {
-      if (students.length >= 2) {
-        const seedPayments: PaymentRecord[] = [
-          {
-            id: uid(),
-            studentId: students[0].id,
-            studentName: students[0].nombre,
-            concepto: 'Matrícula',
-            pagoTotal: 350000,
-            referencia: 'REF-8891-32',
-            fechaVencimiento: '2026-02-05',
-            fechaPago: '2026-02-04',
-            estado: 'pagado',
-          },
-          {
-            id: uid(),
-            studentId: students[0].id,
-            studentName: students[0].nombre,
-            concepto: 'Mensualidad',
-            pagoTotal: 180000,
-            referencia: 'REF-0244-12',
-            fechaVencimiento: '2026-06-05',
-            fechaPago: '2026-06-05',
-            estado: 'pagado',
-          },
-          {
-            id: uid(),
-            studentId: students[1].id,
-            studentName: students[1].nombre,
-            concepto: 'Matrícula',
-            pagoTotal: 350000,
-            referencia: 'REF-8891-35',
-            fechaVencimiento: '2026-02-05',
-            fechaPago: '2026-02-05',
-            estado: 'pagado',
-          },
-          {
-            id: uid(),
-            studentId: students[1].id,
-            studentName: students[1].nombre,
-            concepto: 'Mensualidad',
-            pagoTotal: 180000,
-            referencia: 'REF-3012-99',
-            fechaVencimiento: '2026-06-15', // shortly coming up
-            estado: 'pendiente',
-          },
-          {
-            id: uid(),
-            studentId: students[0].id,
-            studentName: students[0].nombre,
-            concepto: 'Mensualidad',
-            pagoTotal: 180000,
-            referencia: 'REF-3012-98',
-            fechaVencimiento: '2026-07-05',
-            estado: 'pendiente',
+
+      if (loadedPayments && loadedPayments.length > 0) {
+        setPayments(loadedPayments);
+        localStorage.setItem('ep_finanzas', JSON.stringify(loadedPayments));
+      } else {
+        const savedPayments = localStorage.getItem('ep_finanzas');
+        if (savedPayments) {
+          try {
+            const parsed = JSON.parse(savedPayments);
+            setPayments(parsed);
+            // Sync to Firestore
+            parsed.forEach((p: any) => saveDocToFirestore('payments', p));
+          } catch (e) {
+            console.error('Error parsing local payments', e);
           }
-        ];
-        // Add one old overdue transaction to show vencido state
-        if (students[1]) {
-          seedPayments.push({
-            id: uid(),
-            studentId: students[1].id,
-            studentName: students[1].nombre,
-            concepto: 'Seguros y Otros',
-            pagoTotal: 85000,
-            referencia: 'REF-0012-44',
-            fechaVencimiento: '2026-04-10',
-            estado: 'vencido',
-          });
+        } else {
+          if (students.length >= 2) {
+            const seedPayments: PaymentRecord[] = [
+              {
+                id: uid(),
+                studentId: students[0].id,
+                studentName: students[0].nombre,
+                concepto: 'Matrícula',
+                pagoTotal: 350000,
+                referencia: 'REF-8891-32',
+                fechaVencimiento: '2026-02-05',
+                fechaPago: '2026-02-04',
+                estado: 'pagado',
+              },
+              {
+                id: uid(),
+                studentId: students[0].id,
+                studentName: students[0].nombre,
+                concepto: 'Mensualidad',
+                pagoTotal: 180000,
+                referencia: 'REF-0244-12',
+                fechaVencimiento: '2026-06-05',
+                fechaPago: '2026-06-05',
+                estado: 'pagado',
+              },
+              {
+                id: uid(),
+                studentId: students[1].id,
+                studentName: students[1].nombre,
+                concepto: 'Matrícula',
+                pagoTotal: 350000,
+                referencia: 'REF-8891-35',
+                fechaVencimiento: '2026-02-05',
+                fechaPago: '2026-02-05',
+                estado: 'pagado',
+              },
+              {
+                id: uid(),
+                studentId: students[1].id,
+                studentName: students[1].nombre,
+                concepto: 'Mensualidad',
+                pagoTotal: 180000,
+                referencia: 'REF-3012-99',
+                fechaVencimiento: '2026-06-15',
+                estado: 'pendiente',
+              },
+              {
+                id: uid(),
+                studentId: students[0].id,
+                studentName: students[0].nombre,
+                concepto: 'Mensualidad',
+                pagoTotal: 180000,
+                referencia: 'REF-3012-98',
+                fechaVencimiento: '2026-07-05',
+                estado: 'pendiente',
+              }
+            ];
+            if (students[1]) {
+              seedPayments.push({
+                id: uid(),
+                studentId: students[1].id,
+                studentName: students[1].nombre,
+                concepto: 'Seguros y Otros',
+                pagoTotal: 85000,
+                referencia: 'REF-0012-44',
+                fechaVencimiento: '2026-04-10',
+                estado: 'vencido',
+              });
+            }
+
+            setPayments(seedPayments);
+            localStorage.setItem('ep_finanzas', JSON.stringify(seedPayments));
+            // Sync seeds to Firestore
+            seedPayments.forEach(p => saveDocToFirestore('payments', p));
+          }
         }
-
-        setPayments(seedPayments);
-        localStorage.setItem('ep_finanzas', JSON.stringify(seedPayments));
       }
-    }
 
-    // 2. Load enrollment statuses
-    const savedStatus = localStorage.getItem('ep_matricula_status');
-    if (savedStatus) {
+      // 2. Load enrollment statuses
+      let loadedStatuses: any[] = [];
       try {
-        setEnrollmentStatus(JSON.parse(savedStatus));
-      } catch (e) {
-        console.error('Error parsing enrollment status', e);
+        loadedStatuses = await fetchCollectionFromFirestore<any>('matriculaStatus');
+      } catch (err) {
+        console.error('Error loading matricula statuses from Firestore', err);
       }
-    } else {
-      const defaultStatus: Record<string, 'Matriculado' | 'Pendiente' | 'Suspendido'> = {};
-      students.forEach(st => {
-        defaultStatus[st.id] = 'Matriculado';
-      });
-      setEnrollmentStatus(defaultStatus);
-      localStorage.setItem('ep_matricula_status', JSON.stringify(defaultStatus));
+
+      if (loadedStatuses && loadedStatuses.length > 0) {
+        const statusesMap: Record<string, 'Matriculado' | 'Pendiente' | 'Suspendido'> = {};
+        loadedStatuses.forEach(item => {
+          statusesMap[item.id] = item.status;
+        });
+        setEnrollmentStatus(statusesMap);
+        localStorage.setItem('ep_matricula_status', JSON.stringify(statusesMap));
+      } else {
+        const savedStatus = localStorage.getItem('ep_matricula_status');
+        if (savedStatus) {
+          try {
+            const parsed = JSON.parse(savedStatus);
+            setEnrollmentStatus(parsed);
+            Object.entries(parsed).forEach(([stId, status]) => {
+              saveDocToFirestore('matriculaStatus', { id: stId, status });
+            });
+          } catch (e) {
+            console.error('Error parsing enrollment status', e);
+          }
+        } else {
+          const defaultStatus: Record<string, 'Matriculado' | 'Pendiente' | 'Suspendido'> = {};
+          students.forEach(st => {
+            defaultStatus[st.id] = 'Matriculado';
+            saveDocToFirestore('matriculaStatus', { id: st.id, status: 'Matriculado' });
+          });
+          setEnrollmentStatus(defaultStatus);
+          localStorage.setItem('ep_matricula_status', JSON.stringify(defaultStatus));
+        }
+      }
     }
+
+    loadData();
   }, [users]);
 
   // Handle setting enrollment status for a student
@@ -169,6 +216,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
     const nextStatus = { ...enrollmentStatus, [stId]: status };
     setEnrollmentStatus(nextStatus);
     localStorage.setItem('ep_matricula_status', JSON.stringify(nextStatus));
+    saveDocToFirestore('matriculaStatus', { id: stId, status });
     toast('Estado de matrícula actualizado correctamente', 'success');
   };
 
@@ -193,7 +241,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
     if (editingId) {
       const idx = nextPayments.findIndex(p => p.id === editingId);
       if (idx > -1) {
-        nextPayments[idx] = {
+        const updatedItem: PaymentRecord = {
           ...nextPayments[idx],
           studentId,
           studentName: matchedSt.nombre,
@@ -204,10 +252,12 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           estado,
           fechaPago: estado === 'pagado' ? (fechaPago || new Date().toISOString().substring(0, 10)) : undefined,
         };
+        nextPayments[idx] = updatedItem;
+        saveDocToFirestore('payments', updatedItem);
         toast('Registro de cobro actualizado', 'success');
       }
     } else {
-      nextPayments.push({
+      const newItem: PaymentRecord = {
         id: uid(),
         studentId,
         studentName: matchedSt.nombre,
@@ -217,7 +267,9 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
         fechaVencimiento,
         estado,
         fechaPago: estado === 'pagado' ? (fechaPago || new Date().toISOString().substring(0, 10)) : undefined,
-      });
+      };
+      nextPayments.push(newItem);
+      saveDocToFirestore('payments', newItem);
       toast('Nuevo cobro registrado con éxito', 'success');
     }
 
@@ -250,15 +302,6 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
     setIsModalOpen(true);
   };
 
-  const handleDeletePayment = (id: string) => {
-    if (window.confirm('¿Deseas eliminar cobro registrado en el sistema? No es recomendable borrar registros históricos.')) {
-      const nextPayments = payments.filter(p => p.id !== id);
-      setPayments(nextPayments);
-      localStorage.setItem('ep_finanzas', JSON.stringify(nextPayments));
-      toast('Cobro eliminado correctamente', 'success');
-    }
-  };
-
   const handlePrintBarcodeSlip = () => {
     window.print();
   };
@@ -283,6 +326,11 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;
   const currentPaymentsFiltered = filteredPayments.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
+  // Student list pagination (5 elements per page as requested "a partir del registro 5 crear paginas")
+  const totalStudentsPages = Math.ceil(students.length / studentsPerPage) || 1;
+  const activeStudentsPage = studentsPage > totalStudentsPages ? totalStudentsPages : studentsPage;
+  const paginatedStudents = students.slice((activeStudentsPage - 1) * studentsPerPage, activeStudentsPage * studentsPerPage);
 
   // Compute stats metrics
   const getFinancialStats = () => {
@@ -314,18 +362,18 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-wider mb-2">
             <DollarSign className="w-3.5 h-3.5" /> Estado de Matrículas y Pagos
           </div>
-          <h2 className="text-xl font-extrabold text-slate-905 tracking-tight" style={{ color: 'var(--gray-900)' }}>
+          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight" style={{ color: 'var(--gray-900)' }}>
             {isDocOrAdmin ? 'Control Financiero de Matrículas' : 'Mi Estado de Cuenta y Mensualidades'}
           </h2>
-          <p className="text-xs text-slate-505 mt-1">
-            Revisa el estado de saldos pendientes, genera recibos oficiales con código de barras y monitorea la solvencia académica escolar.
+          <p className="text-xs text-slate-500 mt-1">
+            Revisa el estado de saldos pendientes, genera recibos oficiales con código de barras and monitorea la solvencia académica escolar.
           </p>
         </div>
 
         {isDocOrAdmin && (
           <button
             onClick={handleOpenCreateModal}
-            className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <Plus className="w-4 h-4" /> Registrar Cobro
           </button>
@@ -340,7 +388,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Total Recaudado</span>
-            <span className="text-xl font-black text-slate-805 font-mono">{stats.paidText}</span>
+            <span className="text-xl font-black text-slate-800 font-mono">{stats.paidText}</span>
           </div>
         </div>
 
@@ -350,7 +398,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Pendiente de Cobro</span>
-            <span className="text-xl font-black text-slate-805 font-mono">{stats.pendingText}</span>
+            <span className="text-xl font-black text-slate-800 font-mono">{stats.pendingText}</span>
           </div>
         </div>
 
@@ -395,7 +443,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
             placeholder={isDocOrAdmin ? "Buscar alumno o referencia..." : "Filtrar por concepto o ref..."}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-indigo-500 font-semibold text-xs text-slate-705 w-full sm:w-64"
+            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-indigo-500 font-semibold text-xs text-slate-700 w-full sm:w-64"
           />
         </div>
       </div>
@@ -403,13 +451,18 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
       {/* STUDENT MATRICULA LIST FOR ADMINS */}
       {isDocOrAdmin && searchQuery === '' && activeTab === 'all' && (
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs theme-bg-surface theme-border p-5 space-y-4 print:hidden">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-            <Landmark className="w-5 h-5 text-indigo-550" />
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Panorámica Matricular de Estudiantes</h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Panorámica Matricular de Estudiantes</h3>
+            </div>
+            <span className="text-[10px] uppercase font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+              Página {activeStudentsPage} de {totalStudentsPages}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {students.map(st => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 animate-fade-in">
+            {paginatedStudents.map(st => {
               const status = enrollmentStatus[st.id] || 'Matriculado';
               
               let statusStyle = 'bg-emerald-50 text-emerald-700';
@@ -417,19 +470,19 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
               else if (status === 'Suspendido') statusStyle = 'bg-rose-50 text-rose-700 font-bold';
 
               return (
-                <div key={st.id} className="p-3 border rounded-xl hover:bg-slate-50/50 transition flex flex-col justify-between space-y-2.5">
+                <div key={st.id} className="p-3 border border-slate-200 rounded-2xl bg-slate-50/20 hover:bg-slate-50 hover:border-slate-300 transition flex flex-col justify-between space-y-2.5">
                   <div>
                     <span className="font-extrabold text-[12px] text-slate-800 line-clamp-1">{st.nombre}</span>
                     <span className="text-[10px] text-slate-400 mt-0.5 block font-mono">CC: {st.cedula || '---'}</span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${statusStyle}`}>{status}</span>
+                  <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide shrink-0 ${statusStyle}`}>{status}</span>
                     
                     <select
                       value={status}
                       onChange={e => changeEnrollmentStatus(st.id, e.target.value as any)}
-                      className="text-[10px] border rounded bg-white text-slate-600 focus:outline-none p-1 font-bold"
+                      className="text-[9px] border rounded bg-white text-slate-600 focus:outline-none p-1 font-bold cursor-pointer max-w-[85px]"
                     >
                       <option value="Matriculado">Activo</option>
                       <option value="Pendiente">Deudor</option>
@@ -440,16 +493,60 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
               );
             })}
           </div>
+
+          {/* Pagination controls specifically for Students */}
+          {students.length > studentsPerPage && (
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2 text-xs">
+              <span className="text-slate-500 text-[10px] font-medium leading-normal select-none">
+                Estudiantes <span className="font-bold text-slate-800">{(activeStudentsPage - 1) * studentsPerPage + 1}</span> al{' '}
+                <span className="font-bold text-slate-800">{Math.min(activeStudentsPage * studentsPerPage, students.length)}</span> de{' '}
+                <span className="font-bold text-slate-800">{students.length}</span> registrados (Bloques de 5)
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={activeStudentsPage === 1}
+                  onClick={() => setStudentsPage(prev => Math.max(1, prev - 1))}
+                  className="p-1 px-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer text-slate-600 inline-flex items-center gap-1 text-[10px]"
+                >
+                  <ChevronLeft className="w-3 h-3" /> Prev
+                </button>
+                {Array.from({ length: totalStudentsPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setStudentsPage(page)}
+                    className={`h-6 min-w-6 text-[10px] font-black rounded-lg transition cursor-pointer flex items-center justify-center ${
+                      activeStudentsPage === page
+                        ? 'bg-slate-800 text-white'
+                        : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                    }`}
+                    style={activeStudentsPage === page ? { backgroundColor: 'var(--primary, #673ab7)', color: '#fff' } : {}}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={activeStudentsPage === totalStudentsPages}
+                  onClick={() => setStudentsPage(prev => Math.min(totalStudentsPages, prev + 1))}
+                  className="p-1 px-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer text-slate-600 inline-flex items-center gap-1 text-[10px]"
+                >
+                  Next <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* DETAILED TRANSACTIONS LIST */}
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm theme-bg-surface theme-border">
-        <div className="p-4 bg-slate-50 border-b border-slate-205 flex items-center justify-between theme-bg-surface">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between theme-bg-surface">
           <span className="text-xs font-extrabold text-slate-700">Libro Contable de Ingresos y Cobros ({filteredPayments.length})</span>
           {!isDocOrAdmin && (
             <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase ${
-              enrollmentStatus[currentUser.id] === 'Suspendido' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-150 text-emerald-700'
+              enrollmentStatus[currentUser.id] === 'Suspendido' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
             }`}>
               Matrícula: {enrollmentStatus[currentUser.id] || 'Matriculado'}
             </span>
@@ -508,25 +605,58 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                         <div className="flex items-center justify-end gap-1.5 font-bold text-[10px]">
                           <button
                             onClick={() => setInvoiceForMock(p)}
-                            className="bg-indigo-50 border border-indigo-150 text-indigo-700 hover:bg-indigo-100 py-1 px-2 rounded-lg cursor-pointer transition flex items-center gap-1"
+                            className="bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 py-1 px-2 rounded-lg cursor-pointer transition flex items-center gap-1"
                           >
                             <FileText className="w-3 h-3" /> Ver Volante
                           </button>
 
                           {isDocOrAdmin && (
                             <>
-                              <button
-                                onClick={() => handleOpenEditModal(p)}
-                                className="text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-slate-50 cursor-pointer"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeletePayment(p.id)}
-                                className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-50 cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {confirmDeleteId === p.id ? (
+                                <div className="flex items-center gap-1 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-lg text-red-700">
+                                  <span className="text-[9px] font-black uppercase">¿Seguro?</span>
+                                  <button
+                                    onClick={async () => {
+                                      const nextPayments = payments.filter(pay => pay.id !== p.id);
+                                      setPayments(nextPayments);
+                                      localStorage.setItem('ep_finanzas', JSON.stringify(nextPayments));
+                                      try {
+                                        await deleteDocFromFirestore('payments', p.id);
+                                      } catch (err) {
+                                        console.error('Failed to delete payment from firestore', err);
+                                      }
+                                      toast('Cobro eliminado correctamente', 'success');
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="bg-red-600 text-white hover:bg-red-700 px-1.5 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer"
+                                  >
+                                    Sí
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="bg-slate-200 text-slate-700 hover:bg-slate-300 px-1.5 py-0.5 rounded text-[9px] font-black uppercase cursor-pointer"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenEditModal(p)}
+                                    className="text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-slate-50 cursor-pointer"
+                                    title="Editar cobro"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(p.id)}
+                                    className="text-slate-400 hover:text-red-500 p-1 rounded hover:bg-slate-50 cursor-pointer"
+                                    title="Eliminar cobro"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
@@ -609,16 +739,17 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
             <form onSubmit={handleSavePayment} className="p-6 space-y-4 text-xs font-semibold">
               <div className="flex flex-col">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Elegir Estudiante <span className="text-red-500">*</span></label>
-                <select
+                <SearchableSelect
+                  options={students.map(s => ({
+                    value: s.id,
+                    label: s.nombre,
+                    subLabel: s.cedula ? `CC: ${s.cedula}` : undefined
+                  }))}
                   value={studentId}
-                  onChange={e => setStudentId(e.target.value)}
-                  className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-705 focus:outline-none"
-                >
-                  <option value="">Selecciona alumno...</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.nombre} ({s.cedula || 'Sin Cédula'})</option>
-                  ))}
-                </select>
+                  onChange={val => setStudentId(val)}
+                  placeholder="Selecciona alumno..."
+                  id="payment-student-select"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -627,7 +758,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                   <select
                     value={concepto}
                     onChange={e => setConcepto(e.target.value as any)}
-                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-705"
+                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700"
                   >
                     <option value="Matrícula">Matrícula</option>
                     <option value="Mensualidad">Mensualidad</option>
@@ -657,7 +788,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                     required
                     value={fechaVencimiento}
                     onChange={e => setFechaVencimiento(e.target.value)}
-                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-705 focus:outline-none focus:outline-indigo-500"
+                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:outline-indigo-500"
                   />
                 </div>
 
@@ -679,7 +810,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                   <select
                     value={estado}
                     onChange={e => setEstado(e.target.value as any)}
-                    className="p-2.5 bg-slate-50 border border-slate-205 rounded-xl text-slate-705"
+                    className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700"
                   >
                     <option value="pendiente">🟡 Pendiente de Pago</option>
                     <option value="pagado">🟢 Pagado Completamente</option>
@@ -694,7 +825,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                       type="date"
                       value={fechaPago}
                       onChange={e => setFechaPago(e.target.value)}
-                      className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-705"
+                      className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700"
                     />
                   </div>
                 )}
@@ -705,7 +836,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 font-bold transition flex items-center justify-center cursor-pointer"
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 font-bold transition flex items-center justify-center cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -725,7 +856,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
       {/* DETAILED BANK SLIP RECEIPT MOCKUP OVERLAY MODAL */}
       {invoiceForMock && (
         <div className="modal-overlay fixed inset-0 bg-black/45 flex items-center justify-center z-[200] p-4 text-left">
-          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden animate-scale-up border border-slate-250 shadow-2xl theme-bg-surface font-sans text-xs">
+          <div className="bg-white rounded-3xl w-full max-w-xl overflow-hidden animate-scale-up border border-slate-200 shadow-2xl theme-bg-surface font-sans text-xs">
             {/* Header controls bar */}
             <div className="bg-slate-100/50 p-4 border-b border-slate-200 flex items-center justify-between text-xs font-bold theme-bg-surface">
               <span className="text-slate-700">Comprobante de Pago y Volante de Facturación</span>
@@ -751,10 +882,10 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
               <div className="flex justify-between items-start border-b border-slate-200 pb-4">
                 <div>
                   <h3 className="font-extrabold text-[14px] text-slate-900 tracking-tight">INSTITUTO SYNAPSIS</h3>
-                  <p className="text-[10px] text-slate-450 mt-0.5">Volante Universitario Certificado</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Volante Universitario Certificado</p>
                   <p className="text-[10px] text-slate-400">NIT: 322199-B12 | Convenio Bancario: #9081221</p>
                 </div>
-                <div className="bg-indigo-50 border border-indigo-150 p-2 rounded-xl text-center">
+                <div className="bg-indigo-50 border border-indigo-200 p-2 rounded-xl text-center">
                   <Landmark className="w-5 h-5 text-indigo-600 mx-auto" />
                   <span className="text-[9px] font-black text-indigo-700 uppercase tracking-wide block mt-1">BANCO RECAUDADOR</span>
                 </div>
@@ -764,7 +895,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
               <div className="grid grid-cols-2 gap-4 text-[11px] font-semibold text-slate-600">
                 <div className="space-y-1">
                   <span>Estudiante Recaudado:</span>
-                  <div className="font-extrabold text-slate-850" style={{ color: 'var(--gray-900)' }}>{invoiceForMock.studentName}</div>
+                  <div className="font-extrabold text-slate-800" style={{ color: 'var(--gray-900)' }}>{invoiceForMock.studentName}</div>
                   <span className="text-[10px] text-slate-400 block font-mono">ID Alumno: {invoiceForMock.studentId.substring(0, 10).toUpperCase()}</span>
                 </div>
                 <div className="space-y-1 text-right">

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { User, Subject, Semester, Parcial, GradeRecord } from '../types';
 import { fmtDate } from '../lib/db';
+import { SearchableSelect } from './SearchableSelect';
 
 interface BoletinesProps {
   gradeRecords: GradeRecord[];
@@ -468,7 +469,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             <div className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider mb-2">
               <FileText className="w-3.5 h-3.5" /> Generador de Reportes
             </div>
-            <h2 className="text-xl font-extrabold text-slate-950 tracking-tight" style={{ color: 'var(--gray-900)' }}>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight" style={{ color: 'var(--gray-900)' }}>
               Boletines y Reportes Académicos
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -501,16 +502,17 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
           {isDocOrAdmin ? (
             <div className="flex flex-col">
               <span className="text-slate-400 font-bold block mb-1 uppercase tracking-wider text-[9px]">Seleccionar Estudiante</span>
-              <select
+              <SearchableSelect
+                options={students.map(st => ({
+                  value: st.id,
+                  label: st.nombre,
+                  subLabel: st.cedula ? `CC: ${st.cedula}` : undefined
+                }))}
                 value={selectedStudentId}
-                onChange={e => setSelectedStudentId(e.target.value)}
-                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:outline-none"
-              >
-                <option value="">Selecciona alumno...</option>
-                {students.map(st => (
-                  <option key={st.id} value={st.id}>{st.nombre} ({st.cedula || 'Sin ID'})</option>
-                ))}
-              </select>
+                onChange={val => setSelectedStudentId(val)}
+                placeholder="Selecciona alumno..."
+                id="boletin-student-select"
+              />
             </div>
           ) : (
             <div className="flex flex-col">
@@ -523,16 +525,16 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
 
           <div className="flex flex-col">
             <span className="text-slate-400 font-bold block mb-1 uppercase tracking-wider text-[9px]">Seleccionar Semestre</span>
-            <select
+            <SearchableSelect
+              options={semesters.map(sem => ({
+                value: sem.id,
+                label: `${sem.nombre} (${sem.estado})`
+              }))}
               value={selectedSemesterId}
-              onChange={e => setSelectedSemesterId(e.target.value)}
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:outline-none"
-            >
-              <option value="">Selecciona semestre...</option>
-              {semesters.map(sem => (
-                <option key={sem.id} value={sem.id}>{sem.nombre} ({sem.estado})</option>
-              ))}
-            </select>
+              onChange={val => setSelectedSemesterId(val)}
+              placeholder="Selecciona semestre..."
+              id="boletin-semester-select"
+            />
           </div>
 
           <div className="flex flex-col">
@@ -619,7 +621,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
               </div>
               <div>
                 <h1 className="text-lg font-black tracking-tight" style={{ color: themeStyle.primaryHex }}>INSTITUTO SYNAPSIS</h1>
-                <p className="text-[10px] text-slate-450 uppercase tracking-widest font-mono font-bold mt-1">Sistema Integrado de Matrícula y Notas</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold mt-1">Sistema Integrado de Matrícula y Notas</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">Aprobado por el Ministerio de Educación | Resolución 2341-99</p>
               </div>
             </div>
@@ -639,15 +641,15 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             <div className="space-y-2 text-xs">
               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest" style={{ color: themeStyle.primaryHex }}>INFORMACIÓN DEL ESTUDIANTE</h3>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Estudiante:</span>
+                <span className="text-slate-400 font-semibold">Estudiante:</span>
                 <span className="col-span-2 text-slate-800 font-extrabold">{targetStudent.nombre}</span>
               </div>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Identificación:</span>
+                <span className="text-slate-400 font-semibold">Identificación:</span>
                 <span className="col-span-2 text-slate-700 font-mono font-bold">{targetStudent.cedula || '---'}</span>
               </div>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Correo:</span>
+                <span className="text-slate-400 font-semibold">Correo:</span>
                 <span className="col-span-2 text-slate-600 font-bold">{targetStudent.email}</span>
               </div>
             </div>
@@ -655,15 +657,15 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             <div className="space-y-2 text-xs">
               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest" style={{ color: themeStyle.primaryHex }}>INFORMACIÓN DEL PERÍODO LECTIVO</h3>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Semestre:</span>
+                <span className="text-slate-400 font-semibold">Semestre:</span>
                 <span className="col-span-2 text-slate-800 font-extrabold">{targetSemester.nombre}</span>
               </div>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Asist. Consolidada:</span>
+                <span className="text-slate-400 font-semibold">Asist. Consolidada:</span>
                 <span className="col-span-2 text-indigo-700 font-black">{attendanceRate}% Presencialidad</span>
               </div>
               <div className="grid grid-cols-3 font-medium">
-                <span className="text-slate-450 font-semibold">Estado Acad.:</span>
+                <span className="text-slate-400 font-semibold">Estado Acad.:</span>
                 <span className={`col-span-2 font-black ${generalAverage >= 3.0 ? 'text-emerald-700' : 'text-rose-600'}`}>
                   {generalAverage >= 3.0 ? 'APROBADO' : 'REQUERIMIENTO MEJORAMIENTO'}
                 </span>
@@ -747,13 +749,13 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                   <span className="font-black text-slate-800">{totalSubjectsCount}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-450 font-semibold">Materias Aprobadas:</span>
+                  <span className="text-slate-400 font-semibold">Materias Aprobadas:</span>
                   <span className="font-black text-emerald-600 flex items-center gap-1">
                     <CheckCircle className="w-3.5 h-3.5" /> {approvedCount}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-450 font-semibold">Materias Reprobadas:</span>
+                  <span className="text-slate-400 font-semibold">Materias Reprobadas:</span>
                   <span className="font-black text-rose-500 flex items-center gap-1">
                     {failedCount > 0 ? <XCircle className="w-3.5 h-3.5" /> : null} {failedCount}
                   </span>
@@ -768,7 +770,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             {/* Performance status write-up */}
             <div className="md:col-span-7 bg-slate-50 p-5 rounded-2xl border border-slate-150 space-y-3.5 flex flex-col justify-between theme-bg-surface">
               <div>
-                <span className="text-[9px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded uppercase tracking-wider">
+                <span className="text-[9px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded uppercase tracking-wider">
                   Valoración de Rector Rectoría
                 </span>
                 <h4 className="font-black text-slate-800 text-xs mt-2 uppercase" style={{ color: themeStyle.primaryHex }}>{generalPerformance}</h4>
@@ -776,7 +778,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
               </div>
 
               {(customComment || (!isDocOrAdmin && academicReports.length > 0)) && (
-                <div className="border-t border-slate-200 pt-3.5 text-xs text-slate-650 font-semibold italic">
+                <div className="border-t border-slate-200 pt-3.5 text-xs text-slate-600 font-semibold italic">
                   <b>Observación del Tutor:</b> {customComment || 'Rendimiento general destacado. Excelente dedicación y puntualidad demostrada en el semestre escolar.'}
                 </div>
               )}
@@ -825,7 +827,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                 <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider mb-2">
                   <Users className="w-3.5 h-3.5" /> Consolidado Grupal de Notas
                 </div>
-                <h2 className="text-xl font-extrabold text-slate-950 tracking-tight" style={{ color: 'var(--gray-900)' }}>
+                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight" style={{ color: 'var(--gray-900)' }}>
                   Reporte Colectivo de Rendimiento
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
@@ -845,15 +847,16 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-4 items-end justify-between">
               <div className="flex flex-col w-full sm:w-72 text-xs font-medium">
                 <span className="text-slate-400 font-bold block mb-1 uppercase tracking-wider text-[9px]">Seleccionar Semestre Grupal</span>
-                <select
+                <SearchableSelect
+                  options={semesters.map(sem => ({
+                    value: sem.id,
+                    label: `${sem.nombre} (${sem.estado})`
+                  }))}
                   value={selectedSemesterId}
-                  onChange={e => { setSelectedSemesterId(e.target.value); setCollectivePage(1); }}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:outline-none"
-                >
-                  {semesters.map(sem => (
-                    <option key={sem.id} value={sem.id}>{sem.nombre} ({sem.estado})</option>
-                  ))}
-                </select>
+                  onChange={val => { setSelectedSemesterId(val); setCollectivePage(1); }}
+                  placeholder="Selecciona semestre..."
+                  id="boletin-collective-semester-select"
+                />
               </div>
 
               <div className="relative w-full sm:w-80">
@@ -890,7 +893,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Promedio de Curso</span>
-                <span className="text-md font-black text-emerald-650 font-mono">{classAverage.toFixed(2)} / 5.0</span>
+                <span className="text-md font-black text-emerald-600 font-mono">{classAverage.toFixed(2)} / 5.0</span>
               </div>
             </div>
 
@@ -923,7 +926,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
             </div>
 
             {filteredCollectiveStudents.length === 0 ? (
-              <div className="p-12 text-center text-slate-450 text-xs">
+              <div className="p-12 text-center text-slate-400 text-xs">
                 No se encontraron estudiantes para los filtros seleccionados.
               </div>
             ) : (
@@ -938,7 +941,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                           {sub.nombre}
                         </th>
                       ))}
-                      <th className="py-3 px-4 text-center font-bold text-slate-755 bg-indigo-50/20">Prom. Gral</th>
+                      <th className="py-3 px-4 text-center font-bold text-indigo-600 bg-indigo-50/20">Prom. Gral</th>
                       <th className="py-3 px-3 text-center">Aprob/Total</th>
                       <th className="py-3 px-4 text-right">Rendimiento</th>
                     </tr>
@@ -949,17 +952,17 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                       const studentId = item.student.id;
                       
                       const isPassing = item.generalAverage >= 3.0;
-                      let performanceBadge = 'bg-rose-50 text-rose-705 border-rose-100 font-bold';
+                      let performanceBadge = 'bg-rose-50 text-rose-700 border-rose-100 font-bold';
                       let performanceText = 'Bajo';
                       
                       if (item.gradedSubjectsCount === 0) {
-                        performanceBadge = 'bg-slate-50 text-slate-404 border-slate-200';
+                        performanceBadge = 'bg-slate-50 text-slate-400 border-slate-200';
                         performanceText = 'Sin Notas';
                       } else if (item.generalAverage >= 4.6) {
-                        performanceBadge = 'bg-indigo-50 text-indigo-700 border-indigo-150 font-black';
+                        performanceBadge = 'bg-indigo-50 text-indigo-700 border-indigo-200 font-black';
                         performanceText = 'Superior';
                       } else if (item.generalAverage >= 4.0) {
-                        performanceBadge = 'bg-emerald-50 text-emerald-750 border-emerald-150 font-bold';
+                        performanceBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold';
                         performanceText = 'Alto';
                       } else if (item.generalAverage >= 3.0) {
                         performanceBadge = 'bg-amber-50 text-amber-700 border-amber-100';
@@ -969,10 +972,10 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                       return (
                         <tr key={studentId} className="hover:bg-slate-50/50">
                           <td className="py-3 px-5">
-                            <div className="font-extrabold text-slate-805">{studentName}</div>
+                            <div className="font-extrabold text-slate-800">{studentName}</div>
                             <div className="text-[10px] text-slate-400 font-mono">CC: {item.student.cedula || 'Sin ID'}</div>
                           </td>
-                          <td className="py-3 px-3 text-center font-mono font-bold text-slate-650">
+                          <td className="py-3 px-3 text-center font-mono font-bold text-slate-600">
                             {item.attendanceRate}%
                           </td>
                           
@@ -1029,7 +1032,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                                   setSelectedStudentId(studentId);
                                   setReportType('individual');
                                 }}
-                                className="p-1 px-2.5 bg-indigo-50 border border-indigo-150 hover:bg-indigo-100 text-[10px] text-indigo-805 font-bold rounded-xl cursor-pointer transition"
+                                className="p-1 px-2.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-[10px] text-indigo-800 font-bold rounded-xl cursor-pointer transition"
                               >
                                 Ver Boletín
                               </button>

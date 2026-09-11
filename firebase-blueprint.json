@@ -12,7 +12,10 @@
         "rol": { "type": "string", "enum": ["admin", "docente", "estudiante"] },
         "creado": { "type": "string" },
         "cedula": { "type": "string" },
-        "celular": { "type": "string" }
+        "celular": { "type": "string" },
+        "asignaturas": { "type": "array" },
+        "semestre": { "type": "string" },
+        "codigo": { "type": "string" }
       },
       "required": ["id", "nombre", "email", "pass", "rol", "creado"]
     },
@@ -89,6 +92,7 @@
       "properties": {
         "id": { "type": "string" },
         "titulo": { "type": "string" },
+        "subtitulo": { "type": "string" },
         "materia": { "type": "string" },
         "parcialId": { "type": "string" },
         "descripcion": { "type": "string" },
@@ -100,7 +104,8 @@
         "aleatorio": { "type": "boolean" },
         "mostrarNota": { "type": "boolean" },
         "creado": { "type": "string" },
-        "preguntas": { "type": "array" }
+        "preguntas": { "type": "array" },
+        "bannerUrl": { "type": "string" }
       },
       "required": ["id", "titulo", "materia", "docenteId", "estado", "tiempo", "intentos", "aprobacion", "aleatorio", "mostrarNota", "creado", "preguntas"]
     },
@@ -169,6 +174,27 @@
         "actualizado": { "type": "string" }
       },
       "required": ["id", "titulo", "creado"]
+    },
+    "AssignmentSubmission": {
+      "title": "AssignmentSubmission",
+      "description": "Student academic work submissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "estudianteId": { "type": "string" },
+        "estudianteNombre": { "type": "string" },
+        "fechaEntrega": { "type": "string" },
+        "archivoNombre": { "type": "string" },
+        "archivoUrl": { "type": "string" },
+        "comentarioEstudiante": { "type": "string" },
+        "estado": { "type": "string", "enum": ["pendiente", "entregado", "calificado"] },
+        "calificacion": { "type": "number" },
+        "comentarioDocente": { "type": "string" },
+        "creado": { "type": "string" },
+        "actualizado": { "type": "string" }
+      },
+      "required": ["id", "assignmentId", "estudianteId", "estudianteNombre", "fechaEntrega", "archivoNombre", "archivoUrl", "estado", "creado"]
     }
   },
   "firestore": {
@@ -207,6 +233,10 @@
     "assignments": {
       "schema": { "$ref": "entities/Assignment" },
       "description": "Assignments list"
+    },
+    "assignmentSubmissions": {
+      "schema": { "$ref": "entities/AssignmentSubmission" },
+      "description": "Student homework uploads list"
     }
   }
 }

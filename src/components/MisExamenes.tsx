@@ -4,9 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, BookOpen, Trash2, Edit2, Play, Power, HelpCircle } from 'lucide-react';
+import { Plus, BookOpen, Trash2, Edit2, Play, Power, HelpCircle, Search } from 'lucide-react';
 import { User, Exam, Parcial, Subject, Semester } from '../types';
 import { fmtDate, uid, now } from '../lib/db';
+import { SearchableSelect, SelectOption } from './SearchableSelect';
 
 interface MisExamenesProps {
   currentUser: User;
@@ -18,15 +19,33 @@ interface MisExamenesProps {
   onOpenBuilder: (examId: string) => void;
   onUpdateExams: (updated: Exam[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  users?: User[];
 }
 
 export default function MisExamenes({ 
   currentUser, exams, parciales, subjects, semesters, submissions, 
-  onOpenBuilder, onUpdateExams, toast 
+  onOpenBuilder, onUpdateExams, toast, users 
 }: MisExamenesProps) {
   
+  const isTeacher = currentUser.rol === 'docente';
+  const allMyUserIds = (users && currentUser)
+    ? users.filter(u => u.nombre === currentUser.nombre || u.email.toLowerCase() === currentUser.email.toLowerCase()).map(u => u.id)
+    : [currentUser.id];
+
+  const teacherSubjects = isTeacher 
+    ? subjects.filter(s => (s.docenteId && allMyUserIds.includes(s.docenteId)) || currentUser.asignaturas?.includes(s.id))
+    : subjects;
+
+  const subjectOptions: SelectOption[] = teacherSubjects.map(s => ({
+    value: s.nombre,
+    label: s.nombre,
+    subLabel: s.codigo ? `Código: ${s.codigo}` : undefined,
+  }));
+
   const [filter, setFilter] = useState<'all' | 'activo' | 'borrador' | 'cerrado'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Form Fields
   const [title, setTitle] = useState('');
@@ -42,8 +61,18 @@ export default function MisExamenes({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const filteredExams = exams
-    .filter(e => e.docenteId === currentUser.id || currentUser.rol === 'admin')
-    .filter(e => filter === 'all' ? true : e.estado === filter);
+    .filter(e => (e.docenteId && allMyUserIds.includes(e.docenteId)) || currentUser.id === e.docenteId || currentUser.rol === 'admin')
+    .filter(e => filter === 'all' ? true : e.estado === filter)
+    .filter(e => {
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q);
+    });
+
+  const examsPerPage = 8;
+  const totalPages = Math.ceil(filteredExams.length / examsPerPage) || 1;
+  const currentActivePage = Math.min(currentPage, totalPages);
+  const paginatedExams = filteredExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
 
   const handleOpenModal = () => {
     setTitle('');
@@ -68,10 +97,10 @@ export default function MisExamenes({
 
     const newExam: Exam = {
       id: uid(),
-      titulo: title.trim(),
-      materia: materia.trim(),
+      titulo: title.trim().toUpperCase(),
+      materia: materia.trim().toUpperCase(),
       parcialId: parcialId || null,
-      descripcion: description.trim(),
+      descripcion: description.trim().toUpperCase(),
       docenteId: currentUser.id,
       estado,
       tiempo: Number(tiempo) || 0,
@@ -81,6 +110,7 @@ export default function MisExamenes({
       mostrarNota,
       creado: now(),
       preguntas: [],
+      bannerUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80', // default books & theology banner
     };
 
     const nextExams = [...exams, newExam];
@@ -130,26 +160,51 @@ export default function MisExamenes({
         </button>
       </div>
 
-      {/* Chip Tabs Filters */}
-      <div className="chip-tabs flex gap-2 mb-5 flex-wrap">
-        {(['all', 'activo', 'borrador', 'cerrado'] as const).map(tabKey => {
-          const labels = { all: 'Todos', activo: 'Activos', borrador: 'Borradores', cerrado: 'Cerrados' };
-          const isActive = filter === tabKey;
-          return (
+      {/* Chip Tabs Filters & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+        <div className="chip-tabs flex gap-2 flex-wrap">
+          {(['all', 'activo', 'borrador', 'cerrado'] as const).map(tabKey => {
+            const labels = { all: 'Todos', activo: 'Activos', borrador: 'Borradores', cerrado: 'Cerrados' };
+            const isActive = filter === tabKey;
+            return (
+              <button
+                key={tabKey}
+                onClick={() => setFilter(tabKey)}
+                className={`chip-tab px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer border select-none transition-all duration-150 ${
+                  isActive 
+                    ? 'bg-indigo-600 border-indigo-600 text-white' 
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                }`}
+                style={isActive ? { backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+              >
+                {labels[tabKey]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search input bar */}
+        <div className="relative w-full md:max-w-xs">
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            <Search className="w-3.5 h-3.5" />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar examen por título o materia..."
+            className="w-full pl-9 pr-8 py-1.5 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs font-semibold text-slate-800 transition duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-150 theme-bg-surface theme-border"
+          />
+          {searchQuery && (
             <button
-              key={tabKey}
-              onClick={() => setFilter(tabKey)}
-              className={`chip-tab px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer border select-none transition-all duration-150 ${
-                isActive 
-                  ? 'bg-indigo-600 border-indigo-600 text-white' 
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-              }`}
-              style={isActive ? { backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer font-extrabold select-none text-[10px]"
+              title="Limpiar búsqueda"
             >
-              {labels[tabKey]}
+              ✕
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       {/* Exams Grid/Table List */}
@@ -175,14 +230,27 @@ export default function MisExamenes({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredExams.map((e) => {
+                {paginatedExams.map((e) => {
                   const numSubs = submissions.filter(s => s.examenId === e.id).length;
                   const statusBg = e.estado === 'activo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : e.estado === 'borrador' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200';
                   
                   return (
                     <tr key={e.id} className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-semibold text-slate-900" style={{ color: 'var(--gray-900)' }}>
-                        {e.titulo}
+                      <td className="py-3 px-4 font-semibold text-slate-900" style={{ color: 'var(--gray-900)' }}>
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={e.bannerUrl || 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80'}
+                            alt={e.titulo}
+                            className="w-14 h-8 rounded-lg object-cover border border-slate-200 shadow-xs shrink-0 bg-slate-50"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="min-w-0">
+                            <span className="block font-extrabold truncate max-w-xs">{e.titulo}</span>
+                            {e.subtitulo && (
+                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-xs">{e.subtitulo}</span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="badge inline-flex px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -239,7 +307,7 @@ export default function MisExamenes({
                           ) : (
                             <button 
                               onClick={() => setConfirmDeleteId(e.id)} 
-                              className="btn text-xs p-1 rounded border border-rose-220 bg-rose-50 text-rose-750 hover:bg-rose-100 hover:text-rose-800 cursor-pointer"
+                              className="btn text-xs p-1 rounded border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 cursor-pointer"
                               title="Eliminar examen"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -252,6 +320,33 @@ export default function MisExamenes({
                 })}
               </tbody>
             </table>
+
+            {filteredExams.length > 8 && (
+              <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+                <span className="text-xs font-semibold text-slate-400">
+                  Mostrando { (currentActivePage - 1) * 8 + 1 } a { Math.min(currentActivePage * 8, filteredExams.length) } de { filteredExams.length } exámenes
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-500 mr-2">
+                    Página {currentActivePage} de {totalPages}
+                  </span>
+                  <button
+                    disabled={currentActivePage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    disabled={currentActivePage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -280,23 +375,19 @@ export default function MisExamenes({
                 </div>
                 <div className="form-group mb-4">
                   <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Materia <span className="text-red-500">*</span></label>
-                  <select 
-                    required 
-                    value={materia} 
-                    onChange={e => {
-                      const selectedMateria = e.target.value;
+                  <SearchableSelect
+                    options={subjectOptions}
+                    value={materia}
+                    placeholder="-- Selecciona materia --"
+                    searchPlaceholder="Buscar materia/asignatura..."
+                    noResultsText="No se encontraron materias"
+                    onChange={selectedMateria => {
                       setMateria(selectedMateria);
                       const matchingSub = subjects.find(s => s.nombre === selectedMateria);
                       const matchingParc = matchingSub ? parciales.find(p => p.asignatura === matchingSub.id) : null;
                       setParcialId(matchingParc?.id || '');
                     }}
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600 bg-white"
-                  >
-                    <option value="">-- Selecciona materia --</option>
-                    {subjects.map(s => (
-                      <option key={s.id} value={s.nombre}>{s.nombre}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
 
