@@ -148,6 +148,8 @@ export default function ExamBuilder({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved');
   const isFirstRender = useRef(true);
   const isDirtyRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
+  const isRemoteUpdatingRef = useRef(false);
   const lastExamIdRef = useRef(examId);
   const lastKnownTimeRef = useRef(exam.actualizado || exam.creado || '');
   const examsRef = useRef(exams);
@@ -199,12 +201,13 @@ export default function ExamBuilder({
     examsRef.current = exams;
 
     // If exams list updated from remote Firestore and user hasn't made unsaved edits in this session:
-    if (!isDirtyRef.current) {
+    if (!hasUserEditedRef.current && !isDirtyRef.current) {
       const freshExam = exams.find(e => e.id === examId);
       if (freshExam) {
         const freshTime = freshExam.actualizado || freshExam.creado || '';
-        if (freshTime > lastKnownTimeRef.current) {
+        if (freshTime > lastKnownTimeRef.current || !lastKnownTimeRef.current) {
           lastKnownTimeRef.current = freshTime;
+          isRemoteUpdatingRef.current = true;
           setTitle(freshExam.titulo);
           setSubtitulo(freshExam.subtitulo || '');
           setMateria(freshExam.materia);
@@ -217,6 +220,9 @@ export default function ExamBuilder({
           setMostrarNota(freshExam.mostrarNota);
           setQuestions(ensureValidQuestions(freshExam.preguntas || []));
           setBannerUrl(freshExam.bannerUrl || PRESET_BANNERS[0].url);
+          setTimeout(() => {
+            isRemoteUpdatingRef.current = false;
+          }, 150);
         }
       }
     }
@@ -228,6 +234,8 @@ export default function ExamBuilder({
       lastExamIdRef.current = examId;
       isFirstRender.current = true;
       isDirtyRef.current = false;
+      hasUserEditedRef.current = false;
+      isRemoteUpdatingRef.current = true;
 
       const currentExam = examsRef.current.find(e => e.id === examId);
       if (currentExam) {
@@ -244,6 +252,9 @@ export default function ExamBuilder({
         setQuestions(ensureValidQuestions(currentExam.preguntas || []));
         setBannerUrl(currentExam.bannerUrl || PRESET_BANNERS[0].url);
       }
+      setTimeout(() => {
+        isRemoteUpdatingRef.current = false;
+      }, 150);
     }
   }, [examId]);
 
@@ -280,6 +291,7 @@ export default function ExamBuilder({
     examsRef.current = nextExams;
     lastKnownTimeRef.current = nowIso;
     isDirtyRef.current = false;
+    hasUserEditedRef.current = false;
     onUpdateExams(nextExams);
 
     // Immediate direct fallback save to localStorage
@@ -296,10 +308,16 @@ export default function ExamBuilder({
     }
   };
 
-  // Debounced auto-save effect
+  // Debounced auto-save effect: ONLY triggers if user actually modified data
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      return;
+    }
+    if (isRemoteUpdatingRef.current) {
+      return;
+    }
+    if (!hasUserEditedRef.current) {
       return;
     }
 
@@ -309,7 +327,9 @@ export default function ExamBuilder({
     const updateTimer = setTimeout(() => {
       saveCurrentExamImmediate();
       setSaveStatus('saved');
-    }, 300);
+      isDirtyRef.current = false;
+      hasUserEditedRef.current = false;
+    }, 400);
 
     return () => clearTimeout(updateTimer);
   }, [
@@ -539,7 +559,13 @@ export default function ExamBuilder({
     }));
   };
 
+  const notifyUserEdit = () => {
+    hasUserEditedRef.current = true;
+    isDirtyRef.current = true;
+  };
+
   const handleAddEnunciado = (qid: string) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const nextEnun = Array.isArray(q.enunciados) ? [...q.enunciados] : [];
@@ -559,6 +585,7 @@ export default function ExamBuilder({
   };
 
   const handleUpdateEnunciadoText = (qid: string, eIdx: number, val: string) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const nextEnun = [...(q.enunciados || [])];
@@ -570,6 +597,7 @@ export default function ExamBuilder({
   };
 
   const handleUpdateEnunciadoCorrectValue = (qid: string, eIdx: number, termIdx: number) => {
+    notifyUserEdit();
     const validIdx = typeof termIdx === 'number' && !isNaN(termIdx) && termIdx >= 0 ? termIdx : 0;
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
@@ -586,6 +614,7 @@ export default function ExamBuilder({
   };
 
   const handleRemoveEnunciado = (qid: string, eIdx: number) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const currentEnuns = Array.isArray(q.enunciados) ? q.enunciados : [];
@@ -606,6 +635,7 @@ export default function ExamBuilder({
   };
 
   const handleUpdateOptionText = (qid: string, oIdx: number, val: string) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const nextOpts = [...(q.opciones || [])];
@@ -617,6 +647,7 @@ export default function ExamBuilder({
   };
 
   const handleToggleCorrect = (qid: string, oIdx: number) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         let nextCorrect: number[] = [];
@@ -646,6 +677,7 @@ export default function ExamBuilder({
   };
 
   const handleAddOption = (qid: string) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         const currentOpts = Array.isArray(q.opciones) ? [...q.opciones] : [];
@@ -667,6 +699,7 @@ export default function ExamBuilder({
   };
 
   const handleRemoveOption = (qid: string, oIdx: number) => {
+    notifyUserEdit();
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         if (q.opciones.length <= 2 && q.tipo !== 'matching' && q.tipo !== 'table') {
@@ -792,9 +825,10 @@ export default function ExamBuilder({
           )}
           <button 
             onClick={() => handleSave('borrador')}
-            className="btn btn-secondary px-4 py-1.5 rounded-lg text-slate-700 bg-white border hover:bg-slate-50 transition cursor-pointer text-xs font-semibold"
+            className="btn btn-secondary px-4 py-1.5 rounded-lg text-indigo-700 bg-indigo-50/80 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer text-xs font-bold flex items-center gap-1"
+            title="Guardar todos los cambios en Firebase"
           >
-            Guardar borrador
+            💾 Guardar cambios
           </button>
           <button 
             onClick={() => handleSave('activo')}

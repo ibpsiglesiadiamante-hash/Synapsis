@@ -220,6 +220,14 @@ export default function App() {
     setIsSyncingFirebase(true);
     try {
       showToast('Sincronizando datos con Cloud Firestore...', 'info');
+      const remoteDb = await fetchFullStateFromFirestore();
+      if (remoteDb) {
+        setDb(remoteDb);
+        saveState(remoteDb);
+        initializeSyncCache(remoteDb);
+        showToast('¡Datos actualizados exitosamente desde Cloud Firestore! ✓', 'success');
+        return;
+      }
       const result = await fullBidirectionalSync(db);
       if (result && result.success) {
         setDb(result.mergedState);
@@ -405,6 +413,16 @@ export default function App() {
     if (!currentUser) return null;
 
     if (activeEditExamId) {
+      if (isFirebaseLoading) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+              Sincronizando con Firebase...
+            </p>
+          </div>
+        );
+      }
       return (
         <ExamBuilder
           examId={activeEditExamId}
