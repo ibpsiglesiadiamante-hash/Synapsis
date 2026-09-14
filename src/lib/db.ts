@@ -353,7 +353,8 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
         const localTime = localItem.actualizado || localItem.creado || localItem.fecha || '';
         const remoteTime = remoteItem.actualizado || remoteItem.creado || remoteItem.fecha || '';
 
-        if (localTime >= remoteTime) {
+        // Prefer remote item if timestamps are equal or remote is newer
+        if (localTime > remoteTime) {
           itemMap.set(localItem.id, localItem);
         }
       }

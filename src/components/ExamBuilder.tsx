@@ -149,6 +149,7 @@ export default function ExamBuilder({
   const isFirstRender = useRef(true);
   const isDirtyRef = useRef(false);
   const lastExamIdRef = useRef(examId);
+  const lastKnownTimeRef = useRef(exam.actualizado || exam.creado || '');
   const examsRef = useRef(exams);
 
   // Synchronous ref to current exam form state to avoid stale closures in effects and handlers
@@ -202,8 +203,8 @@ export default function ExamBuilder({
       const freshExam = exams.find(e => e.id === examId);
       if (freshExam) {
         const freshTime = freshExam.actualizado || freshExam.creado || '';
-        const curTime = exam.actualizado || exam.creado || '';
-        if (freshTime > curTime) {
+        if (freshTime > lastKnownTimeRef.current) {
+          lastKnownTimeRef.current = freshTime;
           setTitle(freshExam.titulo);
           setSubtitulo(freshExam.subtitulo || '');
           setMateria(freshExam.materia);
@@ -219,7 +220,7 @@ export default function ExamBuilder({
         }
       }
     }
-  }, [exams, examId, exam.actualizado, exam.creado]);
+  }, [exams, examId]);
 
   // Sync state ONLY if user switches to a completely different exam (examId changes)
   useEffect(() => {
@@ -277,6 +278,8 @@ export default function ExamBuilder({
       nextExams.push(updatedExam);
     }
     examsRef.current = nextExams;
+    lastKnownTimeRef.current = nowIso;
+    isDirtyRef.current = false;
     onUpdateExams(nextExams);
 
     // Immediate direct fallback save to localStorage
@@ -759,7 +762,7 @@ export default function ExamBuilder({
   };
 
   const handleBack = () => {
-    saveCurrentExamImmediate('borrador');
+    saveCurrentExamImmediate();
     onBack();
   };
 
@@ -1274,17 +1277,18 @@ export default function ExamBuilder({
                             {q.opciones.map((opt, oIdx) => {
                               const optKey = q.opcionIds?.[oIdx] || `${q.id}-matchopt-${oIdx}`;
                               return (
-                                <div key={optKey} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm">
+                                <div key={optKey} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2.5 pr-1 py-1 text-sm shadow-sm transition hover:border-indigo-400">
                                   <input
                                     type="text"
                                     value={opt}
                                     onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
-                                    className="bg-transparent text-xs font-semibold text-slate-800 w-24 focus:outline-none border-none outline-none"
+                                    className="bg-transparent text-xs font-semibold text-slate-800 min-w-[5.5rem] max-w-[16rem] focus:outline-none border-none outline-none"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveOption(q.id, oIdx)}
-                                    className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 rounded"
+                                    className="text-slate-400 hover:text-red-600 hover:bg-red-50 font-bold shrink-0 text-xs px-1.5 py-0.5 rounded cursor-pointer transition"
+                                    title="Eliminar palabra"
                                   >
                                     ✕
                                   </button>
@@ -1348,7 +1352,7 @@ export default function ExamBuilder({
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveEnunciado(q.id, eIdx)}
-                                      className="text-slate-350 hover:text-red-500 font-bold p-1.5 hover:bg-slate-50 rounded"
+                                      className="text-slate-400 hover:text-red-600 font-bold p-1.5 hover:bg-red-50 rounded cursor-pointer transition"
                                       title="Eliminar enunciado"
                                     >
                                       ✕
