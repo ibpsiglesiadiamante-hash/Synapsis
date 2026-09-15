@@ -1064,7 +1064,7 @@ export default function ExamBuilder({
                       value={q.texto}
                       onChange={e => handleUpdateQText(q.id, e.target.value)}
                       placeholder="Escribe el enunciado de la pregunta aquí..."
-                      className="w-full text-sm sm:text-[15px] leading-relaxed font-semibold text-slate-800 border-b border-slate-200 py-2 focus:border-indigo-500 outline-none placeholder-slate-400 mb-4 bg-transparent whitespace-pre-wrap font-sans block"
+                      className="w-full text-xs sm:text-[13.5px] leading-relaxed font-semibold text-slate-800 border-b border-slate-200 py-1.5 focus:border-indigo-500 outline-none placeholder-slate-400 mb-3 bg-transparent whitespace-pre-wrap font-sans block"
                       rows={1}
                     />
 
@@ -1127,7 +1127,7 @@ export default function ExamBuilder({
                                   value={opt}
                                   onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
                                   placeholder={`Opción ${oIdx + 1}`}
-                                  className="flex-1 bg-transparent border-b border-slate-100 text-xs sm:text-sm py-1 font-medium focus:border-indigo-400 outline-none whitespace-pre-wrap font-sans block"
+                                  className="flex-1 bg-transparent border-b border-slate-100 text-[12px] sm:text-[13px] py-1 font-medium focus:border-indigo-400 outline-none whitespace-pre-wrap font-sans block"
                                   rows={1}
                                   onKeyDown={e => {
                                     if (e.key === 'Enter') {

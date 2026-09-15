@@ -731,7 +731,7 @@ export default function Resultados({
                         <span className="font-bold text-indigo-700">Puntos: {earnedPoints} / {q.puntos}</span>
                       </div>
                       
-                      <p className="font-bold text-slate-900 leading-snug mb-2.5 whitespace-pre-wrap">{q.texto}</p>
+                      <p className="font-semibold text-slate-900 leading-snug mb-2 text-[12.5px] whitespace-pre-wrap">{q.texto}</p>
                       
                       <div className="flex items-start gap-1 p-2 bg-white rounded border border-slate-100 mt-2 font-medium">
                         {isTextGraded ? (

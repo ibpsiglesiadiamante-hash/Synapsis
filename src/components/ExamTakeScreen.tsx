@@ -472,10 +472,10 @@ export default function ExamTakeScreen({
                       key={idx} 
                       className={`uppercase text-center tracking-wide text-slate-900 ${
                         idx === 0 
-                          ? 'font-black text-lg md:text-xl text-[#1a237e]' 
-                          : 'font-bold text-sm md:text-md text-slate-700 mt-0.5'
+                          ? 'font-extrabold text-base md:text-lg text-[#1a237e]' 
+                          : 'font-semibold text-xs md:text-sm text-slate-600 mt-0.5'
                       }`}
-                      style={{ letterSpacing: '0.05em' }}
+                      style={{ letterSpacing: '0.04em' }}
                     >
                       {line.trim()}
                     </div>
@@ -585,20 +585,20 @@ export default function ExamTakeScreen({
                     : 'border-[#dadce0] shadow-sm border-l-1 hover:shadow-md'
                 }`}
               >
-                <div className="flex justify-between items-start gap-4 mb-4">
+                <div className="flex justify-between items-start gap-4 mb-3">
                   <div className="flex items-start">
-                    <span className="text-[#202124] text-[16px] font-normal leading-relaxed whitespace-pre-wrap">
+                    <span className="text-[#202124] text-[14px] sm:text-[14.5px] font-normal leading-relaxed whitespace-pre-wrap">
                       <span className="font-semibold mr-1">{idx + 1}.</span> {qItem.texto}
                     </span>
                     <span className="text-rose-600 font-bold ml-1" title="Pregunta obligatoria">*</span>
                   </div>
                   
-                  <span className="text-xs text-slate-400 font-semibold shrink-0 bg-slate-50 px-2.5 py-1 rounded-md font-mono select-none">
+                  <span className="text-[11px] text-slate-400 font-semibold shrink-0 bg-slate-50 px-2 py-0.5 rounded-md font-mono select-none">
                     {qItem.puntos} {qItem.puntos === 1 ? 'punto' : 'puntos'}
                   </span>
                 </div>
 
-                <div className="space-y-3 mt-2">
+                <div className="space-y-2 mt-1">
                   
                   {/* Radio Multiple Choice & True/False */}
                   {(qItem.tipo === 'multiple' || qItem.tipo === 'tf') && (
@@ -611,18 +611,18 @@ export default function ExamTakeScreen({
                             e.stopPropagation();
                             handleSetAnswer(qItem.id, oIdx);
                           }}
-                          className="flex items-center gap-3 py-2 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
+                          className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
                         >
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
+                          <div className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                             isChecked 
                               ? 'border-[#673ab7]' 
                               : 'border-[#5f6368] group-hover:border-[#202124]'
                           }`}>
                             {isChecked && (
-                              <div className="w-2.5 h-2.5 rounded-full bg-[#673ab7]" />
+                              <div className="w-2 h-2 rounded-full bg-[#673ab7]" />
                             )}
                           </div>
-                          <span className="text-[#202124] text-sm leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
+                          <span className="text-[#202124] text-[13px] leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
                         </div>
                       );
                     })
@@ -651,9 +651,9 @@ export default function ExamTakeScreen({
                               e.stopPropagation();
                               handleToggleCheckbox(qItem.id, oIdx);
                             }}
-                            className="flex items-center gap-3 py-2 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
+                            className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
                           >
-                            <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                            <div className={`w-[17px] h-[17px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
                               isChecked 
                                 ? 'border-[#673ab7] bg-[#673ab7] text-white' 
                                 : 'border-[#5f6368] bg-transparent group-hover:border-[#202124]'
@@ -662,7 +662,7 @@ export default function ExamTakeScreen({
                                 <Check className="w-3.5 h-3.5 stroke-[3px]" />
                               )}
                             </div>
-                            <span className="text-[#202124] text-sm leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
+                            <span className="text-[#202124] text-[13px] leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
                           </div>
                         );
                       })}
@@ -676,7 +676,7 @@ export default function ExamTakeScreen({
                         value={answers[qItem.id] !== undefined ? answers[qItem.id] : ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={e => handleSetAnswer(qItem.id, e.target.value !== '' ? Number(e.target.value) : '')}
-                        className="w-full p-2.5 border border-[#dadce0] rounded-md bg-white text-sm text-[#202124] focus:outline-none focus:border-[#673ab7] focus:ring-1 focus:ring-[#673ab7]/30 transition-all cursor-pointer"
+                        className="w-full p-2 border border-[#dadce0] rounded-md bg-white text-xs text-[#202124] focus:outline-none focus:border-[#673ab7] focus:ring-1 focus:ring-[#673ab7]/30 transition-all cursor-pointer"
                       >
                         <option value="">Elegir</option>
                         {qItem.opciones.map((opt, oIdx) => (
@@ -735,14 +735,14 @@ export default function ExamTakeScreen({
                               }`}
                             >
                               <div className="flex items-start gap-2 flex-1 min-w-0">
-                                <span className={`font-black text-sm select-none shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-xs ${
+                                <span className={`font-bold select-none shrink-0 w-5.5 h-5.5 flex items-center justify-center rounded-md text-[11px] ${
                                   hasValue 
                                     ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' 
                                     : 'bg-slate-200 text-slate-505 dark:bg-slate-800 dark:text-slate-400'
                                 }`}>
                                   {eIdx + 1}
                                 </span>
-                                <span className="text-slate-800 text-sm font-semibold leading-relaxed dark:text-slate-105 whitespace-pre-wrap">
+                                <span className="text-slate-800 text-[13px] font-semibold leading-relaxed dark:text-slate-105 whitespace-pre-wrap">
                                   {enun}
                                 </span>
                               </div>
