@@ -143,6 +143,7 @@ export async function saveDocToFirestore<T extends { id: string }>(collName: str
   try {
     const cleanItem = sanitizeForFirestore(item);
     await setDoc(doc(db, collName, item.id), cleanItem as any);
+    itemSyncCache.set(`${collName}/${item.id}`, JSON.stringify(item));
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `${collName}/${item.id}`);
   }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Exam, Question, Parcial, Subject, Semester } from '../types';
 import { uid } from '../lib/db';
+import { saveDocToFirestore } from '../lib/firebase';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 
 interface ExamBuilderProps {
@@ -148,10 +149,7 @@ export default function ExamBuilder({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved');
   const isFirstRender = useRef(true);
   const isDirtyRef = useRef(false);
-  const hasUserEditedRef = useRef(false);
-  const isRemoteUpdatingRef = useRef(false);
   const lastExamIdRef = useRef(examId);
-  const lastKnownTimeRef = useRef(exam.actualizado || exam.creado || '');
   const examsRef = useRef(exams);
 
   // Synchronous ref to current exam form state to avoid stale closures in effects and handlers
@@ -199,34 +197,7 @@ export default function ExamBuilder({
   // Keep examsRef synced with latest exams prop
   useEffect(() => {
     examsRef.current = exams;
-
-    // If exams list updated from remote Firestore and user hasn't made unsaved edits in this session:
-    if (!hasUserEditedRef.current && !isDirtyRef.current) {
-      const freshExam = exams.find(e => e.id === examId);
-      if (freshExam) {
-        const freshTime = freshExam.actualizado || freshExam.creado || '';
-        if (freshTime > lastKnownTimeRef.current || !lastKnownTimeRef.current) {
-          lastKnownTimeRef.current = freshTime;
-          isRemoteUpdatingRef.current = true;
-          setTitle(freshExam.titulo);
-          setSubtitulo(freshExam.subtitulo || '');
-          setMateria(freshExam.materia);
-          setParcialId(freshExam.parcialId || '');
-          setDescription(freshExam.descripcion || '');
-          setTiempo(freshExam.tiempo);
-          setIntentos(freshExam.intentos);
-          setAprobacion(freshExam.aprobacion);
-          setAleatorio(freshExam.aleatorio);
-          setMostrarNota(freshExam.mostrarNota);
-          setQuestions(ensureValidQuestions(freshExam.preguntas || []));
-          setBannerUrl(freshExam.bannerUrl || PRESET_BANNERS[0].url);
-          setTimeout(() => {
-            isRemoteUpdatingRef.current = false;
-          }, 150);
-        }
-      }
-    }
-  }, [exams, examId]);
+  }, [exams]);
 
   // Sync state ONLY if user switches to a completely different exam (examId changes)
   useEffect(() => {
@@ -234,8 +205,6 @@ export default function ExamBuilder({
       lastExamIdRef.current = examId;
       isFirstRender.current = true;
       isDirtyRef.current = false;
-      hasUserEditedRef.current = false;
-      isRemoteUpdatingRef.current = true;
 
       const currentExam = examsRef.current.find(e => e.id === examId);
       if (currentExam) {
@@ -252,13 +221,10 @@ export default function ExamBuilder({
         setQuestions(ensureValidQuestions(currentExam.preguntas || []));
         setBannerUrl(currentExam.bannerUrl || PRESET_BANNERS[0].url);
       }
-      setTimeout(() => {
-        isRemoteUpdatingRef.current = false;
-      }, 150);
     }
   }, [examId]);
 
-  const saveCurrentExamImmediate = (overrideEstado?: 'borrador' | 'activo') => {
+  const saveCurrentExamImmediate = async (overrideEstado?: 'borrador' | 'activo'): Promise<Exam> => {
     const cur = latestDataRef.current;
     const currentBase = examsRef.current.find(e => e.id === cur.examId) || exam;
     const nowIso = new Date().toISOString();
@@ -289,12 +255,10 @@ export default function ExamBuilder({
       nextExams.push(updatedExam);
     }
     examsRef.current = nextExams;
-    lastKnownTimeRef.current = nowIso;
     isDirtyRef.current = false;
-    hasUserEditedRef.current = false;
     onUpdateExams(nextExams);
 
-    // Immediate direct fallback save to localStorage
+    // 1. Immediate local storage persistence
     try {
       const rawLocal = localStorage.getItem('ep_exams');
       const localExams: Exam[] = rawLocal ? JSON.parse(rawLocal) : [];
@@ -306,30 +270,35 @@ export default function ExamBuilder({
     } catch (e) {
       console.warn('Error backing up exam to localStorage:', e);
     }
+
+    // 2. Direct Cloud Firestore persistence
+    try {
+      await saveDocToFirestore('exams', updatedExam);
+    } catch (err) {
+      console.error('Error direct saving to Firestore:', err);
+    }
+
+    return updatedExam;
   };
 
-  // Debounced auto-save effect: ONLY triggers if user actually modified data
+  // Debounced auto-save effect: triggers reliably whenever any field changes without stealing input focus
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      return;
-    }
-    if (isRemoteUpdatingRef.current) {
-      return;
-    }
-    if (!hasUserEditedRef.current) {
       return;
     }
 
     isDirtyRef.current = true;
     setSaveStatus('saving');
 
-    const updateTimer = setTimeout(() => {
-      saveCurrentExamImmediate();
-      setSaveStatus('saved');
-      isDirtyRef.current = false;
-      hasUserEditedRef.current = false;
-    }, 400);
+    const updateTimer = setTimeout(async () => {
+      try {
+        await saveCurrentExamImmediate();
+        setSaveStatus('saved');
+      } catch (err) {
+        console.error('Auto-save error:', err);
+      }
+    }, 700);
 
     return () => clearTimeout(updateTimer);
   }, [
@@ -348,7 +317,7 @@ export default function ExamBuilder({
     examId
   ]);
 
-  // Flush latest state immediately on beforeunload or unmount ONLY
+  // Flush latest state immediately on beforeunload or unmount
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (isDirtyRef.current) {
@@ -560,7 +529,6 @@ export default function ExamBuilder({
   };
 
   const notifyUserEdit = () => {
-    hasUserEditedRef.current = true;
     isDirtyRef.current = true;
   };
 
@@ -780,13 +748,14 @@ export default function ExamBuilder({
     });
   };
 
-  const handleSave = (estado: 'borrador' | 'activo') => {
-    saveCurrentExamImmediate(estado);
+  const handleSave = async (estado: 'borrador' | 'activo') => {
+    setSaveStatus('saving');
+    await saveCurrentExamImmediate(estado);
     setSaveStatus('saved');
     toast(
       estado === 'activo' 
         ? 'Examen publicado exitosamente ✓' 
-        : 'Progreso guardado como borrador', 
+        : 'Progreso guardado exitosamente en la nube ✓', 
       'success'
     );
     if (estado === 'activo') {
@@ -794,8 +763,11 @@ export default function ExamBuilder({
     }
   };
 
-  const handleBack = () => {
-    saveCurrentExamImmediate();
+  const handleBack = async () => {
+    if (isDirtyRef.current) {
+      setSaveStatus('saving');
+      await saveCurrentExamImmediate();
+    }
     onBack();
   };
 

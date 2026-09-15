@@ -335,19 +335,26 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
 
     const itemMap = new Map<string, any>();
 
-    // 1. Remote items from Cloud Firestore (primary source of truth)
+    // 1. Remote items from Cloud Firestore
     remoteList.forEach((remoteItem: any) => {
       if (remoteItem && remoteItem.id && !deletedIds.has(remoteItem.id)) {
         itemMap.set(remoteItem.id, remoteItem);
       }
     });
 
-    // 2. Local items (only add brand new items created locally that do not exist on remote yet)
+    // 2. Local items: add new ones, or overwrite remote if local has newer timestamp
     localList.forEach((localItem: any) => {
       if (!localItem || !localItem.id || deletedIds.has(localItem.id)) return;
 
-      if (!itemMap.has(localItem.id)) {
+      const remoteItem = itemMap.get(localItem.id);
+      if (!remoteItem) {
         itemMap.set(localItem.id, localItem);
+      } else {
+        const localTime = localItem.actualizado || localItem.creado || '';
+        const remoteTime = remoteItem.actualizado || remoteItem.creado || '';
+        if (localTime > remoteTime) {
+          itemMap.set(localItem.id, localItem);
+        }
       }
     });
 
