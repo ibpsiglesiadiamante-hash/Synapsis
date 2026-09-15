@@ -167,6 +167,12 @@ export default function ExamTakeScreen({
     if (list.includes(valIdx)) {
       nextList = list.filter(item => item !== valIdx);
     } else {
+      const q = questions.find(item => item.id === qid);
+      const maxAllowed = q?.maxRespuestas !== undefined ? q.maxRespuestas : 3;
+      if (maxAllowed && list.length >= maxAllowed) {
+        toast(`Solo puedes seleccionar hasta ${maxAllowed} respuesta${maxAllowed > 1 ? 's' : ''} en esta pregunta`, 'warning');
+        return;
+      }
       nextList = [...list, valIdx];
     }
     handleSetAnswer(qid, nextList);
@@ -624,31 +630,43 @@ export default function ExamTakeScreen({
 
                   {/* Checkboxes items list */}
                   {qItem.tipo === 'checkbox' && (
-                    qItem.opciones.map((opt, oIdx) => {
-                      const answersList: number[] = answers[qItem.id] || [];
-                      const isChecked = answersList.includes(oIdx);
-                      return (
-                        <div 
-                          key={oIdx}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleCheckbox(qItem.id, oIdx);
-                          }}
-                          className="flex items-center gap-3 py-2 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
-                        >
-                          <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
-                            isChecked 
-                              ? 'border-[#673ab7] bg-[#673ab7] text-white' 
-                              : 'border-[#5f6368] bg-transparent group-hover:border-[#202124]'
-                          }`}>
-                            {isChecked && (
-                              <Check className="w-3.5 h-3.5 stroke-[3px]" />
-                            )}
+                    <div className="space-y-2">
+                      <div className="text-[12px] font-semibold text-indigo-700 bg-indigo-50/70 border border-indigo-150 px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 mb-1 select-none">
+                        <span>ℹ️</span>
+                        <span>
+                          {qItem.maxRespuestas !== undefined 
+                            ? `Selecciona hasta ${qItem.maxRespuestas} respuesta${qItem.maxRespuestas > 1 ? 's' : ''}` 
+                            : 'Selecciona hasta 3 respuestas'}
+                          {` (${(answers[qItem.id] || []).length} seleccionada${(answers[qItem.id] || []).length === 1 ? '' : 's'})`}
+                        </span>
+                      </div>
+
+                      {qItem.opciones.map((opt, oIdx) => {
+                        const answersList: number[] = answers[qItem.id] || [];
+                        const isChecked = answersList.includes(oIdx);
+                        return (
+                          <div 
+                            key={oIdx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCheckbox(qItem.id, oIdx);
+                            }}
+                            className="flex items-center gap-3 py-2 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
+                          >
+                            <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
+                              isChecked 
+                                ? 'border-[#673ab7] bg-[#673ab7] text-white' 
+                                : 'border-[#5f6368] bg-transparent group-hover:border-[#202124]'
+                            }`}>
+                              {isChecked && (
+                                <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                              )}
+                            </div>
+                            <span className="text-[#202124] text-sm leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
                           </div>
-                          <span className="text-[#202124] text-sm leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   )}
 
                   {/* Dropdown menu */}

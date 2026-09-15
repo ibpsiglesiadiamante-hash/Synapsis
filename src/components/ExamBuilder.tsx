@@ -417,6 +417,7 @@ export default function ExamBuilder({
           ...q,
           tipo: type,
           correctas: [],
+          maxRespuestas: type === 'checkbox' ? (q.maxRespuestas || 3) : undefined,
           opciones: options,
           opcionIds,
           enunciados: type === 'matching' ? enunciados : undefined,
@@ -626,10 +627,29 @@ export default function ExamBuilder({
           if (q.correctas.includes(oIdx)) {
             nextCorrect = q.correctas.filter(c => c !== oIdx);
           } else {
+            const maxAllowed = q.maxRespuestas && q.maxRespuestas > 0 ? q.maxRespuestas : 99;
+            if (q.correctas.length >= maxAllowed) {
+              toast(`Solo puedes marcar hasta ${maxAllowed} respuesta${maxAllowed > 1 ? 's' : ''} correcta${maxAllowed > 1 ? 's' : ''}`, 'warning');
+              return q;
+            }
             nextCorrect = [...q.correctas, oIdx];
           }
         }
         return { ...q, correctas: nextCorrect };
+      }
+      return q;
+    }));
+  };
+
+  const handleUpdateMaxRespuestas = (qid: string, maxVal?: number) => {
+    notifyUserEdit();
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        let nextCorrect = q.correctas || [];
+        if (maxVal && maxVal > 0 && nextCorrect.length > maxVal) {
+          nextCorrect = nextCorrect.slice(0, maxVal);
+        }
+        return { ...q, maxRespuestas: maxVal, correctas: nextCorrect };
       }
       return q;
     }));
@@ -1140,13 +1160,40 @@ export default function ExamBuilder({
                           })
                         )}
                         {!isTF && (
-                          <button 
-                            type="button" 
-                            onClick={() => handleAddOption(q.id)}
-                            className="text-indigo-600 hover:text-indigo-800 text-xs font-bold text-left self-start mt-1.5 flex items-center gap-1 cursor-pointer"
-                          >
-                            + Agregar opción de respuesta
-                          </button>
+                          <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-1 border-t border-dashed border-slate-150">
+                            <button 
+                              type="button" 
+                              onClick={() => handleAddOption(q.id)}
+                              className="text-indigo-600 hover:text-indigo-800 text-xs font-bold text-left flex items-center gap-1 cursor-pointer"
+                            >
+                              + Agregar opción de respuesta
+                            </button>
+
+                            {isCheck && (
+                              <div className="flex items-center gap-2 text-xs bg-indigo-50/60 text-indigo-900 px-2.5 py-1 rounded-lg border border-indigo-100">
+                                <span className="font-semibold text-[11px] text-slate-600">Máx. respuestas seleccionables:</span>
+                                <select
+                                  value={q.maxRespuestas !== undefined ? q.maxRespuestas : 3}
+                                  onChange={e => {
+                                    const val = e.target.value === 'all' ? undefined : Number(e.target.value);
+                                    handleUpdateMaxRespuestas(q.id, val);
+                                  }}
+                                  className="bg-white border border-indigo-200 rounded px-1.5 py-0.5 font-bold text-xs text-indigo-700 cursor-pointer focus:outline-none"
+                                >
+                                  <option value={2}>Hasta 2 respuestas</option>
+                                  <option value={3}>Hasta 3 respuestas (Predeterminado)</option>
+                                  <option value={4}>Hasta 4 respuestas</option>
+                                  <option value={5}>Hasta 5 respuestas</option>
+                                  <option value="all">Sin límite (Cualquiera)</option>
+                                </select>
+                                {q.maxRespuestas !== undefined && (
+                                  <span className="text-[10px] font-bold text-indigo-600">
+                                    ({q.correctas.length}/{q.maxRespuestas} marcadas como correctas)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -1638,8 +1685,8 @@ export default function ExamBuilder({
                         onChange={e => handleChangeQType(q.id, e.target.value as Question['tipo'])}
                         className="text-xs p-1.5 font-bold border rounded-lg bg-slate-50 text-slate-600 cursor-pointer"
                       >
-                        <option value="multiple">Opción múltiple</option>
-                        <option value="checkbox">Opción de Casillas</option>
+                        <option value="multiple">Opción única (Una sola respuesta)</option>
+                        <option value="checkbox">Opción múltiple / Casillas (Múltiples respuestas: hasta 3)</option>
                         <option value="dropdown">Menú desplegable</option>
                         <option value="tf">Verdadero/Falso</option>
                         <option value="abierta">Respuesta libre/Texto</option>
