@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { CalendarDays, Plus, Trash2, Edit2, CheckCircle2, XSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Plus, Trash2, Edit2, CheckCircle2, XSquare, ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Semester } from '../types';
-import { uid, now, fmtDate } from '../lib/db';
+import { uid, now, fmtDate, generateSemesterCode } from '../lib/db';
 
 interface SemestresProps {
   semesters: Semester[];
@@ -32,10 +32,14 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
 
   const currentSemesters = semesters.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
+  const [isCodeAuto, setIsCodeAuto] = useState(true);
+
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setNombre('');
-    setCodigo('');
+    setIsCodeAuto(true);
+    const autoCode = generateSemesterCode('', semesters);
+    setCodigo(autoCode);
     setEstado('activo');
     setIsModalOpen(true);
   };
@@ -43,18 +47,33 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   const handleOpenEditModal = (sem: Semester) => {
     setEditingId(sem.id);
     setNombre(sem.nombre);
-    setCodigo(sem.codigo || '');
+    setCodigo(sem.codigo || generateSemesterCode(sem.nombre, semesters));
+    setIsCodeAuto(false);
     setEstado(sem.estado);
     setIsModalOpen(true);
   };
 
+  const handleNombreChange = (val: string) => {
+    setNombre(val);
+    if (!editingId && isCodeAuto) {
+      setCodigo(generateSemesterCode(val, semesters));
+    }
+  };
+
+  const handleRegenerateCode = () => {
+    const freshCode = generateSemesterCode(nombre, semesters);
+    setCodigo(freshCode);
+    setIsCodeAuto(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !codigo.trim()) {
-      toast('Todos los campos son requeridos', 'error');
+    if (!nombre.trim()) {
+      toast('El nombre del semestre es requerido', 'error');
       return;
     }
 
+    const finalCode = codigo.trim() || generateSemesterCode(nombre, semesters);
     const nextSems = [...semesters];
 
     if (editingId) {
@@ -63,7 +82,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
         nextSems[idx] = {
           ...nextSems[idx],
           nombre: nombre.trim(),
-          codigo: codigo.trim(),
+          codigo: finalCode,
           estado,
           actualizado: now(),
         };
@@ -74,12 +93,12 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
       const newSem: Semester = {
         id: uid(),
         nombre: nombre.trim(),
-        codigo: codigo.trim(),
+        codigo: finalCode,
         estado,
         creado: now(),
       };
       onUpdateSemesters([...nextSems, newSem]);
-      toast('Nuevo ciclo o semestre académico creado', 'success');
+      toast(`Nuevo ciclo creado con código ${finalCode}`, 'success');
     }
 
     setIsModalOpen(false);
@@ -272,22 +291,45 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
                   type="text"
                   required
                   value={nombre}
-                  onChange={e => setNombre(e.target.value)}
+                  onChange={e => handleNombreChange(e.target.value)}
                   placeholder="Ej / Semestre 2026-I"
                   className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Código único descriptivo <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={codigo}
-                  onChange={e => setCodigo(e.target.value)}
-                  placeholder="Ej / SEM-26A"
-                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Código de semestre <span className="text-indigo-600 font-semibold font-mono">(Automático)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRegenerateCode}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition"
+                    title="Regenerar código según el ciclo"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Regenerar</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={codigo}
+                    onChange={e => {
+                      setCodigo(e.target.value);
+                      setIsCodeAuto(false);
+                    }}
+                    placeholder="Ej / SEM-26A"
+                    className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-slate-50 font-mono font-bold text-indigo-900 uppercase"
+                  />
+                  <span className="absolute right-2.5 top-2.5 pointer-events-none">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                  Se genera automáticamente con el formato académico o puedes personalizarlo si lo prefieres.
+                </p>
               </div>
 
               <div className="form-group flex flex-col">

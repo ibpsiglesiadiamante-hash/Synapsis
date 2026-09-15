@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet, Sparkles, RefreshCw, Key } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
-import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
+import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode } from '../lib/db';
 import { deleteDocFromFirestore, saveDocToFirestore } from '../lib/firebase';
 
 interface EstudiantesProps {
@@ -31,6 +31,7 @@ export default function Estudiantes({
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [codigo, setCodigo] = useState('');
   const [cedula, setCedula] = useState('');
   const [celular, setCelular] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -103,6 +104,7 @@ export default function Estudiantes({
     setNombre('');
     setEmail('');
     setPass('');
+    setCodigo(generateStudentCode(users));
     setCedula('');
     setCelular('');
     setIsModalOpen(true);
@@ -113,9 +115,15 @@ export default function Estudiantes({
     setNombre(st.nombre);
     setEmail(st.email || '');
     setPass('');
+    setCodigo(st.codigo || generateStudentCode(users));
     setCedula(st.cedula || '');
     setCelular(st.celular || '');
     setIsModalOpen(true);
+  };
+
+  const handleRegenerateStudentCode = () => {
+    const newCode = generateStudentCode(users);
+    setCodigo(newCode);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -138,6 +146,8 @@ export default function Estudiantes({
       finalEmail = `${slug || 'estudiante'}.${randomNum}@instituto.edu.co`;
     }
 
+    const finalCode = (codigo.trim() || generateStudentCode(users)).toUpperCase();
+
     if (editingId) {
       const idx = nextUsers.findIndex(u => u.id === editingId);
       if (idx > -1) {
@@ -150,6 +160,7 @@ export default function Estudiantes({
           ...nextUsers[idx],
           nombre: nombre.trim().toUpperCase(),
           email: finalEmail.toLowerCase(),
+          codigo: finalCode,
           cedula: cedula.trim().toUpperCase() || undefined,
           celular: celular.trim().toUpperCase() || undefined,
           ...(pass ? { pass: pass.trim() } : {}),
@@ -165,18 +176,12 @@ export default function Estudiantes({
         return;
       }
 
-      let automaticCode = '';
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      do {
-        automaticCode = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
-      } while (users.some(u => u.codigo === automaticCode));
-
       const newSt: User = {
         id: uid(),
         nombre: nombre.trim().toUpperCase(),
         email: finalEmail.toLowerCase(),
-        pass: automaticCode,
-        codigo: automaticCode,
+        pass: pass.trim() || finalCode,
+        codigo: finalCode,
         rol: 'estudiante',
         creado: now(),
         cedula: cedula.trim().toUpperCase() || undefined,
@@ -185,7 +190,7 @@ export default function Estudiantes({
 
       saveDocToFirestore('users', newSt);
       onUpdateUsers([...nextUsers, newSt]);
-      toast(`Estudiante registrado. Correo: ${finalEmail} | Código/Contraseña: ${automaticCode}`, 'success');
+      toast(`Estudiante registrado. Correo: ${finalEmail} | Código: ${finalCode}`, 'success');
     }
 
     setIsModalOpen(false);
@@ -241,11 +246,7 @@ export default function Estudiantes({
       }
       existingEmails.add(finalEmail);
 
-      let automaticCode = '';
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      do {
-        automaticCode = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
-      } while (users.some(u => u.codigo === automaticCode) || newUsersList.some(u => u.codigo === automaticCode));
+      const automaticCode = generateStudentCode([...users, ...newUsersList]);
 
       const newSt: User = {
         id: uid(),
@@ -636,6 +637,39 @@ export default function Estudiantes({
                 />
               </div>
 
+              <div className="form-group col-span-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Código de estudiante <span className="text-indigo-600 font-semibold font-mono">(Automático)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRegenerateStudentCode}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition"
+                    title="Generar otro código aleatorio"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Regenerar</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={codigo}
+                    onChange={e => setCodigo(e.target.value.toUpperCase())}
+                    placeholder="Ej / X9B2"
+                    maxLength={10}
+                    className="form-control w-full p-2.5 border rounded-xl text-sm focus:outline-indigo-650 bg-slate-50 font-mono font-bold text-indigo-900 uppercase tracking-widest"
+                  />
+                  <span className="absolute right-3 top-3 pointer-events-none">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                  Código de 4 caracteres generado automáticamente para identificar al estudiante y acceder al sistema.
+                </p>
+              </div>
+
               {editingId ? (
                 <div className="form-group flex flex-col">
                   <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
@@ -649,14 +683,7 @@ export default function Estudiantes({
                     className="form-control w-full p-2.5 border rounded-xl text-sm focus:outline-indigo-650 bg-white"
                   />
                 </div>
-              ) : (
-                <div className="form-group p-3.5 bg-slate-50 rounded-xl border border-dashed border-slate-200 theme-bg-surface select-none">
-                  <span className="text-[10px] font-bold text-indigo-600 block mb-1 tracking-wider font-mono">🔐 CÓDIGO ÚNICO AUTOMÁTICO</span>
-                  <p className="text-[11px] text-slate-500 leading-normal font-sans font-medium">
-                    Se generará un código alfanumérico aleatorio de 4 dígitos (ej: <span className="font-mono font-bold text-slate-700">X9B2</span>) que le servirá al estudiante como usuario de acceso para el portal y para presentar exámenes.
-                  </p>
-                </div>
-              )}
+              ) : null}
 
               <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4 mt-6 bg-slate-50 rounded-b-2xl -mx-5 -mb-5 p-4">
                 <button

@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, BookOpen, GraduationCap, Users, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, BookOpen, GraduationCap, Users, ChevronLeft, ChevronRight, Search, Sparkles, RefreshCw } from 'lucide-react';
 import { Subject, User } from '../types';
-import { uid, now, fmtDate } from '../lib/db';
+import { uid, now, fmtDate, generateSubjectCode } from '../lib/db';
 
 interface AsignaturasProps {
   subjects: Subject[];
@@ -51,10 +51,15 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
 
   const docentes = users.filter(u => u.rol === 'docente' || u.rol === 'admin');
 
+  const [isCodeAuto, setIsCodeAuto] = useState(true);
+
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setNombre('');
-    setCodigo('');
+    setIsCodeAuto(true);
+    // Código generado automáticamente por defecto
+    const autoCode = generateSubjectCode('', subjects);
+    setCodigo(autoCode);
     setDocenteId('');
     setIsModalOpen(true);
   };
@@ -62,9 +67,23 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
   const handleOpenEditModal = (sub: Subject) => {
     setEditingId(sub.id);
     setNombre(sub.nombre);
-    setCodigo(sub.codigo || '');
+    setCodigo(sub.codigo || generateSubjectCode(sub.nombre, subjects));
+    setIsCodeAuto(false);
     setDocenteId(sub.docenteId || '');
     setIsModalOpen(true);
+  };
+
+  const handleNombreChange = (val: string) => {
+    setNombre(val);
+    if (!editingId && isCodeAuto) {
+      setCodigo(generateSubjectCode(val, subjects));
+    }
+  };
+
+  const handleRegenerateCode = () => {
+    const freshCode = generateSubjectCode(nombre, subjects);
+    setCodigo(freshCode);
+    setIsCodeAuto(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -74,6 +93,7 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
       return;
     }
 
+    const finalCode = codigo.trim() || generateSubjectCode(nombre, subjects);
     const nextSubs = [...subjects];
 
     if (editingId) {
@@ -82,7 +102,7 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
         nextSubs[idx] = {
           ...nextSubs[idx],
           nombre: nombre.trim(),
-          codigo: codigo.trim(),
+          codigo: finalCode,
           docenteId,
           actualizado: now(),
         };
@@ -93,12 +113,12 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
       const newSub: Subject = {
         id: uid(),
         nombre: nombre.trim(),
-        codigo: codigo.trim(),
+        codigo: finalCode,
         docenteId,
         creado: now(),
       };
       onUpdateSubjects([...nextSubs, newSub]);
-      toast('Asignatura creada satisfactoriamente', 'success');
+      toast(`Asignatura creada satisfactoriamente con código ${finalCode}`, 'success');
     }
 
     setIsModalOpen(false);
@@ -325,21 +345,45 @@ export default function Asignaturas({ subjects, users, onUpdateSubjects, toast }
                   type="text"
                   required
                   value={nombre}
-                  onChange={e => setNombre(e.target.value)}
+                  onChange={e => handleNombreChange(e.target.value)}
                   placeholder="Ej / Química Orgánica"
                   className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white"
                 />
               </div>
 
               <div className="form-group col-span-2">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Código de curso</label>
-                <input
-                  type="text"
-                  value={codigo}
-                  onChange={e => setCodigo(e.target.value)}
-                  placeholder="Ej / MAT-201"
-                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Código de curso <span className="text-indigo-600 font-semibold font-mono">(Automático)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRegenerateCode}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition"
+                    title="Regenerar código según el nombre"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Regenerar</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={codigo}
+                    onChange={e => {
+                      setCodigo(e.target.value);
+                      setIsCodeAuto(false);
+                    }}
+                    placeholder="Ej / QUI-101"
+                    className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-slate-50 font-mono font-bold text-indigo-900 uppercase"
+                  />
+                  <span className="absolute right-2.5 top-2.5 pointer-events-none">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                  Se autocalcula automáticamente desde el nombre o puedes personalizarlo si lo deseas.
+                </p>
               </div>
 
               <div className="form-group flex flex-col">

@@ -40,6 +40,94 @@ export function avatarLetter(name: string): string {
   return (name || '?').charAt(0).toUpperCase();
 }
 
+/**
+ * Genera automáticamente un código único para un estudiante (4 caracteres alfanuméricos en mayúscula).
+ */
+export function generateStudentCode(existingUsers: User[] = []): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  let attempts = 0;
+  do {
+    code = Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+    attempts++;
+  } while (existingUsers.some(u => (u.codigo || '').toUpperCase() === code) && attempts < 1000);
+  return code;
+}
+
+/**
+ * Genera automáticamente un código para una asignatura basado en su nombre o secuencia (ej. MAT-101, QUI-102, ASG-103).
+ */
+export function generateSubjectCode(nombre: string, existingSubjects: Subject[] = []): string {
+  // Limpiar nombre y remover acentos
+  const clean = (nombre || '')
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "");
+
+  const words = clean.split(/\s+/).filter(Boolean);
+  let prefix = 'ASG';
+
+  if (words.length >= 3) {
+    prefix = words.slice(0, 3).map(w => w[0]).join('');
+  } else if (words.length === 2) {
+    prefix = (words[0].substring(0, 2) + words[1].substring(0, 1)).padEnd(3, 'X');
+  } else if (words.length === 1 && words[0].length >= 3) {
+    prefix = words[0].substring(0, 3);
+  } else if (words.length === 1 && words[0].length > 0) {
+    prefix = words[0].padEnd(3, 'X');
+  }
+
+  // Buscar el siguiente número disponible para este prefijo
+  let num = 101;
+  const prefixCodes = existingSubjects
+    .map(s => (s.codigo || '').toUpperCase().trim())
+    .filter(c => c.startsWith(`${prefix}-`));
+
+  while (existingSubjects.some(s => (s.codigo || '').toUpperCase().trim() === `${prefix}-${num}`)) {
+    num++;
+  }
+
+  return `${prefix}-${num}`;
+}
+
+/**
+ * Genera automáticamente un código para un semestre basado en su nombre o el año actual (ej. SEM-26A, SEM-26B, SEM-27A).
+ */
+export function generateSemesterCode(nombre: string, existingSemesters: Semester[] = []): string {
+  const currentYear = new Date().getFullYear();
+  const yearSuffix = currentYear.toString().slice(-2); // "26"
+
+  // Intentar detectar si el nombre contiene año (ej: 2026, 2027) y período (I, II, 1, 2, A, B)
+  const clean = (nombre || '').trim().toUpperCase();
+  const yearMatch = clean.match(/(?:20)?(\d{2})/);
+  const detectedYear = yearMatch ? yearMatch[1] : yearSuffix;
+
+  let period = 'A';
+  if (clean.includes('-II') || clean.includes(' II') || clean.includes('-2') || clean.includes(' 2') || clean.includes('-B') || clean.includes(' B')) {
+    period = 'B';
+  } else if (clean.includes('-III') || clean.includes(' III') || clean.includes('-3') || clean.includes(' C')) {
+    period = 'C';
+  } else if (clean.includes('-I') || clean.includes(' I') || clean.includes('-1') || clean.includes(' A')) {
+    period = 'A';
+  } else {
+    // Si no se especifica período en el nombre, contar cuántos semestres hay ya para ese año
+    const countForYear = existingSemesters.filter(s => (s.codigo || '').includes(detectedYear)).length;
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    period = alphabet[countForYear % alphabet.length] || 'A';
+  }
+
+  let code = `SEM-${detectedYear}${period}`;
+  let counter = 1;
+  while (existingSemesters.some(s => (s.codigo || '').toUpperCase().trim() === code)) {
+    code = `SEM-${detectedYear}${period}${counter}`;
+    counter++;
+  }
+
+  return code;
+}
+
 interface AppState {
   users: User[];
   institutions: Institution[];

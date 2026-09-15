@@ -970,6 +970,51 @@ export default function Biblia() {
   // Cache dictionary to avoid duplicate requests: "bookKey-chapter" -> Verses[ ]
   const chapterCacheRef = useRef<Record<string, Verse[]>>({});
   const offlineCacheKeysRef = useRef<Record<string, boolean>>({});
+  const bookDataCacheRef = useRef<Record<number, { chapters: string[][] }>>({});
+  const allBibleDataRef = useRef<any[] | null>(null);
+
+  // Robust book data loader from local bundled JSON with CDN fallback
+  const loadBookData = async (bookIdx: number): Promise<{ chapters: string[][] } | null> => {
+    if (bookDataCacheRef.current[bookIdx]) {
+      return bookDataCacheRef.current[bookIdx];
+    }
+    // 1. Try local bundled static JSON (/bible/book_X.json)
+    try {
+      const res = await fetch(`/bible/book_${bookIdx}.json`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.chapters)) {
+          bookDataCacheRef.current[bookIdx] = data;
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn(`Local fetch for book_${bookIdx}.json failed:`, e);
+    }
+
+    // 2. Try CDN fallback (jsdelivr)
+    try {
+      if (!allBibleDataRef.current) {
+        const cdnRes = await fetch('https://cdn.jsdelivr.net/gh/thiagobodruk/bible@master/json/es_rvr.json');
+        if (cdnRes.ok) {
+          const all = await cdnRes.json();
+          if (Array.isArray(all)) {
+            allBibleDataRef.current = all;
+          }
+        }
+      }
+      if (allBibleDataRef.current && allBibleDataRef.current[bookIdx]) {
+        const b = allBibleDataRef.current[bookIdx];
+        const data = { chapters: b.chapters };
+        bookDataCacheRef.current[bookIdx] = data;
+        return data;
+      }
+    } catch (err) {
+      console.warn('CDN fallback error:', err);
+    }
+
+    return null;
+  };
 
   // Interactive Bookmarks loaded from localStorage
   const [bookmarks, setBookmarks] = useState<BookmarkedVerse[]>(() => {
@@ -996,7 +1041,7 @@ export default function Biblia() {
     setDailyVerseIdx(day % DAILY_VERSES.length);
   }, []);
 
-  // Fetch Chapter Scriptures from cache / preseeded DB / live online API
+  // Fetch Chapter Scriptures from complete authentic Bible repository
   useEffect(() => {
     let active = true;
     const book = BIBLE_BOOKS[selectedBookIdx];
@@ -1005,45 +1050,35 @@ export default function Biblia() {
     // 1. Check local session memory cache first
     if (chapterCacheRef.current[cacheKey]) {
       setVerses(chapterCacheRef.current[cacheKey]);
-      setIsOfflineMode(!!offlineCacheKeysRef.current[cacheKey]);
+      setIsOfflineMode(false);
       setHasError(false);
       setIsLoading(false);
       return;
     }
 
-    // 2. Otherwise request live Spanish translation from reliable Deno Bible API
     const fetchChapter = async () => {
       setIsLoading(true);
       setHasError(false);
       try {
-        const abbrev = DENO_BOOK_ABREVIATIONS[selectedBookIdx];
-        const response = await fetch(`https://bible-api.deno.dev/api/read/rv1960/${abbrev}/${selectedChapter}`);
-        if (!response.ok) {
-          throw new Error('No se pudo conectar al servidor de Sagradas Escrituras');
-        }
-        const data = await response.json();
-        
+        const bookData = await loadBookData(selectedBookIdx);
         if (!active) return;
 
-        const rawVerses = data.vers || [];
-        const parsedVerses: Verse[] = rawVerses.map((v: any) => ({
-          book: book.name,
-          chapter: selectedChapter,
-          verse: v.number,
-          text: v.verse.replace(/\r?\n|\r/g, ' ').trim()
-        }));
+        if (bookData && bookData.chapters && bookData.chapters[selectedChapter - 1]) {
+          const rawVerses: string[] = bookData.chapters[selectedChapter - 1];
+          const parsedVerses: Verse[] = rawVerses.map((verseText: string, idx: number) => ({
+            book: book.name,
+            chapter: selectedChapter,
+            verse: idx + 1,
+            text: verseText.replace(/\r?\n|\r/g, ' ').trim()
+          }));
 
-        if (parsedVerses.length > 0) {
-          setVerses(parsedVerses);
-          setIsOfflineMode(false);
-          chapterCacheRef.current[cacheKey] = parsedVerses;
-          offlineCacheKeysRef.current[cacheKey] = false;
-        } else {
-          throw new Error('Capítulo vacío o no encontrado en los registros.');
+          if (parsedVerses.length > 0) {
+            setVerses(parsedVerses);
+            setIsOfflineMode(false);
+            chapterCacheRef.current[cacheKey] = parsedVerses;
+            return;
+          }
         }
-      } catch (err) {
-        console.warn("Live fetch error, falling back to offline content:", err);
-        if (!active) return;
 
         // 3. Fall back to curated offline seeds if available
         const offlineBook = OFFLINE_BIBLE_SEEDS.find(b => b.name.toLowerCase() === book.name.toLowerCase());
@@ -1052,15 +1087,12 @@ export default function Biblia() {
           setVerses(offlineVerses);
           setIsOfflineMode(false);
           chapterCacheRef.current[cacheKey] = offlineVerses;
-          offlineCacheKeysRef.current[cacheKey] = false;
         } else {
-          // 4. Otherwise trigger high-fidelity spiritual fallback
-          const fallback = generateSpiritualFallback(book.name, selectedChapter);
-          setVerses(fallback);
-          setIsOfflineMode(true);
-          chapterCacheRef.current[cacheKey] = fallback;
-          offlineCacheKeysRef.current[cacheKey] = true;
+          setHasError(true);
         }
+      } catch (err) {
+        console.error("Error al cargar capítulo bíblico:", err);
+        if (active) setHasError(true);
       } finally {
         if (active) {
           setIsLoading(false);
@@ -1089,56 +1121,35 @@ export default function Biblia() {
     const match = query.match(referenceRegex);
 
     if (match) {
-      const bookNameInput = match[1].trim().toLowerCase();
+      const bookNameInput = match[1].trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const chapterNum = parseInt(match[2]);
       const verseNum = parseInt(match[3]);
 
-      const foundBookIdx = BIBLE_BOOKS.findIndex(b => 
-        b.name.toLowerCase() === bookNameInput || 
-        b.key.toLowerCase() === bookNameInput
-      );
+      const foundBookIdx = BIBLE_BOOKS.findIndex(b => {
+        const bName = b.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const bKey = b.key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return bName === bookNameInput || bKey === bookNameInput;
+      });
 
       if (foundBookIdx !== -1) {
         const foundBook = BIBLE_BOOKS[foundBookIdx];
         try {
-          const abbrev = DENO_BOOK_ABREVIATIONS[foundBookIdx];
-          const res = await fetch(`https://bible-api.deno.dev/api/read/rv1960/${abbrev}/${chapterNum}/${verseNum}`);
-          if (!res.ok) throw new Error('Ref no encontrada');
-          const data = await res.json();
-          
-          if (data && data.verse) {
-            const parsed: Verse[] = [{
+          const bookData = await loadBookData(foundBookIdx);
+          const rawChapter = bookData?.chapters?.[chapterNum - 1];
+          const verseText = rawChapter?.[verseNum - 1];
+
+          if (verseText) {
+            setSearchResults([{
               book: foundBook.name,
               chapter: chapterNum,
-              verse: data.number,
-              text: data.verse.replace(/\r?\n|\r/g, ' ').trim()
-            }];
-            setSearchResults(parsed);
+              verse: verseNum,
+              text: verseText.replace(/\r?\n|\r/g, ' ').trim()
+            }]);
           } else {
-            setSearchError('El versículo solicitado no pudo hallarse en la versión Reina Valera.');
+            setSearchError(`No se encontró el versículo ${verseNum} en ${foundBook.name} capítulo ${chapterNum}.`);
           }
         } catch {
-          // Check locally
-          const localBook = OFFLINE_BIBLE_SEEDS.find(b => b.name.toLowerCase() === foundBook.name.toLowerCase());
-          const localVer = localBook && (localBook.chapters as any)[chapterNum]?.find((v: any) => v.verse === verseNum);
-          if (localVer) {
-            setSearchResults([localVer]);
-          } else {
-            // Generar dinámicamente el versículo de manera offline si no está pregrabado
-            const fallbackVerses = generateSpiritualFallback(foundBook.name, chapterNum);
-            const fallbackVer = fallbackVerses.find(v => v.verse === verseNum);
-            if (fallbackVer) {
-              setSearchResults([fallbackVer]);
-            } else {
-              // Si el versículo excede el rango generado, mostrar uno temático de paz para reconfortar al creyente
-              setSearchResults([{
-                book: foundBook.name,
-                chapter: chapterNum,
-                verse: verseNum,
-                text: 'El corazón alegre hermosea el rostro; mas por el dolor del corazón el espíritu se abate. El Señor guiará tus pasos en paz.'
-              }]);
-            }
-          }
+          setSearchError('Error al buscar la cita bíblica.');
         } finally {
           setIsSearchingLive(false);
         }
@@ -1146,108 +1157,71 @@ export default function Biblia() {
       }
     }
 
-    // 2. Otherwise search locally using smart theological stem & tagging matcher
-    const keyword = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const queryStem = getSpanishStem(query);
-
-    const queryTokens = query.toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .split(/\W+/)
-      .filter(t => t.length > 1);
-
-    const uniqueMatchesMap = new Map<string, { verse: Verse; score: number }>();
-
-    const evaluateVerseMatch = (v: Verse, tags: string[] = []) => {
-      const textClean = v.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const bookClean = v.book.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const keyId = `${v.book}-${v.chapter}-${v.verse}`;
-
-      // a. Exact full match in text or book name (highest score)
-      if (textClean.includes(keyword) || bookClean.includes(keyword)) {
-        uniqueMatchesMap.set(keyId, { verse: v, score: 100 });
-        return;
-      }
-
-      // b. Exact full match in tags
-      const hasExactTag = tags.some(t => {
-        const tc = t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return tc.includes(keyword) || keyword.includes(tc);
-      });
-      if (hasExactTag) {
-        uniqueMatchesMap.set(keyId, { verse: v, score: 95 });
-        return;
-      }
-
-      // c. Word Stem matching
-      let stemMatchesCount = 0;
-      queryTokens.forEach(token => {
-        const tokenStem = getSpanishStem(token);
-        if (!tokenStem) return;
-
-        // Does any word in the bible text share this root stem?
-        const textWords = textClean.split(/\W+/);
-        const textHasStem = textWords.some(w => getSpanishStem(w) === tokenStem);
-
-        // Does any tag share this root stem?
-        const tagsHaveStem = tags.some(t => getSpanishStem(t) === tokenStem);
-
-        if (textHasStem || tagsHaveStem) {
-          stemMatchesCount++;
+    // 2. Full text concordance search across the Bible
+    try {
+      if (!allBibleDataRef.current) {
+        try {
+          const fullRes = await fetch('/bible/es_rvr.json');
+          if (fullRes.ok) {
+            allBibleDataRef.current = await fullRes.json();
+          }
+        } catch (e) {
+          console.warn("Could not load /bible/es_rvr.json:", e);
         }
-      });
-
-      if (stemMatchesCount > 0 && queryTokens.length > 0) {
-        // Higher percentage of matching query tokens gives higher score
-        const score = Math.round((stemMatchesCount / queryTokens.length) * 85);
-        
-        // Only keep if no match exists yet or if this has a higher score
-        const existing = uniqueMatchesMap.get(keyId);
-        if (!existing || score > existing.score) {
-          uniqueMatchesMap.set(keyId, { verse: v, score });
-        }
-        return;
       }
 
-      // d. Global term stem matching
-      if (queryStem) {
-        const textWords = textClean.split(/\W+/);
-        const textHasGlobalStem = textWords.some(w => getSpanishStem(w) === queryStem);
-        const tagsHaveGlobalStem = tags.some(t => getSpanishStem(t) === queryStem);
+      const cleanQuery = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const queryTokens = cleanQuery.split(/\W+/).filter(t => t.length > 2);
+      const matches: Verse[] = [];
 
-        if (textHasGlobalStem || tagsHaveGlobalStem) {
-          const score = 65;
-          const existing = uniqueMatchesMap.get(keyId);
-          if (!existing || score > existing.score) {
-            uniqueMatchesMap.set(keyId, { verse: v, score });
+      if (allBibleDataRef.current && Array.isArray(allBibleDataRef.current)) {
+        for (let bIdx = 0; bIdx < allBibleDataRef.current.length && matches.length < 50; bIdx++) {
+          const b = allBibleDataRef.current[bIdx];
+          const bookDisplayName = BIBLE_BOOKS[bIdx]?.name || b.name;
+          for (let cIdx = 0; cIdx < b.chapters.length && matches.length < 50; cIdx++) {
+            const chap = b.chapters[cIdx];
+            for (let vIdx = 0; vIdx < chap.length && matches.length < 50; vIdx++) {
+              const text = chap[vIdx];
+              const cleanText = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              
+              const isMatch = cleanText.includes(cleanQuery) || 
+                (queryTokens.length > 0 && queryTokens.every(token => cleanText.includes(token)));
+
+              if (isMatch) {
+                matches.push({
+                  book: bookDisplayName,
+                  chapter: cIdx + 1,
+                  verse: vIdx + 1,
+                  text: text.replace(/\r?\n|\r/g, ' ').trim()
+                });
+              }
+            }
           }
         }
       }
-    };
 
-    // Index and search the local preloaded database
-    OFFLINE_BIBLE_SEEDS.forEach(bk => {
-      Object.keys(bk.chapters).forEach(chapKey => {
-        const chapNum = Number(chapKey);
-        const versesArr = (bk.chapters as any)[chapNum] as Verse[];
-        versesArr.forEach(v => {
-          evaluateVerseMatch(v, []);
+      if (matches.length > 0) {
+        setSearchResults(matches);
+      } else {
+        // Fallback to thematic search
+        const fallbackThematic = POPULAR_THEMATIC_VERSES.filter(v => {
+          const textClean = v.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const tagsClean = (v.tags || []).join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return textClean.includes(cleanQuery) || tagsClean.includes(cleanQuery);
         });
-      });
-    });
 
-    // Index and search the curated thematic database
-    POPULAR_THEMATIC_VERSES.forEach(v => {
-      evaluateVerseMatch(v, v.tags || []);
-    });
-
-    // Convert map to array, sort by score descending, and map back to Verse
-    const sortedMatches = Array.from(uniqueMatchesMap.values())
-      .sort((a, b) => b.score - a.score)
-      .map(entry => entry.verse);
-
-    setSearchResults(sortedMatches);
-    setIsSearchingLive(false);
+        if (fallbackThematic.length > 0) {
+          setSearchResults(fallbackThematic);
+        } else {
+          setSearchError(`No se hallaron concordancias exactas para "${query}". Intenta con otra palabra clave como "amor", "fe", "salvación" o una cita como "Juan 3:16".`);
+        }
+      }
+    } catch (err) {
+      console.error("Search error:", err);
+      setSearchError("Ocurrió un error al procesar la búsqueda.");
+    } finally {
+      setIsSearchingLive(false);
+    }
   };
 
   const toggleBookmark = (v: Verse) => {
@@ -1682,9 +1656,28 @@ export default function Biblia() {
                   return (
                     <div key={idx} className="pt-3.5 text-left flex flex-col justify-between group">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10.5px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-120 font-serif">
-                          📖 {v.book} {v.chapter}:{v.verse}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10.5px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-120 font-serif">
+                            📖 {v.book} {v.chapter}:{v.verse}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const bIdx = BIBLE_BOOKS.findIndex(b => 
+                                b.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === 
+                                v.book.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                              );
+                              if (bIdx !== -1) {
+                                setSelectedBookIdx(bIdx);
+                                setSelectedChapter(v.chapter);
+                                setActiveSegment('read');
+                              }
+                            }}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-0.5 ml-1"
+                            title="Leer el capítulo completo en pergamino"
+                          >
+                            <span>Leer capítulo completo →</span>
+                          </button>
+                        </div>
                         
                         <button
                           onClick={() => toggleBookmark(v)}
@@ -1756,7 +1749,23 @@ export default function Biblia() {
                     </p>
                   </div>
 
-                  <div className="border-t border-dashed border-[#eaddc3] mt-3.5 pt-2.5 flex justify-end gap-2 text-right">
+                  <div className="border-t border-dashed border-[#eaddc3] mt-3.5 pt-2.5 flex justify-between items-center text-right">
+                    <button
+                      onClick={() => {
+                        const bIdx = BIBLE_BOOKS.findIndex(bk => 
+                          bk.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === 
+                          b.book.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                        );
+                        if (bIdx !== -1) {
+                          setSelectedBookIdx(bIdx);
+                          setSelectedChapter(b.chapter);
+                          setActiveSegment('read');
+                        }
+                      }}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      Leer capítulo completo →
+                    </button>
                     <button
                       onClick={() => toggleBookmark(b)}
                       className="text-[11.5px] font-bold text-rose-600 hover:text-rose-750 hover:underline cursor-pointer flex items-center gap-1 scale-98 transition active:scale-95"
