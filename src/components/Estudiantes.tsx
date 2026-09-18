@@ -6,8 +6,8 @@
 import React, { useState } from 'react';
 import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet, Sparkles, RefreshCw, Key } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
-import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode } from '../lib/db';
-import { deleteDocFromFirestore, saveDocToFirestore } from '../lib/firebase';
+import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
+import { deleteDocFromFirestore, saveDocToFirestore, uploadAllStudentsToFirestore } from '../lib/firebase';
 
 interface EstudiantesProps {
   users: User[];
@@ -329,6 +329,36 @@ export default function Estudiantes({
     e.target.value = '';
   };
 
+  const [isSyncingFirestore, setIsSyncingFirestore] = useState(false);
+
+  // Sync all students to Cloud Firestore
+  const handleSyncAllStudents = async () => {
+    try {
+      setIsSyncingFirestore(true);
+      const defaultUsers = (backupAppState.users || []) as User[];
+      const userMap = new Map<string, User>();
+      defaultUsers.forEach(u => userMap.set(u.id, u));
+      users.forEach(u => {
+        if (!u || !u.id) return;
+        const existing = userMap.get(u.id);
+        if (existing) {
+          userMap.set(u.id, { ...existing, ...u });
+        } else {
+          userMap.set(u.id, u);
+        }
+      });
+      const mergedList = Array.from(userMap.values());
+      onUpdateUsers(mergedList);
+      await uploadAllStudentsToFirestore(mergedList);
+      toast(`¡Se sincronizaron exitosamente los ${mergedList.filter(u => u.rol === 'estudiante').length} estudiantes en la base de datos!`, 'success');
+    } catch (e) {
+      console.error(e);
+      toast('Error al sincronizar estudiantes con la base de datos', 'error');
+    } finally {
+      setIsSyncingFirestore(false);
+    }
+  };
+
   return (
     <div className="page-estudiantes animate-fade-in pb-12">
       <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -337,10 +367,21 @@ export default function Estudiantes({
             Matrícula de Estudiantes
           </h2>
           <div className="page-sub text-sm font-medium mt-1 text-slate-500 font-sans">
-            Gestiona la admisión, matrícula y consulta los historiales de notas correspondientes
+            Gestiona la admisión, matrícula y consulta los historiales de notas correspondientes ({estudiantes.length} registrados)
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleSyncAllStudents}
+            disabled={isSyncingFirestore}
+            className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold border border-emerald-200 transition-all cursor-pointer text-xs disabled:opacity-50"
+            title="Sincronizar y subir todos los estudiantes a Cloud Firestore"
+          >
+            <Sparkles className={`w-4 h-4 text-emerald-600 ${isSyncingFirestore ? 'animate-spin' : ''}`} />
+            <span>{isSyncingFirestore ? 'Sincronizando...' : 'Subir a BD'}</span>
+          </button>
+
           <button
             onClick={() => setIsBatchModalOpen(true)}
             className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold border border-slate-200 transition-all cursor-pointer text-xs"

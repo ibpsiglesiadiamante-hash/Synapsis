@@ -367,6 +367,56 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
         </div>
       )}
 
+      {/* Quick Level Filter Tabs */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel(NIVEL_PASTORAL);
+            setCurrentPage(1);
+          }}
+          className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer border ${
+            filterNivel === NIVEL_PASTORAL
+              ? 'bg-[#ea580c] text-white border-[#ea580c] shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          <span>NIVEL I : Biblioteología Pastoral (Sem I-V)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel(NIVEL_MINISTERIAL);
+            setCurrentPage(1);
+          }}
+          className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer border ${
+            filterNivel === NIVEL_MINISTERIAL
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-400 hover:text-indigo-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          <span>NIVEL II : Biblioteología Ministerial (Sem VI-IX)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel('todos');
+            setCurrentPage(1);
+          }}
+          className={`px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer border ${
+            filterNivel === 'todos'
+              ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>Todos los Niveles</span>
+        </button>
+      </div>
+
       {/* Filter and Search Bar */}
       <div className="mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center gap-3 justify-between">
         <div className="relative w-full md:max-w-xs flex-1">
@@ -434,42 +484,39 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
         </div>
       </div>
 
-      {/* VIEW 1: PENSUM CURRICULAR GRID (Matching the study plan PDF) */}
+      {/* VIEW 1: PENSUM CURRICULAR GRID (Matching the study plan PDF and reference layout) */}
       {viewMode === 'pensum' ? (
         <div className="space-y-8">
           {/* NIVEL I SECTION */}
           {(filterNivel === 'todos' || filterNivel === NIVEL_PASTORAL) && (
-            <div className="bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 rounded-3xl p-5 border border-emerald-200/80 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-emerald-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="px-3 py-1 bg-emerald-600 text-white font-black text-xs uppercase tracking-wider rounded-lg shadow-xs">
-                    {pensumGroups.nivel1.badge}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-amber-200/90 shadow-sm">
+              {/* Header matching image reference */}
+              <div className="text-center pb-4 mb-5 border-b border-amber-100">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+                  NIVEL I : Biblioteología Pastoral
+                </h3>
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  <span className="text-xs font-bold text-amber-800 bg-amber-100/80 px-3 py-0.5 rounded-full">
+                    Semestres I al V • 20 Materias Troncales
                   </span>
-                  <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                    {pensumGroups.nivel1.title}
-                  </h3>
                 </div>
-                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/70 px-3 py-1 rounded-full w-fit">
-                  5 Semestres Académicos (I al V)
-                </span>
               </div>
 
               {/* Columns for Semestres I to V */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
                 {pensumGroups.nivel1.semesters
                   .filter(sem => filterSemestre === 'todos' || sem.name === filterSemestre)
                   .map(sem => (
-                    <div key={sem.name} className="bg-white rounded-2xl border border-slate-200/80 shadow-xs flex flex-col overflow-hidden hover:border-emerald-300 transition">
-                      {/* Column Header */}
-                      <div className="bg-slate-900 text-white p-3 text-center">
-                        <div className="text-xs font-black uppercase tracking-wider">{sem.name}</div>
-                        <div className="text-[10px] text-emerald-300 font-semibold">{sem.subjects.length} materias</div>
+                    <div key={sem.name} className="bg-slate-50/70 rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden hover:border-amber-400 transition-all">
+                      {/* Column Header matching reference: orange rounded tab */}
+                      <div className="bg-[#ea580c] text-white py-2.5 px-3 text-center shadow-xs">
+                        <div className="text-xs sm:text-[13px] font-black uppercase tracking-wider">{sem.name}</div>
                       </div>
 
                       {/* Subjects list */}
-                      <div className="p-2.5 flex-1 flex flex-col gap-2">
+                      <div className="p-3 flex-1 flex flex-col gap-3.5 justify-around">
                         {sem.subjects.length === 0 ? (
-                          <div className="text-center py-6 text-slate-400 text-xs italic">
+                          <div className="text-center py-8 text-slate-400 text-xs italic">
                             Sin materias registradas
                           </div>
                         ) : (
@@ -478,17 +525,26 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
                             return (
                               <div
                                 key={sub.id}
-                                className="group relative bg-slate-50 hover:bg-emerald-50/50 p-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 transition text-left"
+                                className="group relative bg-white hover:bg-amber-50/60 p-3 sm:p-3.5 rounded-xl border border-slate-200/90 hover:border-amber-400 transition-all flex flex-col justify-center min-h-[90px] shadow-xs"
                               >
-                                <div className="flex items-start justify-between gap-1 mb-1">
-                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                                <div className="flex items-center gap-2.5">
+                                  {/* Orange Arrow exactly as in user reference */}
+                                  <ArrowRight className="w-5 h-5 text-[#ea580c] shrink-0 stroke-[2.5]" />
+                                  <div className="font-extrabold text-xs sm:text-[13px] text-slate-900 leading-snug flex-1 text-center pr-1">
+                                    {sub.nombre}
+                                  </div>
+                                </div>
+
+                                {/* Subtle meta footer (code & docent & actions) */}
+                                <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px] text-slate-500">
+                                  <span className="font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
                                     {sub.codigo || 'S/C'}
                                   </span>
-                                  <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                  <div className="flex items-center gap-1">
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEditModal(sub)}
-                                      className="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer"
+                                      className="p-1 text-slate-400 hover:text-indigo-600 rounded cursor-pointer transition-colors"
                                       title="Editar materia"
                                     >
                                       <Edit2 className="w-3 h-3" />
@@ -496,19 +552,12 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
                                     <button
                                       type="button"
                                       onClick={() => handleDelete(sub.id)}
-                                      className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                      className="p-1 text-slate-400 hover:text-rose-600 rounded cursor-pointer transition-colors"
                                       title="Eliminar materia"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
                                   </div>
-                                </div>
-                                <div className="font-bold text-xs text-slate-800 line-clamp-2 leading-tight">
-                                  {sub.nombre}
-                                </div>
-                                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-500">
-                                  <Users className="w-3 h-3 text-slate-400 shrink-0" />
-                                  <span className="truncate">{doc ? doc.nombre : 'Sin docente asignado'}</span>
                                 </div>
                               </div>
                             );
@@ -520,7 +569,7 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
                       <button
                         type="button"
                         onClick={() => handleOpenCreateModal(sem.name, NIVEL_PASTORAL)}
-                        className="m-2 p-1.5 rounded-xl border border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/50 hover:bg-emerald-100/50 text-[11px] font-bold text-emerald-800 flex items-center justify-center gap-1 cursor-pointer transition"
+                        className="m-2.5 p-1.5 rounded-xl border border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/60 hover:bg-amber-100 text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 cursor-pointer transition"
                       >
                         <Plus className="w-3 h-3" />
                         <span>Agregar materia</span>

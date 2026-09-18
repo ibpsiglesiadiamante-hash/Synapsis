@@ -311,7 +311,7 @@ export function getInitialState(): AppState {
     }
   };
 
-  const users = loadCollection('ep_users', defaults.users);
+  const rawUsers = loadCollection('ep_users', defaults.users);
   const institutions = loadCollection('ep_instituciones', defaults.institutions);
   const rawSubjects = loadCollection('ep_subjects', defaults.subjects);
   const rawSemesters = loadCollection('ep_semesters', defaults.semesters);
@@ -321,6 +321,21 @@ export function getInitialState(): AppState {
   const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
   const assignments = loadCollection('ep_trabajos', defaults.assignments);
   const assignmentSubmissions = loadCollection('ep_entregas_trabajos', defaults.assignmentSubmissions);
+
+  // Guarantee that all students and staff from institute records are present
+  const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const userMap = new Map<string, User>();
+  defaultUsers.forEach(u => userMap.set(u.id, u));
+  rawUsers.forEach(u => {
+    if (!u || !u.id || deletedIds.has(u.id)) return;
+    const existing = userMap.get(u.id);
+    if (existing) {
+      userMap.set(u.id, { ...existing, ...u });
+    } else {
+      userMap.set(u.id, u);
+    }
+  });
+  const users = Array.from(userMap.values());
 
   // Guarantee that all 36 biblical subjects from curriculum are present
   const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
@@ -459,7 +474,20 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       }
     });
 
-    // 3. Guarantee that official subjects and semesters are present
+    // 3. Guarantee that official subjects, semesters and students are present
+    if (key === 'users') {
+      const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultUsers.forEach(dUser => {
+        const existing = itemMap.get(dUser.id);
+        if (!existing) {
+          itemMap.set(dUser.id, dUser);
+        } else {
+          // Merge preserving existing data but filling any blanks
+          itemMap.set(dUser.id, { ...dUser, ...existing });
+        }
+      });
+    }
+
     if (key === 'subjects') {
       const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
       defaultSubs.forEach(dSub => {

@@ -54,7 +54,8 @@ import {
   initializeSyncCache,
   fullBidirectionalSync,
   registerDeletedId,
-  uploadTheologicalSubjectsToFirestore
+  uploadTheologicalSubjectsToFirestore,
+  uploadAllStudentsToFirestore
 } from './lib/firebase';
 
 import Header from './components/Header';
@@ -104,14 +105,16 @@ export default function App() {
           initializeSyncCache(remoteDb);
           // Sync any newly restored or merged documents to Firestore
           syncToFirestore(mergedDb).catch(e => console.warn('Background sync error:', e));
-          // Explicitly guarantee all 36 biblical subjects are saved to Firestore
+          // Explicitly guarantee all 36 biblical subjects and all 53 students are saved to Firestore
           uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(e => console.warn('Background subjects sync error:', e));
+          uploadAllStudentsToFirestore(mergedDb.users).catch(e => console.warn('Background students sync error:', e));
         } else {
           // No remote database found, let's seed with current default list
           console.log('Firestore dataset is empty. Writing initial educational seed in background...');
           const localSeed = getInitialState();
           seedFirestore(localSeed).catch(e => console.warn('Background seed error:', e));
           uploadTheologicalSubjectsToFirestore(localSeed.subjects).catch(e => console.warn('Background subjects seed error:', e));
+          uploadAllStudentsToFirestore(localSeed.users).catch(e => console.warn('Background students seed error:', e));
           setDb(localSeed);
           saveState(localSeed);
           initializeSyncCache(localSeed);

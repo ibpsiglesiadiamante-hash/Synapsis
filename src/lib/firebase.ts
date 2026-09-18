@@ -500,7 +500,7 @@ export async function pushAllStateToFirestore(state: AppState): Promise<number> 
 }
 
 /**
- * Specifically uploads all 36 official biblical subjects and their academic semester configuration to Firestore
+ * Specifically uploads all official biblical subjects and their academic semester configuration to Firestore
  */
 export async function uploadTheologicalSubjectsToFirestore(subjects: Subject[]): Promise<number> {
   enableFirestore();
@@ -520,6 +520,31 @@ export async function uploadTheologicalSubjectsToFirestore(subjects: Subject[]):
   if (promises.length > 0) {
     await Promise.all(promises);
     console.log(`Uploaded ${count} subjects to Cloud Firestore.`);
+  }
+  return count;
+}
+
+/**
+ * Uploads all registered students to Cloud Firestore
+ */
+export async function uploadAllStudentsToFirestore(users: User[]): Promise<number> {
+  enableFirestore();
+  let count = 0;
+  const deletedIds = getDeletedIds();
+  const promises: Promise<void>[] = [];
+
+  for (const user of users) {
+    if (user && user.id && !deletedIds.has(user.id)) {
+      count++;
+      promises.push(saveDocToFirestore('users', user).catch(e => {
+        console.warn(`Error writing user ${user.nombre} to Firestore:`, e);
+      }));
+    }
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+    console.log(`Uploaded ${count} students/users to Cloud Firestore.`);
   }
   return count;
 }
