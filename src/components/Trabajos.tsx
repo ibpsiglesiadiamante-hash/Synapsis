@@ -110,10 +110,13 @@ export default function Trabajos({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim() || !asignaturaId) {
-      toast('El título y la asignatura son campos obligatorios', 'error');
+    if (!asignaturaId) {
+      toast('Debes seleccionar una asignatura para el trabajo', 'error');
       return;
     }
+
+    const targetSub = teacherSubjects.find(s => s.id === asignaturaId);
+    const resolvedTitulo = titulo.trim() || (targetSub ? `Taller - ${targetSub.nombre}` : 'Taller Académico');
 
     const nextTasks = [...assignments];
 
@@ -122,7 +125,7 @@ export default function Trabajos({
       if (idx > -1) {
         nextTasks[idx] = {
           ...nextTasks[idx],
-          titulo: titulo.trim().toUpperCase(),
+          titulo: resolvedTitulo.toUpperCase(),
           asignatura: asignaturaId,
           parcialId: parcialId || undefined,
           descripcion: descripcion.trim().toUpperCase(),
@@ -136,7 +139,7 @@ export default function Trabajos({
     } else {
       const newAssignment: Assignment = {
         id: uid(),
-        titulo: titulo.trim().toUpperCase(),
+        titulo: resolvedTitulo.toUpperCase(),
         asignatura: asignaturaId,
         parcialId: parcialId || undefined,
         descripcion: descripcion.trim().toUpperCase(),
@@ -592,6 +595,12 @@ export default function Trabajos({
                   onChange={e => {
                     const nextSubId = e.target.value;
                     setAsignaturaId(nextSubId);
+                    if (!titulo.trim()) {
+                      const foundSub = teacherSubjects.find(s => s.id === nextSubId);
+                      if (foundSub) {
+                        setTitulo(`Taller - ${foundSub.nombre}`);
+                      }
+                    }
                     const matchingParcs = nextSubId ? parciales.filter(p => p.asignatura === nextSubId) : [];
                     setParcialId(matchingParcs[0]?.id || '');
                   }}

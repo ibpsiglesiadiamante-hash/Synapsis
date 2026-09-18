@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { CalendarDays, Plus, Trash2, Edit2, CheckCircle2, XSquare, ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Semester } from '../types';
 import { uid, now, fmtDate, generateSemesterCode } from '../lib/db';
+import { saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
 
 interface SemestresProps {
   semesters: Semester[];
@@ -69,7 +70,11 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   const handleNombreChange = (val: string) => {
     setNombre(val);
     if (!editingId && isCodeAuto) {
-      setCodigo(generateSemesterCode(val, semesters));
+      try {
+        setCodigo(generateSemesterCode(val, semesters));
+      } catch (err) {
+        console.warn('Error auto-generating semester code:', err);
+      }
     }
     if (['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX', 'VI', 'VII', 'VIII', 'IX'].some(k => val.includes(k))) {
       setNivel(NIVEL_MINISTERIAL);
@@ -79,45 +84,58 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   };
 
   const handleRegenerateCode = () => {
-    const freshCode = generateSemesterCode(nombre, semesters);
-    setCodigo(freshCode);
-    setIsCodeAuto(true);
+    try {
+      const freshCode = generateSemesterCode(nombre, semesters);
+      setCodigo(freshCode);
+      setIsCodeAuto(true);
+    } catch (err) {
+      console.warn('Error regenerating semester code:', err);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) {
+    const cleanNombre = (nombre || '').trim();
+    if (!cleanNombre) {
       toast('El nombre del semestre es requerido', 'error');
       return;
     }
 
-    const finalCode = codigo.trim() || generateSemesterCode(nombre, semesters);
-    const nextSems = [...semesters];
+    const finalCode = (codigo || '').trim() || generateSemesterCode(cleanNombre, semesters);
+    const safeSems = Array.isArray(semesters) ? semesters.filter((s): s is Semester => Boolean(s && s.id)) : [];
+    const nextSems = [...safeSems];
 
     if (editingId) {
       const idx = nextSems.findIndex(s => s.id === editingId);
       if (idx > -1) {
-        nextSems[idx] = {
+        const updatedSem: Semester = {
           ...nextSems[idx],
-          nombre: nombre.trim(),
+          nombre: cleanNombre,
           codigo: finalCode,
           nivel,
           estado,
           actualizado: now(),
         };
+        nextSems[idx] = updatedSem;
         onUpdateSemesters(nextSems);
+        saveDocToFirestore('semesters', updatedSem).catch(err => {
+          console.warn('Error saving semester update to Firestore:', err);
+        });
         toast('Semestre actualizado correctamente y re-calculado', 'success');
       }
     } else {
       const newSem: Semester = {
         id: uid(),
-        nombre: nombre.trim(),
+        nombre: cleanNombre,
         codigo: finalCode,
         nivel,
         estado,
         creado: now(),
       };
       onUpdateSemesters([...nextSems, newSem]);
+      saveDocToFirestore('semesters', newSem).catch(err => {
+        console.warn('Error saving new semester to Firestore:', err);
+      });
       toast(`Nuevo ciclo creado con código ${finalCode}`, 'success');
     }
 
@@ -125,8 +143,11 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   };
 
   const handleDelete = (id: string) => {
-    const nextSems = semesters.filter(s => s.id !== id);
+    const nextSems = semesters.filter(s => s && s.id !== id);
     onUpdateSemesters(nextSems);
+    deleteDocFromFirestore('semesters', id).catch(err => {
+      console.warn('Error deleting semester from Firestore:', err);
+    });
     toast('Semestre eliminado correctamente', 'success');
   };
 

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Subject, User, Semester } from '../types';
 import { uid, now, fmtDate, generateSubjectCode, backupAppState } from '../lib/db';
-import { uploadTheologicalSubjectsToFirestore } from '../lib/firebase';
+import { uploadTheologicalSubjectsToFirestore, saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
 
 interface AsignaturasProps {
   subjects: Subject[];
@@ -139,45 +139,59 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
   const handleNombreChange = (val: string) => {
     setNombre(val);
     if (!editingId && isCodeAuto) {
-      setCodigo(generateSubjectCode(val, subjects));
+      try {
+        setCodigo(generateSubjectCode(val, subjects));
+      } catch (err) {
+        console.warn('Error auto-generating subject code:', err);
+      }
     }
   };
 
   const handleRegenerateCode = () => {
-    const freshCode = generateSubjectCode(nombre, subjects);
-    setCodigo(freshCode);
-    setIsCodeAuto(true);
+    try {
+      const freshCode = generateSubjectCode(nombre, subjects);
+      setCodigo(freshCode);
+      setIsCodeAuto(true);
+    } catch (err) {
+      console.warn('Error regenerating subject code:', err);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) {
+    const cleanNombre = (nombre || '').trim();
+    if (!cleanNombre) {
       toast('El nombre de la materia es obligatorio', 'error');
       return;
     }
 
-    const finalCode = codigo.trim() || generateSubjectCode(nombre, subjects);
-    const nextSubs = [...subjects];
+    const finalCode = (codigo || '').trim() || generateSubjectCode(cleanNombre, subjects);
+    const safeSubs = Array.isArray(subjects) ? subjects.filter((s): s is Subject => Boolean(s && s.id)) : [];
+    const nextSubs = [...safeSubs];
 
     if (editingId) {
       const idx = nextSubs.findIndex(s => s.id === editingId);
       if (idx > -1) {
-        nextSubs[idx] = {
+        const updatedSub: Subject = {
           ...nextSubs[idx],
-          nombre: nombre.trim(),
+          nombre: cleanNombre,
           codigo: finalCode,
           nivel,
           semestre,
           docenteId,
           actualizado: now(),
         };
+        nextSubs[idx] = updatedSub;
         onUpdateSubjects(nextSubs);
+        saveDocToFirestore('subjects', updatedSub).catch(err => {
+          console.warn('Error saving subject update to Firestore:', err);
+        });
         toast('Materia o asignatura actualizada con éxito', 'success');
       }
     } else {
       const newSub: Subject = {
         id: uid(),
-        nombre: nombre.trim(),
+        nombre: cleanNombre,
         codigo: finalCode,
         nivel,
         semestre,
@@ -185,6 +199,9 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
         creado: now(),
       };
       onUpdateSubjects([...nextSubs, newSub]);
+      saveDocToFirestore('subjects', newSub).catch(err => {
+        console.warn('Error saving new subject to Firestore:', err);
+      });
       toast(`Asignatura creada satisfactoriamente con código ${finalCode}`, 'success');
     }
 
@@ -192,8 +209,11 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
   };
 
   const handleDelete = (id: string) => {
-    const nextSubs = subjects.filter(s => s.id !== id);
+    const nextSubs = subjects.filter(s => s && s.id !== id);
     onUpdateSubjects(nextSubs);
+    deleteDocFromFirestore('subjects', id).catch(err => {
+      console.warn('Error deleting subject from Firestore:', err);
+    });
     toast('Asignatura eliminada del catálogo correctamente', 'success');
   };
 
@@ -852,8 +872,11 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
                   Nombre de la materia <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="nombre-materia-input"
+                  name="nombre"
                   type="text"
                   required
+                  autoFocus
                   value={nombre}
                   onChange={e => handleNombreChange(e.target.value)}
                   placeholder="Ej. Teología, Pentateuco, Hermenéutica..."

@@ -90,14 +90,15 @@ export default function MisExamenes({
 
   const handleCreateExam = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !materia.trim()) {
-      toast('Título y materia son obligatorios', 'error');
+    if (!materia.trim()) {
+      toast('Debes seleccionar la materia o asignatura', 'error');
       return;
     }
+    const resolvedTitle = title.trim() || `Examen - ${materia.trim()}`;
 
     const newExam: Exam = {
       id: uid(),
-      titulo: title.trim().toUpperCase(),
+      titulo: resolvedTitle.toUpperCase(),
       materia: materia.trim().toUpperCase(),
       parcialId: parcialId || null,
       descripcion: description.trim().toUpperCase(),
@@ -383,6 +384,9 @@ export default function MisExamenes({
                     noResultsText="No se encontraron materias"
                     onChange={selectedMateria => {
                       setMateria(selectedMateria);
+                      if (!title.trim()) {
+                        setTitle(`Examen de ${selectedMateria}`);
+                      }
                       const matchingSub = subjects.find(s => s.nombre === selectedMateria);
                       const matchingParc = matchingSub ? parciales.find(p => p.asignatura === matchingSub.id) : null;
                       setParcialId(matchingParc?.id || '');

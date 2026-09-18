@@ -105,10 +105,14 @@ export default function Parciales({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !semestre || !asignatura) {
-      toast('Completa los campos obligatorios del parcial', 'error');
+    if (!semestre || !asignatura) {
+      toast('Debes seleccionar el semestre y la asignatura del corte', 'error');
       return;
     }
+
+    const availableSubs = isTeacher ? teacherSubjects : subjects;
+    const targetSub = availableSubs.find(s => s.id === asignatura);
+    const resolvedNombre = nombre.trim() || (targetSub ? `Corte - ${targetSub.nombre}` : 'Primer Parcial');
 
     const nextParciales = [...parciales];
 
@@ -117,7 +121,7 @@ export default function Parciales({
       if (idx > -1) {
         const updatedP: Parcial = {
           ...nextParciales[idx],
-          nombre: nombre.trim().toUpperCase(),
+          nombre: resolvedNombre.toUpperCase(),
           semestre,
           asignatura,
           fechaInicio,
@@ -133,7 +137,7 @@ export default function Parciales({
     } else {
       const newParcial: Parcial = {
         id: uid(),
-        nombre: nombre.trim().toUpperCase(),
+        nombre: resolvedNombre.toUpperCase(),
         semestre,
         asignatura,
         fechaInicio,
@@ -458,7 +462,15 @@ export default function Parciales({
                   <SearchableSelect
                     options={(isTeacher ? teacherSubjects : subjects).map(s => ({ value: s.id, label: s.nombre, subLabel: s.codigo ? `Código: ${s.codigo}` : undefined }))}
                     value={asignatura}
-                    onChange={val => setAsignatura(val)}
+                    onChange={val => {
+                      setAsignatura(val);
+                      if (!nombre.trim()) {
+                        const targetSub = (isTeacher ? teacherSubjects : subjects).find(s => s.id === val);
+                        if (targetSub) {
+                          setNombre(`Corte I - ${targetSub.nombre}`);
+                        }
+                      }
+                    }}
                     placeholder="Materia..."
                     id="parcial-subject-select"
                   />

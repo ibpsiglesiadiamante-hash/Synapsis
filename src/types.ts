@@ -15,6 +15,7 @@ export interface User {
   asignaturas?: string[];
   semestre?: string;
   codigo?: string;
+  actualizado?: string;
 }
 
 export interface Subject {

@@ -20,7 +20,11 @@ import {
   ShieldCheck,
   ArrowRight,
   BookOpen,
-  Globe
+  Globe,
+  UserPlus,
+  CheckCircle2,
+  Phone,
+  CreditCard
 } from 'lucide-react';
 
 import { 
@@ -44,7 +48,10 @@ import {
   mergeStates,
   restoreBackupState,
   exportFullBackupState,
-  validateAndParseBackup
+  validateAndParseBackup,
+  uid,
+  now,
+  generateStudentCode
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -55,7 +62,8 @@ import {
   fullBidirectionalSync,
   registerDeletedId,
   uploadTheologicalSubjectsToFirestore,
-  uploadAllStudentsToFirestore
+  uploadAllStudentsToFirestore,
+  saveDocToFirestore
 } from './lib/firebase';
 
 import Header from './components/Header';
@@ -179,11 +187,22 @@ export default function App() {
     return localStorage.getItem('synapsis_activeEditExamId');
   });
 
-  // Login form states
+  // Login & Registration form states
+  const [loginTab, setLoginTab] = useState<'login' | 'register'>('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Student registration states
+  const [regNombre, setRegNombre] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regCedula, setRegCedula] = useState('');
+  const [regCelular, setRegCelular] = useState('');
+  const [regSemestre, setRegSemestre] = useState('SEMESTRE I');
+  const [regPass, setRegPass] = useState('');
+  const [regShowPass, setRegShowPass] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Persist current active tab and active exam actions
   useEffect(() => {
@@ -313,16 +332,27 @@ export default function App() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = loginEmail.trim().toLowerCase();
+    const cleanId = loginEmail.trim().toLowerCase();
     const cleanPass = loginPass.trim();
 
     let matchedUser = db.users.find(u => {
       const userEmail = (u.email || '').trim().toLowerCase();
-      const userCode = (u.codigo || u.id.substring(0, 4)).trim().toLowerCase();
+      const userCode = (u.codigo || '').trim().toLowerCase();
+      const userCedula = (u.cedula || '').trim().toLowerCase();
+      const userId = (u.id || '').trim().toLowerCase();
+      const userIdShort = userId.substring(0, 4);
+
+      const idMatch = userEmail === cleanId || 
+                      userCode === cleanId || 
+                      userCedula === cleanId || 
+                      userId === cleanId ||
+                      userIdShort === cleanId;
+
       const passMatch = u.pass === cleanPass || 
                         (u.pass || '').toLowerCase() === cleanPass.toLowerCase() || 
-                        userCode === cleanPass.toLowerCase();
-      return (userEmail === cleanEmail || userCode === cleanEmail) && passMatch;
+                        userCode === cleanPass.toLowerCase() ||
+                        userCedula === cleanPass.toLowerCase();
+      return idMatch && passMatch;
     });
 
     if (!matchedUser) {
@@ -339,7 +369,7 @@ export default function App() {
         const passMatch = u.pass === cleanPass || 
                           (u.pass || '').toLowerCase() === cleanPass.toLowerCase() || 
                           userCode === cleanPass.toLowerCase();
-        return (userEmail === cleanEmail || userCode === cleanEmail) && passMatch;
+        return (userEmail === cleanId || userCode === cleanId) && passMatch;
       });
       if (fallbackUser) {
         matchedUser = fallbackUser;
@@ -348,7 +378,7 @@ export default function App() {
     }
 
     if (!matchedUser) {
-      showToast('Credenciales incorrectas. Verifica tu correo/código y contraseña.', 'error');
+      showToast('Credenciales incorrectas. Verifica tu correo, cédula o código y tu contraseña.', 'error');
       return;
     }
 
@@ -356,13 +386,80 @@ export default function App() {
     localStorage.setItem('instituto_currentUser', JSON.stringify(matchedUser));
     
     // Set landing tab based on role
-    if (matchedUser.rol === 'admin' || matchedUser.rol === 'docente') {
-      setActiveTab('dashboard');
-    } else {
-      setActiveTab('dashboard');
+    setActiveTab('dashboard');
+    showToast(`¡Bienvenido al sistema, ${matchedUser.nombre}!`, 'success');
+  };
+
+  const handleRegisterStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regNombre.trim()) {
+      showToast('Por favor escribe tu nombre completo', 'warning');
+      return;
+    }
+    if (!regEmail.trim()) {
+      showToast('Por favor escribe tu correo electrónico', 'warning');
+      return;
+    }
+    if (!regPass.trim()) {
+      showToast('Por favor define una contraseña de acceso', 'warning');
+      return;
     }
 
-    showToast(`¡Bienvenido al sistema, ${matchedUser.nombre}!`, 'success');
+    // Check if user already exists with this email or cedula
+    const existing = db.users.find(u => {
+      const eMatch = u.email && u.email.trim().toLowerCase() === regEmail.trim().toLowerCase();
+      const cMatch = regCedula.trim() && u.cedula && u.cedula.trim() === regCedula.trim();
+      return eMatch || cMatch;
+    });
+
+    if (existing) {
+      showToast('Ya existe un estudiante registrado con este correo o documento. Inicia sesión directamente.', 'error');
+      setLoginEmail(existing.email || regEmail);
+      setLoginTab('login');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const newStudentCode = generateStudentCode();
+      const newStudent: User = {
+        id: uid(),
+        nombre: regNombre.trim().toUpperCase(),
+        email: regEmail.trim().toLowerCase(),
+        pass: regPass.trim(),
+        rol: 'estudiante',
+        codigo: newStudentCode,
+        cedula: regCedula.trim() || undefined,
+        celular: regCelular.trim() || undefined,
+        semestre: regSemestre || 'SEMESTRE I',
+        creado: now(),
+        actualizado: now()
+      };
+
+      const updatedUsers = [newStudent, ...db.users];
+      updateUsers(updatedUsers);
+      await saveDocToFirestore('users', newStudent).catch(err => {
+        console.warn('Could not save registered student directly to Firestore:', err);
+      });
+
+      // Clear register form
+      setRegNombre('');
+      setRegEmail('');
+      setRegCedula('');
+      setRegCelular('');
+      setRegPass('');
+
+      // Automatically log in newly registered student
+      setCurrentUser(newStudent);
+      localStorage.setItem('instituto_currentUser', JSON.stringify(newStudent));
+      setActiveTab('dashboard');
+      showToast(`¡Matrícula confirmada con éxito! Tu código es ${newStudentCode}. ¡Bienvenido/a!`, 'success');
+    } catch (err) {
+      console.error('Error in student registration:', err);
+      showToast('Ocurrió un error al procesar la matrícula. Inténtalo de nuevo.', 'error');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   const handleQuickLogin = (email: string, pass: string) => {
@@ -751,9 +848,9 @@ export default function App() {
 
       {/* RENDER LOGIN IF NO SESSION */}
       {!currentUser ? (
-        <div id="loginPage" className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#090d16] relative overflow-hidden flex-col select-none">
+        <div id="loginPage" className="min-h-screen w-full flex items-center justify-center p-3 sm:p-6 bg-[#090d16] relative overflow-x-hidden flex-col select-none">
           {/* Subtle modern ambient background lighting */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-indigo-500/15 via-blue-600/5 to-transparent blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-indigo-500/15 via-blue-600/5 to-transparent blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-500/5 blur-3xl pointer-events-none" />
           
           {/* Subtle engineering grid backdrop */}
@@ -766,148 +863,439 @@ export default function App() {
           />
 
           {/* Institutional Status Pill */}
-          <div className="mb-5 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-slate-800/80 backdrop-blur-md text-slate-300 text-xs shadow-sm">
+          <div className="mb-5 flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 backdrop-blur-md text-slate-300 text-xs shadow-sm flex-wrap justify-center">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <span className="font-medium text-[11px] text-slate-300">Campus Virtual Conectado</span>
             <span className="text-slate-600">·</span>
+            <span className="font-medium text-[11px] text-slate-300">Cloud Firestore Sincronizado</span>
+            <span className="text-slate-600">·</span>
             <span className="font-mono text-[10px] text-indigo-400 font-semibold">synapsis-edu.web.app</span>
           </div>
 
-          {/* Main Card */}
-          <div className="w-full max-w-[420px] bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-7 sm:p-8 flex flex-col text-left animate-fade-in relative z-10 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-indigo-500/40 before:to-transparent">
+          {/* Main Split Card Container */}
+          <div className="w-full max-w-5xl bg-[#0d121f]/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-slate-800/90 flex flex-col lg:flex-row overflow-hidden relative z-10 before:absolute before:inset-x-0 before:top-0 before:h-[2px] before:bg-gradient-to-r before:from-indigo-500 before:via-purple-500 before:to-emerald-400">
             
-            {/* Header Brand */}
-            <div className="flex items-center gap-3.5 mb-5 pb-5 border-b border-slate-800/80">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20 ring-1 ring-white/10 shrink-0">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
+            {/* LEFT PANEL: Branding, Features & Quick Access */}
+            <div className="w-full lg:w-[44%] p-6 sm:p-8 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-slate-800/80 bg-slate-950/40">
               <div>
-                <h1 className="text-xl font-bold text-white tracking-tight leading-tight">
-                  Synapsis
-                </h1>
-                <p className="text-[11px] font-semibold text-indigo-400 tracking-wide uppercase font-sans">
-                  Campus Virtual Universitario
+                {/* Brand Header */}
+                <div className="flex items-center gap-3.5 mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 ring-1 ring-white/20 shrink-0">
+                    <GraduationCap className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-2xl font-black text-white tracking-tight leading-none">
+                        Synapsis
+                      </h1>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 uppercase tracking-wider">
+                        OFICIAL
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-extrabold text-indigo-400 tracking-wider uppercase mt-1 font-sans">
+                      CAMPUS VIRTUAL UNIVERSITARIO
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-400 font-normal leading-relaxed mb-6">
+                  Plataforma integral para evaluaciones digitales, registro de calificaciones, asistencia y seguimiento académico.
                 </p>
-                <p className="text-[11px] text-slate-400 font-normal mt-0.5 leading-snug">
-                  Gestión académica, evaluaciones y calificaciones
-                </p>
-              </div>
-            </div>
 
-            {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1.5 font-sans">
-                  Correo Institucional o Código
-                </label>
-                <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/60 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
-                  <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input 
-                    type="text" 
-                    name="email"
-                    id="email"
-                    required
-                    value={loginEmail}
-                    onChange={e => setLoginEmail(e.target.value)}
-                    placeholder="usuario@synapsis.edu o código"
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
-                  />
+                {/* 3 Feature items */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-700/50 flex items-center justify-center text-indigo-400 shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-200">Acceso Cifrado Institucional</div>
+                      <div className="text-[11px] text-slate-400">Conexión con autenticación segura por rol.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <div className="w-8 h-8 rounded-lg bg-purple-950/80 border border-purple-700/50 flex items-center justify-center text-purple-400 shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-200">Exámenes con Temporizador</div>
+                      <div className="text-[11px] text-slate-400">Control de tiempo, navegación e intentos.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-200">Calificaciones en Tiempo Real</div>
+                      <div className="text-[11px] text-slate-400">Boletines y cálculo automático de notas.</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Acceso Rápido por Perfil */}
+                <div className="pt-4 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      ACCESO RÁPIDO POR PERFIL
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">1 clic</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <button 
+                      type="button"
+                      onClick={() => handleQuickLogin('admin@synapsis.edu', 'admin123')}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-indigo-950/40 hover:border-indigo-600/60 transition-all cursor-pointer group text-left"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition-transform">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-200">Administrador</div>
+                          <div className="text-[10px] text-slate-500 font-mono">admin@synapsis.edu</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-300 bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700/50">
+                        Control Total
+                      </span>
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => handleQuickLogin('juan.docente@synapsis.edu', 'docente123')}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-emerald-950/40 hover:border-emerald-600/60 transition-all cursor-pointer group text-left"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-200">Docente Titular</div>
+                          <div className="text-[10px] text-slate-500 font-mono">juan.docente@synapsis.edu</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-800/40">
+                        Evaluador
+                      </span>
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => handleQuickLogin('maria.estudiante@synapsis.edu', 'estudiante123')}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-blue-950/40 hover:border-blue-600/60 transition-all cursor-pointer group text-left"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-200">Estudiante Activo</div>
+                          <div className="text-[10px] text-slate-500 font-mono">maria.estudiante@synapsis.edu</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-semibold text-blue-300 bg-blue-950/60 px-2 py-1 rounded-md border border-blue-800/40">
+                        Exámenes
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-300 font-sans">
-                    Contraseña
-                  </label>
+              {/* Bottom Footer on Left Panel */}
+              <div className="mt-6 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <div className="flex items-center gap-1.5 font-mono text-[11px] text-indigo-300">
+                  <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>synapsis-edu.web.app</span>
                 </div>
-                <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/60 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
-                  <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input 
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={loginPass}
-                    onChange={e => setLoginPass(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
-                    title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button 
-                type="submit" 
-                className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer group"
-              >
-                <span>Acceder al Portal</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </form>
-
-            {/* Quick Demo Access Badges */}
-            <div className="mt-6 pt-5 border-t border-slate-800">
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Acceso Rápido por Rol
-                </span>
-                <span className="text-[10px] text-slate-500">1-clic demo</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button 
-                  type="button"
-                  onClick={() => handleQuickLogin('admin@synapsis.edu', 'admin123')}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-indigo-950/40 hover:border-indigo-600/60 text-slate-300 hover:text-indigo-300 transition-all cursor-pointer group shadow-xs"
-                >
-                  <ShieldCheck className="w-4 h-4 text-indigo-400 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-semibold">Admin</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Control total</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => handleQuickLogin('juan.docente@synapsis.edu', 'docente123')}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-emerald-950/40 hover:border-emerald-600/60 text-slate-300 hover:text-emerald-300 transition-all cursor-pointer group shadow-xs"
-                >
-                  <GraduationCap className="w-4 h-4 text-emerald-400 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-semibold">Docente</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Evaluador</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => handleQuickLogin('maria.estudiante@synapsis.edu', 'estudiante123')}
-                  className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/70 hover:bg-blue-950/40 hover:border-blue-600/60 text-slate-300 hover:text-blue-300 transition-all cursor-pointer group shadow-xs"
-                >
-                  <BookOpen className="w-4 h-4 text-blue-400 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-semibold">Estudiante</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Exámenes</span>
-                </button>
-              </div>
-
-              {/* Share & QR Access Button */}
-              <div className="mt-4 pt-3.5 border-t border-slate-800/80">
                 <button
                   type="button"
                   onClick={() => setIsShareModalOpen(true)}
-                  className="w-full py-2.5 px-3 rounded-xl border border-slate-800 bg-slate-950/50 hover:bg-slate-800/60 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-between transition-all cursor-pointer shadow-xs group"
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white cursor-pointer px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span className="truncate font-mono text-[11px] text-indigo-300">synapsis-ec.web.app</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-slate-200 shrink-0 font-medium">
-                    <QrCode className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Ver QR</span>
-                  </div>
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Ver QR</span>
                 </button>
+              </div>
+            </div>
+
+            {/* RIGHT PANEL: Auth Tabs & Forms */}
+            <div className="w-full lg:w-[56%] p-6 sm:p-8 flex flex-col justify-between bg-[#0d121f]">
+              <div>
+                <span className="text-xs font-black tracking-wider text-indigo-400 uppercase font-sans">
+                  PORTAL DE ACCESO INSTITUCIONAL
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1">
+                  Identificación de Usuario
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1 mb-5">
+                  Selecciona tu tipo de acceso o ingresa con tus datos académicos:
+                </p>
+
+                {/* TABS SWITCHER: Iniciar Sesión / Nuevo Estudiante */}
+                <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 mb-6 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLoginTab('login')}
+                    className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      loginTab === 'login'
+                        ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-600/30'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
+                    }`}
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    <span>Iniciar Sesión</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLoginTab('register')}
+                    className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                      loginTab === 'register'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
+                        : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30'
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Nuevo Estudiante</span>
+                  </button>
+                </div>
+
+                {/* VIEW 1: INICIAR SESIÓN */}
+                {loginTab === 'login' ? (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-semibold text-slate-300 font-sans">
+                          Usuario, Correo o Cédula
+                        </label>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Cualquiera de los 3 es válido
+                        </span>
+                      </div>
+                      <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                        <UserIcon className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="text" 
+                          name="email"
+                          id="email"
+                          required
+                          value={loginEmail}
+                          onChange={e => setLoginEmail(e.target.value)}
+                          placeholder="ej: usuario@synapsis.edu, EST-001 o Cédula"
+                          className="w-full pl-10 pr-3.5 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-semibold text-slate-300 font-sans">
+                          Contraseña
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => showToast('Para recuperar o restablecer tu contraseña, ingresa con tu cédula o contacta a la secretaría académica.', 'info')}
+                          className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer transition-colors"
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </button>
+                      </div>
+                      <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                        <Lock className="absolute left-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={loginPass}
+                          onChange={e => setLoginPass(e.target.value)}
+                          placeholder="Digita tu contraseña institucional"
+                          className="w-full pl-10 pr-10 py-2.5 bg-transparent text-white text-sm outline-none placeholder:text-slate-500 font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 transition-colors p-0.5 rounded cursor-pointer"
+                          title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                    >
+                      <span>Acceder al Portal Académico</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </form>
+                ) : (
+                  /* VIEW 2: REGISTRO DE NUEVO ESTUDIANTE */
+                  <form onSubmit={handleRegisterStudent} className="space-y-3.5 animate-fade-in">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Nombre Completo y Apellidos <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <UserIcon className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="text" 
+                          required
+                          value={regNombre}
+                          onChange={e => setRegNombre(e.target.value)}
+                          placeholder="ej: Carlos Alberto Mendoza"
+                          className="w-full pl-10 pr-3.5 py-2 bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-slate-500 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Correo Electrónico <span className="text-rose-400">*</span>
+                        </label>
+                        <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                          <CreditCard className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400 pointer-events-none opacity-0" />
+                          <input 
+                            type="email" 
+                            required
+                            value={regEmail}
+                            onChange={e => setRegEmail(e.target.value)}
+                            placeholder="correo@ejemplo.com"
+                            className="w-full px-3.5 py-2 bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-slate-500 font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Documento / Cédula <span className="text-rose-400">*</span>
+                        </label>
+                        <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                          <input 
+                            type="text" 
+                            required
+                            value={regCedula}
+                            onChange={e => setRegCedula(e.target.value)}
+                            placeholder="ej: 1107065653"
+                            className="w-full px-3.5 py-2 bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-slate-500 font-medium"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Celular / WhatsApp (Opcional)
+                        </label>
+                        <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                          <input 
+                            type="text" 
+                            value={regCelular}
+                            onChange={e => setRegCelular(e.target.value)}
+                            placeholder="ej: 0987654321"
+                            className="w-full px-3.5 py-2 bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-slate-500 font-medium"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">
+                          Semestre Académico
+                        </label>
+                        <select 
+                          value={regSemestre}
+                          onChange={e => setRegSemestre(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-white text-xs sm:text-sm outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value="SEMESTRE I">SEMESTRE I</option>
+                          <option value="SEMESTRE II">SEMESTRE II</option>
+                          <option value="SEMESTRE III">SEMESTRE III</option>
+                          <option value="SEMESTRE IV">SEMESTRE IV</option>
+                          <option value="SEMESTRE V">SEMESTRE V</option>
+                          <option value="SEMESTRE VI">SEMESTRE VI</option>
+                          <option value="SEMESTRE VII">SEMESTRE VII</option>
+                          <option value="SEMESTRE VIII">SEMESTRE VIII</option>
+                          <option value="SEMESTRE IX">SEMESTRE IX</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Crea una Contraseña de Acceso <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative rounded-xl border border-slate-700/80 bg-slate-950/80 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
+                        <Lock className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <input 
+                          type={regShowPass ? "text" : "password"}
+                          required
+                          value={regPass}
+                          onChange={e => setRegPass(e.target.value)}
+                          placeholder="Mínimo 6 caracteres"
+                          className="w-full pl-10 pr-10 py-2 bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-slate-500 font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setRegShowPass(!regShowPass)}
+                          className="absolute right-3 top-2 text-slate-400 hover:text-slate-200 p-0.5 rounded cursor-pointer"
+                        >
+                          {regShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      disabled={isRegistering}
+                      className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <span>{isRegistering ? 'Procesando matrícula...' : 'Completar Matrícula y Acceder'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              {/* Bottom footer toggle link exactly as shown in screenshot */}
+              <div className="mt-6 pt-4 border-t border-slate-800/80 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-2">
+                {loginTab === 'login' ? (
+                  <>
+                    <span className="text-xs text-slate-400 font-medium">
+                      ¿Eres alumno nuevo y aún no tienes matrícula?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLoginTab('register')}
+                      className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Registrarme como estudiante →</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs text-slate-400 font-medium">
+                      ¿Ya cuentas con usuario o código institucional?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLoginTab('login')}
+                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span>Iniciar sesión aquí →</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
