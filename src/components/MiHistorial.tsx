@@ -29,7 +29,7 @@ export default function MiHistorial({ currentUser, exams, submissions }: MiHisto
         (exam?.materia || '').toLowerCase().includes(q)
       );
     })
-    .sort((a,b) => b.fecha.localeCompare(a.fecha));
+    .sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
   // Reset page to 1 when a search is entered
   React.useEffect(() => {

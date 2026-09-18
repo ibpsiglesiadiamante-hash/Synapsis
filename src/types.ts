@@ -24,6 +24,8 @@ export interface Subject {
   codigo?: string;
   docenteId?: string;
   actualizado?: string;
+  nivel?: string;
+  semestre?: string;
 }
 
 export interface Semester {
@@ -35,6 +37,7 @@ export interface Semester {
   codigo?: string;
   estado: 'activo' | 'inactivo';
   actualizado?: string;
+  nivel?: string;
 }
 
 export interface Parcial {
@@ -190,4 +193,17 @@ export interface Submission {
   autoPuntaje?: number;
   gradedBy?: string;
   gradedAt?: string;
+}
+
+export interface AppState {
+  users: User[];
+  institutions: Institution[];
+  subjects: Subject[];
+  semesters: Semester[];
+  parciales: Parcial[];
+  exams: Exam[];
+  submissions: Submission[];
+  gradeRecords: GradeRecord[];
+  assignments: Assignment[];
+  assignmentSubmissions: AssignmentSubmission[];
 }

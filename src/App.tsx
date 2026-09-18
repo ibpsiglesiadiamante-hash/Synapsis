@@ -41,7 +41,10 @@ import {
   saveState, 
   avatarColor, 
   avatarLetter,
-  mergeStates
+  mergeStates,
+  restoreBackupState,
+  exportFullBackupState,
+  validateAndParseBackup
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -50,7 +53,8 @@ import {
   syncToFirestore, 
   initializeSyncCache,
   fullBidirectionalSync,
-  registerDeletedId
+  registerDeletedId,
+  uploadTheologicalSubjectsToFirestore
 } from './lib/firebase';
 
 import Header from './components/Header';
@@ -83,9 +87,9 @@ import ShareAppModal from './components/ShareAppModal';
 export default function App() {
   // Database States
   const [db, setDb] = useState(() => getInitialState());
-  const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
+  const [isFirebaseLoading, setIsFirebaseLoading] = useState(false);
 
-  // Download entire Synapsis Portal database on mount
+  // Download entire Synapsis Portal database on mount in background
   useEffect(() => {
     async function loadFirestoreData() {
       try {
@@ -97,12 +101,17 @@ export default function App() {
           const mergedDb = mergeStates(localDb, remoteDb);
           setDb(mergedDb);
           saveState(mergedDb);
-          initializeSyncCache(mergedDb);
+          initializeSyncCache(remoteDb);
+          // Sync any newly restored or merged documents to Firestore
+          syncToFirestore(mergedDb).catch(e => console.warn('Background sync error:', e));
+          // Explicitly guarantee all 36 biblical subjects are saved to Firestore
+          uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(e => console.warn('Background subjects sync error:', e));
         } else {
           // No remote database found, let's seed with current default list
-          console.log('Firestore dataset is empty. Writing initial educational seed...');
+          console.log('Firestore dataset is empty. Writing initial educational seed in background...');
           const localSeed = getInitialState();
-          await seedFirestore(localSeed);
+          seedFirestore(localSeed).catch(e => console.warn('Background seed error:', e));
+          uploadTheologicalSubjectsToFirestore(localSeed.subjects).catch(e => console.warn('Background subjects seed error:', e));
           setDb(localSeed);
           saveState(localSeed);
           initializeSyncCache(localSeed);
@@ -118,9 +127,16 @@ export default function App() {
 
   // App Session States
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('instituto_currentUser');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return null; }
+    try {
+      const saved = localStorage.getItem('instituto_currentUser');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && typeof u === 'object' && u.id && u.rol) {
+          return u;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not parse currentUser session:', e);
     }
     return null;
   });
@@ -152,7 +168,7 @@ export default function App() {
       bioCosmicSynth.togglePlay(false);
     }
   }, [theme]);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
   const [activeTakeExamId, setActiveTakeExamId] = useState<string | null>(() => {
     return localStorage.getItem('synapsis_activeTakeExamId');
   });
@@ -245,6 +261,53 @@ export default function App() {
     }
   };
 
+  const handleRestoreBackup = async () => {
+    try {
+      setIsSyncingFirebase(true);
+      showToast('Restaurando copia de seguridad y sincronizando con Firebase...', 'info');
+      const restored = restoreBackupState();
+      setDb(restored);
+      saveState(restored);
+      initializeSyncCache(restored);
+      await syncToFirestore(restored);
+      showToast('¡Copia de seguridad restaurada y sincronizada en Firebase exitosamente!', 'success');
+    } catch (err) {
+      console.error('Failed to restore backup and sync to Firebase', err);
+      showToast('Error al restaurar copia de seguridad en Firebase', 'error');
+    } finally {
+      setIsSyncingFirebase(false);
+    }
+  };
+
+  const handleExportBackup = () => {
+    try {
+      exportFullBackupState(db);
+      showToast('Copia de seguridad completa descargada con éxito', 'success');
+    } catch (err) {
+      console.error('Failed to export backup:', err);
+      showToast('Error al descargar la copia de seguridad', 'error');
+    }
+  };
+
+  const handleImportBackup = async (jsonString: string) => {
+    try {
+      setIsSyncingFirebase(true);
+      showToast('Restaurando copia de seguridad...', 'info');
+      const imported = validateAndParseBackup(jsonString);
+      setDb(imported);
+      saveState(imported);
+      initializeSyncCache(imported);
+      await syncToFirestore(imported);
+      showToast(`¡Respaldo importado y sincronizado! (${imported.subjects?.length || 0} materias, ${imported.semesters?.length || 0} semestres, ${imported.users?.length || 0} usuarios)`, 'success');
+    } catch (err) {
+      console.error('Failed to import backup:', err);
+      showToast('El archivo JSON de respaldo no tiene un formato válido', 'error');
+      throw err;
+    } finally {
+      setIsSyncingFirebase(false);
+    }
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = loginEmail.trim().toLowerCase();
@@ -303,19 +366,16 @@ export default function App() {
     setLoginEmail(email);
     setLoginPass(pass);
     setTimeout(() => {
-      let matchedUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
+      const targetEmail = (email || '').toLowerCase();
+      let matchedUser = db.users.find(u => {
+        const uEmail = (u.email || '').toLowerCase();
+        return (uEmail === targetEmail || 
+          (targetEmail === 'admin@synapsis.edu' && uEmail === 'ibpsiglesiadiamante@gmail.com') || 
+          (targetEmail === 'juan.docente@synapsis.edu' && uEmail === 'quinoneswash70@gmail.com') || 
+          (targetEmail === 'maria.estudiante@synapsis.edu' && uEmail === 'nelsonquinte1994@gmail.com'));
+      });
       if (!matchedUser) {
-        const defaultUsers: User[] = [
-          { id: 'admin-fallback-id', nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: new Date().toISOString() },
-          { id: 'docente-fallback-id', nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: new Date().toISOString() },
-          { id: 'estudiante1-fallback-id', nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
-          { id: 'estudiante2-fallback-id', nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
-        ];
-        const fallbackUser = defaultUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
-        if (fallbackUser) {
-          matchedUser = fallbackUser;
-          updateUsers([...db.users, fallbackUser]);
-        }
+        matchedUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.pass === pass);
       }
 
       if (matchedUser) {
@@ -517,6 +577,7 @@ export default function App() {
         return (
           <Asignaturas
             subjects={db.subjects}
+            semesters={db.semesters}
             users={db.users}
             onUpdateSubjects={updateSubjects}
             toast={showToast}
@@ -661,22 +722,6 @@ export default function App() {
   };
 
   // RENDER APP
-  if (isFirebaseLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center relative overflow-hidden text-center p-6 select-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(6,182,212,0.15),transparent_60%)] pointer-events-none" />
-        {/* Repeating star background simulation */}
-        <div className="stars-overlay !opacity-55" />
-        
-        <div className="w-14 h-14 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(6,182,212,0.4)]" />
-        
-        <h1 className="text-2xl font-extrabold text-white tracking-wide font-sans">Portal Synapsis</h1>
-        <p className="text-cyan-400 font-mono text-[10px] tracking-widest uppercase mt-2">Sincronizando con Cloud Firestore...</p>
-        <p className="text-slate-500 text-xs mt-4 leading-relaxed max-w-xs font-medium">Estableciendo canal intelectual bio-cósmico seguro con el servidor de la nube.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="app-root relative font-sans antialiased text-slate-800">
       
@@ -853,7 +898,7 @@ export default function App() {
                 >
                   <div className="flex items-center gap-2 truncate">
                     <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
-                    <span className="truncate font-mono text-[11px] text-indigo-300">synapsis-edu.web.app</span>
+                    <span className="truncate font-mono text-[11px] text-indigo-300">synapsis-ec.web.app</span>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] text-slate-400 group-hover:text-slate-200 shrink-0 font-medium">
                     <QrCode className="w-3.5 h-3.5 text-slate-400" />
@@ -878,7 +923,7 @@ export default function App() {
           <Header 
             currentUser={currentUser} 
             theme={theme}
-            onThemeChange={setTheme}
+            onThemeChange={(newTheme) => setTheme(newTheme as 'theme-academia' | 'theme-cyber')}
             onLogout={handleLogout}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen(prev => !prev)}
@@ -961,7 +1006,18 @@ export default function App() {
         isOpen={isShareModalOpen} 
         onClose={() => setIsShareModalOpen(false)} 
         onSyncFirebase={handleManualSync}
+        onRestoreBackup={handleRestoreBackup}
+        onExportBackup={handleExportBackup}
+        onImportBackup={handleImportBackup}
         isSyncing={isSyncingFirebase}
+        stats={{
+          subjects: db.subjects.length,
+          semesters: db.semesters.length,
+          parciales: db.parciales.length,
+          users: db.users.length,
+          exams: db.exams.length,
+          grades: db.gradeRecords.length
+        }}
       />
 
     </div>

@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
 import './index.css';
 
 // Global capture-phase listener to transform typed inputs in the DOM.
@@ -8,7 +9,7 @@ import './index.css';
 // - Email inputs are transformed to LOWERCASE to prevent truncated email overflow.
 document.addEventListener('input', (e) => {
   const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+  if (target && typeof target.getAttribute === 'function' && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
     const inputType = (target.getAttribute('type') || (target.tagName === 'TEXTAREA' ? 'textarea' : 'text')).toLowerCase();
     
     // Email and username/login inputs must remain lowercase
@@ -62,7 +63,9 @@ document.addEventListener('input', (e) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
 

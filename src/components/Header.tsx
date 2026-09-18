@@ -32,13 +32,19 @@ export default function Header({
   onSyncFirebase,
   isSyncing = false
 }: HeaderProps) {
-  const roleLabel = {
+  const roleLabel = (currentUser?.rol && {
     admin: 'Administrador',
     docente: 'Docente',
     estudiante: 'Estudiante',
-  }[currentUser.rol];
+  }[currentUser.rol]) || 'Usuario';
 
-  const [isMusicPlaying, setIsMusicPlaying] = useState(bioCosmicSynth.getIsPlaying());
+  const [isMusicPlaying, setIsMusicPlaying] = useState(() => {
+    try {
+      return bioCosmicSynth.getIsPlaying();
+    } catch (e) {
+      return false;
+    }
+  });
 
   const handleToggleMusic = () => {
     const newState = bioCosmicSynth.togglePlay();
@@ -154,13 +160,13 @@ export default function Header({
         >
           <div 
             className="user-avatar w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white shadow-sm"
-            style={{ backgroundColor: avatarColor(currentUser.nombre) }}
+            style={{ backgroundColor: avatarColor(currentUser?.nombre || 'Usuario') }}
           >
-            {avatarLetter(currentUser.nombre)}
+            {avatarLetter(currentUser?.nombre || 'U')}
           </div>
           <div className="user-info text-left hidden sm:block">
             <div className="user-name text-[13px] font-semibold leading-tight text-slate-800" style={{ color: 'var(--gray-800)' }}>
-              {currentUser.nombre}
+              {currentUser?.nombre || 'Usuario'}
             </div>
             <div className="user-role text-[11px] font-medium text-slate-400">
               {roleLabel}

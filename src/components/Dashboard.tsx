@@ -53,19 +53,19 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
   let sortedExams: Exam[] = [];
 
   if (rol === 'admin') {
-    sortedSubs = [...submissions].sort((a,b) => b.fecha.localeCompare(a.fecha));
-    sortedExams = [...exams];
+    sortedSubs = [...(submissions || [])].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    sortedExams = [...(exams || [])];
   } else if (rol === 'docente') {
-    const docExams = exams.filter(e => e.docenteId && allMyUserIds.includes(e.docenteId));
+    const docExams = (exams || []).filter(e => e.docenteId && allMyUserIds.includes(e.docenteId));
     const examIds = docExams.map(e => e.id);
-    const mySubsList = submissions.filter(s => examIds.includes(s.examenId));
-    sortedSubs = [...mySubsList].sort((a,b) => b.fecha.localeCompare(a.fecha));
+    const mySubsList = (submissions || []).filter(s => examIds.includes(s.examenId));
+    sortedSubs = [...mySubsList].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     sortedExams = docExams;
   } else {
-    const studentSubs = submissions.filter(s => s.estudianteId === currentUser.id);
-    sortedSubs = [...studentSubs].sort((a,b) => b.fecha.localeCompare(a.fecha));
+    const studentSubs = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
+    sortedSubs = [...studentSubs].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     
-    const availableExams = exams.filter(e => e.estado === 'activo');
+    const availableExams = (exams || []).filter(e => e.estado === 'activo');
     sortedExams = availableExams.filter(e => {
       if (e.intentos === 0) return true;
       const myCount = studentSubs.filter(s => s.examenId === e.id).length;

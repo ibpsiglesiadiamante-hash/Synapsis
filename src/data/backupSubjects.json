@@ -1,0 +1,297 @@
+{
+  "subjects": [
+    {
+      "id": "mtspr1wjnpijn",
+      "nombre": "Teología",
+      "codigo": "TEO-101",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre I",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "1a07ecf79cf_e82cbf49",
+      "nombre": "Introducción al A.T.",
+      "codigo": "IAT-101",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre I",
+      "docenteId": "mu646uivlewlf",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mqac0j8kkrzuo",
+      "nombre": "Ética e Integridad",
+      "codigo": "ETI-101",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre I",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mqac183iog4zy",
+      "nombre": "Educación Cristiana I",
+      "codigo": "EDC-101",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre I",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mqac244bpn0jb",
+      "nombre": "Cristología",
+      "codigo": "CRI-102",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre II",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5n2g4huv1ai",
+      "nombre": "Introducción al N.T.",
+      "codigo": "INT-102",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre II",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "1a07f7e04bd_8cea04b1",
+      "nombre": "Geografía Bíblica",
+      "codigo": "GEO-102",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre II",
+      "docenteId": "admin-fallback-id",
+      "creado": "2026-09-08T05:00:00.000Z",
+      "actualizado": "2026-09-17T23:29:40.207Z"
+    },
+    {
+      "id": "mu5n3b5c9h3d9",
+      "nombre": "Educación Cristiana II",
+      "codigo": "EDC-102",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre II",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5n3qjsmys1v",
+      "nombre": "Espíritu Santo",
+      "codigo": "ESP-103",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre III",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5n4kdk2ghtf",
+      "nombre": "Pentateuco",
+      "codigo": "PEN-103",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre III",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5n556ogrkeq",
+      "nombre": "Controversia",
+      "codigo": "CON-103",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre III",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5n5s2wf1okf",
+      "nombre": "Hermenéutica",
+      "codigo": "HER-103",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre III",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nbin3z06z3",
+      "nombre": "Doctrina del Hombre, Pecado y Salvación",
+      "codigo": "DOC-104",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre IV",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nci8gtrgy7",
+      "nombre": "Libros Históricos del N.T.",
+      "codigo": "LHN-104",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre IV",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nd4js3hman",
+      "nombre": "Homilética I",
+      "codigo": "HOM-104",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre IV",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5ndhx3qum4m",
+      "nombre": "Homilética II",
+      "codigo": "HOM-105",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre IV",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nduonzvrfw",
+      "nombre": "Epístolas Paulinas I",
+      "codigo": "EPI-105",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre V",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5ne75rty5i6",
+      "nombre": "Epístolas Paulinas II",
+      "codigo": "EPI-106",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre V",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5neokongd9k",
+      "nombre": "Consejería I",
+      "codigo": "CNS-105",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre V",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nf4w06abzo",
+      "nombre": "Consejería II",
+      "codigo": "CNS-106",
+      "nivel": "NIVEL I : Biblioteología Pastoral",
+      "semestre": "Semestre V",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nfsl34c647",
+      "nombre": "Administración",
+      "codigo": "ADM-206",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VI",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5ng687lsjyz",
+      "nombre": "Epístolas Generales",
+      "codigo": "EPG-206",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VI",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "1a07ed96600_e4b34393",
+      "nombre": "Apocalipsis I",
+      "codigo": "APO-206",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VI",
+      "docenteId": "mu646uivlewlf",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5ngpm7ayvmf",
+      "nombre": "Apocalipsis II",
+      "codigo": "APO-207",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VI",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nh8sf7ufra",
+      "nombre": "Misiones",
+      "codigo": "MIS-207",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5ni5tbxh96o",
+      "nombre": "Libros Históricos A.T.",
+      "codigo": "LHA-207",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "1a07edb096f_a6d48429",
+      "nombre": "Profetas Mayores I",
+      "codigo": "PMA-207",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VII",
+      "docenteId": "mu646uivlewlf",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nit5bcba6g",
+      "nombre": "Profetas Mayores II",
+      "codigo": "PMA-208",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5njbxzb27gw",
+      "nombre": "Iglecrecimiento",
+      "codigo": "IGL-208",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VIII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5njp27milbu",
+      "nombre": "Angelología",
+      "codigo": "ANG-208",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VIII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nk1o7dwq5i",
+      "nombre": "Libros Poéticos",
+      "codigo": "LPO-208",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VIII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nkcrbqacco",
+      "nombre": "Historia de la Iglesia I",
+      "codigo": "HIG-208",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre VIII",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nkqoncthql",
+      "nombre": "Historia de la Iglesia II",
+      "codigo": "HIG-209",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre IX",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nl50nkhefg",
+      "nombre": "Profetas Menores I",
+      "codigo": "PME-209",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre IX",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nln0fnxob5",
+      "nombre": "Profetas Menores II",
+      "codigo": "PME-210",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre IX",
+      "creado": "2026-09-08T05:00:00.000Z"
+    },
+    {
+      "id": "mu5nm5l5twm1u",
+      "nombre": "Formulación de Proyectos",
+      "codigo": "FPR-209",
+      "nivel": "NIVEL II : Biblioteología Ministerial",
+      "semestre": "Semestre IX",
+      "creado": "2026-09-08T05:00:00.000Z"
+    }
+  ]
+}

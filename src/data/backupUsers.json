@@ -1,0 +1,274 @@
+{
+  "institutions": [
+    {
+      "id": "1a07f632c50_97cffda5",
+      "nombre": "INSTITUTO BIBLICO PATRICIO SYMES",
+      "tipo": "Universidad",
+      "codigo": "NIT-322199",
+      "ciudad": "CALI-VALLE",
+      "direccion": "",
+      "telefono": "3154445893",
+      "email": "ibpsiglesiadiamante@gmail.com",
+      "creado": "2026-09-08T05:00:00.976Z",
+      "actualizado": "2026-09-16T13:58:02.132Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "admin-fallback-id",
+      "nombre": "WASHINGTON QUIÑONES",
+      "email": "ibpsiglesiadiamante@gmail.com",
+      "pass": "admin123",
+      "rol": "admin",
+      "codigo": "ADM-001",
+      "creado": "2026-09-16T09:55:22.467Z"
+    },
+    {
+      "id": "mu3jg0j9hy3yi",
+      "nombre": "ANDERSON FRANCISCO CABEZAS",
+      "email": "andersonfcc@gmail.com",
+      "pass": "Gielci607*",
+      "rol": "estudiante",
+      "codigo": "TJJV",
+      "cedula": "5226299",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a098f1b4d4_ae34adfd",
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T03:25:38.613Z"
+    },
+    {
+      "id": "mu3l1jsdp333n",
+      "nombre": "YERLIN MARTINEZ PEREZ",
+      "email": "yermartinez28@gmail.com",
+      "pass": "Uni2026",
+      "rol": "estudiante",
+      "codigo": "T4VS",
+      "cedula": "1107065653",
+      "semestre": "1a07f7bbeff_1c4eba4c",
+      "asignaturas": [
+        "1a098efffdd_ce06e4fb",
+        "1a07ecf79cf_e82cbf49"
+      ],
+      "creado": "2026-09-16T04:10:22.957Z"
+    },
+    {
+      "id": "mu3ldirsqhvhy",
+      "nombre": "JENIFFER GARCÍA",
+      "email": "jeniffer.1986garcia@gmail.com",
+      "pass": "2007stevan ",
+      "rol": "estudiante",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T04:19:41.512Z"
+    },
+    {
+      "id": "mu3xex6712meu",
+      "nombre": "LIZETH BUSTOS ROJAS",
+      "email": "lizethbr89@gmail.com",
+      "pass": "Paulina07",
+      "rol": "estudiante",
+      "codigo": "5VP6",
+      "cedula": "1110485808",
+      "semestre": "mu5sp76a2k6j5",
+      "asignaturas": [
+        "1a098f1b4d4_ae34adfd",
+        "1a07ed96600_e4b34393"
+      ],
+      "creado": "2026-09-16T09:56:42.224Z"
+    },
+    {
+      "id": "mu447davvfdtm",
+      "nombre": "JHON JAIRO CRUZ ANGULO",
+      "email": "jhonjairocruzangulo@gmail.com",
+      "pass": "Cachicoco",
+      "rol": "estudiante",
+      "codigo": "SYIB",
+      "cedula": "16936830",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T13:06:47.191Z"
+    },
+    {
+      "id": "mu45afwmf8yry",
+      "nombre": "NERLYN PATRICIA FLOREZ MONDRAGÓN",
+      "email": "yuliflor@hotmail.es",
+      "pass": "Mati.2026",
+      "rol": "estudiante",
+      "codigo": "YEKY",
+      "cedula": "31477609",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T13:37:10.150Z"
+    },
+    {
+      "id": "mu45o3v99vnpt",
+      "nombre": "MARCELA TRUJILLO RAMOS",
+      "email": "juaneske@hotmail.com",
+      "pass": "kecajuanes",
+      "rol": "estudiante",
+      "codigo": "IOCZ",
+      "cedula": "1130596235",
+      "semestre": "mu5sqf5uuaacj",
+      "asignaturas": [
+        "1a098f29063_36705202",
+        "1a07edb096f_a6d48429"
+      ],
+      "creado": "2026-09-16T13:47:47.733Z"
+    },
+    {
+      "id": "mu45o9kaqzepv",
+      "nombre": "JACQUELINE SANCHEZ GOMEZ",
+      "email": "jasago.variedades@gmail.com",
+      "pass": "Angeles1975",
+      "rol": "estudiante",
+      "codigo": "ETQD",
+      "cedula": "66926776",
+      "semestre": "1a07ecdd8e0_1204d0ff",
+      "creado": "2026-09-16T13:47:55.116Z"
+    },
+    {
+      "id": "mu45rdbgpo0xo",
+      "nombre": "EDUARDO CABAL",
+      "email": "eduardocabal19@gmail.com",
+      "pass": "10490423",
+      "rol": "estudiante",
+      "codigo": "DXNQ",
+      "cedula": "10490424",
+      "semestre": "mu5sqf5uuaacj",
+      "asignaturas": [
+        "1a098f29063_36705202",
+        "1a07edb096f_a6d48429"
+      ],
+      "creado": "2026-09-16T13:50:19.948Z"
+    },
+    {
+      "id": "mu461xzqoagyj",
+      "nombre": "DIANA MARCELA HENAO CHICANGANA",
+      "email": "dimarhenao777@gmail.com",
+      "pass": "123456789",
+      "rol": "estudiante",
+      "codigo": "RKKR",
+      "cedula": "1143929066",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T13:58:33.302Z"
+    },
+    {
+      "id": "mu46l0o0k8vjs",
+      "nombre": "ADRIANA MARGARITA DIAZ CEBALLOS",
+      "email": "adrisaac1982@gmail.com",
+      "pass": "16411202",
+      "rol": "estudiante",
+      "codigo": "HSCA",
+      "cedula": "1113701662",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T14:13:23.232Z"
+    },
+    {
+      "id": "mu46mqhoemydv",
+      "nombre": "FRANCISCO JAVIER BETANCOURT",
+      "email": "f.beta@gmail.com",
+      "pass": "Placa21576",
+      "rol": "estudiante",
+      "codigo": "54SC",
+      "cedula": "76328326",
+      "semestre": "mu5sp76a2k6j5",
+      "asignaturas": [
+        "1a098f1b4d4_ae34adfd",
+        "1a07ed96600_e4b34393"
+      ],
+      "creado": "2026-09-16T14:14:43.356Z"
+    },
+    {
+      "id": "mu47m07howh2v",
+      "nombre": "BRENDA SAISURY BEDOYA",
+      "email": "tejada2204@gmail.com",
+      "pass": "1602",
+      "rol": "estudiante",
+      "codigo": "53C0",
+      "cedula": "38558930",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-16T14:42:08.909Z"
+    },
+    {
+      "id": "mu4asvp8f0dbq",
+      "nombre": "BEISY DAHIANA PORTOCARRERO QUIÑONEZ",
+      "email": "dahiannaportocarrero@hotmail.com",
+      "pass": "Samuel311215*",
+      "rol": "estudiante",
+      "codigo": "HGDO",
+      "cedula": "1111790066",
+      "semestre": "1a07ecdd8e0_1204d0ff",
+      "creado": "2026-09-16T16:11:28.508Z"
+    },
+    {
+      "id": "mu4cyll6op5ht",
+      "nombre": "PAOLA GUACA",
+      "email": "gm.paolaandrea33@gmail.com",
+      "pass": "2020",
+      "rol": "estudiante",
+      "codigo": "JHV3",
+      "cedula": "1107051097",
+      "semestre": "mu5sqf5uuaacj",
+      "asignaturas": [
+        "1a098f29063_36705202",
+        "1a07edb096f_a6d48429"
+      ],
+      "creado": "2026-09-16T17:11:54.570Z"
+    },
+    {
+      "id": "mu63hxwu7kmy3",
+      "nombre": "NELSON",
+      "email": "nelsonquinte1994@gmail.com",
+      "pass": "1010217753",
+      "rol": "estudiante",
+      "codigo": "7VUJ",
+      "cedula": "1010217753",
+      "celular": "3116542133",
+      "semestre": "mu5smr56ua268",
+      "asignaturas": [
+        "1a07f7e04bd_8cea04b1"
+      ],
+      "creado": "2026-09-17T22:22:33.198Z"
+    },
+    {
+      "id": "mu646uivlewlf",
+      "nombre": "WASHINGTON QUIÑONES",
+      "email": "quinoneswash70@gmail.com",
+      "pass": "053507",
+      "rol": "docente",
+      "creado": "2026-09-17T22:41:55.207Z"
+    },
+    {
+      "id": "mu65cmw1gz3z7",
+      "nombre": "BYRON ALEXANDER QUINTERO",
+      "email": "baironquinterol@gmail.com",
+      "pass": "2315",
+      "rol": "estudiante",
+      "codigo": "44I7",
+      "cedula": "1130617567",
+      "celular": "3225182957",
+      "semestre": "mu5sp76a2k6j5",
+      "asignaturas": [
+        "1a07ed96600_e4b34393"
+      ],
+      "creado": "2026-09-17T23:14:24.865Z"
+    }
+  ]
+}

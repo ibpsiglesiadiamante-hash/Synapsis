@@ -22,7 +22,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentUser, activePage, onPageChange, isOpen, onClose, onOpenShareModal }: SidebarProps) {
-  const rol = currentUser.rol;
+  const rol = currentUser?.rol || 'estudiante';
 
   // Collapsible Nav Groups State (persisted to localStorage)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {

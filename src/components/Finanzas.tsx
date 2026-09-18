@@ -321,7 +321,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
     const matchesTab = activeTab === 'all' || p.estado === activeTab;
 
     return matchesUser && matchesSearch && matchesTab;
-  }).sort((a, b) => b.fechaVencimiento.localeCompare(a.fechaVencimiento));
+  }).sort((a, b) => (b.fechaVencimiento || '').localeCompare(a.fechaVencimiento || ''));
 
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;

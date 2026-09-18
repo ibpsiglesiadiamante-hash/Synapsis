@@ -7,34 +7,51 @@ import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import { 
   QrCode, Copy, Check, Download, Printer, Share2, ExternalLink, Smartphone, 
-  Database, CheckCircle2, RefreshCw, Server, Globe
+  Database, CheckCircle2, RefreshCw, Server, Globe, Upload, FileText, AlertTriangle
 } from 'lucide-react';
 
 interface ShareAppModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSyncFirebase?: () => Promise<any> | void;
+  onRestoreBackup?: () => Promise<any> | void;
+  onExportBackup?: () => void;
+  onImportBackup?: (jsonString: string) => Promise<any> | void;
   isSyncing?: boolean;
+  stats?: {
+    subjects: number;
+    semesters: number;
+    parciales: number;
+    users: number;
+    exams?: number;
+    grades?: number;
+  };
 }
 
-// Official working portal link on Firebase Hosting (Project ID: synapsis-edu)
-export const OFFICIAL_PORTAL_URL = 'https://synapsis-edu.web.app';
+// Official working portal link on Firebase Hosting (Project ID: synapsis-edu / synapsis-ec)
+export const OFFICIAL_PORTAL_URL = 'https://synapsis-ec.web.app';
 export const SHORT_URL = 'https://tinyurl.com/2ad5gh2c';
 export const FULL_URL = 'https://ais-pre-4wzwuwhx24ttdai2gesabg-794631310365.us-east1.run.app/';
-export const FIREBASE_HOSTING_URL = 'https://synapsis-edu.web.app';
+export const FIREBASE_HOSTING_URL = 'https://synapsis-ec.web.app';
 
 export default function ShareAppModal({ 
   isOpen, 
   onClose,
   onSyncFirebase,
-  isSyncing = false
+  onRestoreBackup,
+  onExportBackup,
+  onImportBackup,
+  isSyncing = false,
+  stats
 }: ShareAppModalProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedShort, setCopiedShort] = useState(false);
   const [localSyncState, setLocalSyncState] = useState<'idle' | 'syncing' | 'success'>('idle');
   const [lastSyncCount, setLastSyncCount] = useState<number | null>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,6 +80,31 @@ export default function ShareAppModal({
     navigator.clipboard.writeText(SHORT_URL);
     setCopiedShort(true);
     setTimeout(() => setCopiedShort(false), 2500);
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (onImportBackup) {
+          setImportStatus('Procesando y restaurando respaldo...');
+          await onImportBackup(text);
+          setImportStatus('¡Copia de seguridad importada y sincronizada!');
+          setTimeout(() => setImportStatus(null), 4000);
+        }
+      } catch (err) {
+        console.error('Error reading backup file:', err);
+        setImportStatus('Error al restaurar archivo. Asegúrese de que sea un JSON válido.');
+        setTimeout(() => setImportStatus(null), 4000);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleTriggerSync = async () => {
@@ -261,7 +303,97 @@ export default function ShareAppModal({
               </span>
             </div>
 
-            {/* Manual Sync Trigger Button */}
+            {/* Live Data Summary Banner */}
+            {stats && (
+              <div className="bg-white/95 border border-indigo-100 rounded-xl p-3 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Datos registrados en el sistema:</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                    Plan 2026
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 text-center">
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.subjects}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Materias</div>
+                  </div>
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.semesters}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Semestres</div>
+                  </div>
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.parciales}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Cortes/Parc.</div>
+                  </div>
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.users}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Usuarios</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Hidden File Input for Backup Upload */}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileSelected} 
+              accept=".json,application/json" 
+              className="hidden" 
+            />
+
+            {importStatus && (
+              <div className="p-2.5 rounded-xl text-xs font-semibold bg-indigo-50 border border-indigo-200 text-indigo-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>{importStatus}</span>
+              </div>
+            )}
+
+            {/* Action 1: Export Live Backup */}
+            {onExportBackup && (
+              <button
+                type="button"
+                onClick={onExportBackup}
+                disabled={isCurrentSyncing}
+                className="w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer bg-slate-900 hover:bg-slate-800 text-white shadow-xs"
+                title="Descargar copia de seguridad con todas las notas, materias, usuarios y evaluaciones en formato JSON"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Descargar Copia de Seguridad Completa (JSON)</span>
+              </button>
+            )}
+
+            {/* Action 2: Import Backup File */}
+            {onImportBackup && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isCurrentSyncing}
+                className="w-full py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-emerald-300 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 disabled:opacity-60"
+                title="Cargar un archivo de respaldo JSON guardado previamente"
+              >
+                <Upload className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Restaurar desde Archivo JSON en tu Dispositivo</span>
+              </button>
+            )}
+
+            {/* Action 3: Restore Official 2026 Curriculum */}
+            {onRestoreBackup && (
+              <button
+                type="button"
+                onClick={onRestoreBackup}
+                disabled={isCurrentSyncing}
+                className="w-full py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 disabled:opacity-60"
+              >
+                <Database className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Cargar Pensum Teológico Completo (Nivel I y II - 36 materias)</span>
+              </button>
+            )}
+
+            {/* Action 4: Sync to Cloud Firestore */}
             {onSyncFirebase && (
               <button
                 type="button"
@@ -276,10 +408,10 @@ export default function ShareAppModal({
                 <RefreshCw className={`w-3.5 h-3.5 ${isCurrentSyncing ? 'animate-spin' : ''}`} />
                 <span>
                   {isCurrentSyncing 
-                    ? 'Sincronizando datos con Cloud Firestore (synapsis-edu)...' 
+                    ? 'Sincronizando datos con Cloud Firestore...' 
                     : localSyncState === 'success'
-                      ? `¡Datos registrados en synapsis-edu! ${lastSyncCount ? `(${lastSyncCount} registros)` : ''}`
-                      : 'Sincronizar y Registrar Toda la Base de Datos con synapsis-edu'
+                      ? `¡Datos registrados en Firebase! ${lastSyncCount ? `(${lastSyncCount} registros)` : ''}`
+                      : 'Sincronizar y Registrar Toda la Base de Datos en Firebase'
                   }
                 </span>
               </button>

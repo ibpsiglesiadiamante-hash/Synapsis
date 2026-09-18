@@ -4,8 +4,10 @@
  */
 
 import { 
-  User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission 
+  User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission, AppState 
 } from '../types';
+import { backupAppState } from '../data/backupData';
+export { backupAppState };
 
 export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -128,177 +130,129 @@ export function generateSemesterCode(nombre: string, existingSemesters: Semester
   return code;
 }
 
-interface AppState {
-  users: User[];
-  institutions: Institution[];
-  subjects: Subject[];
-  semesters: Semester[];
-  parciales: Parcial[];
-  exams: Exam[];
-  submissions: Submission[];
-  gradeRecords: GradeRecord[];
-  assignments: Assignment[];
-  assignmentSubmissions: AssignmentSubmission[];
+export function exportFullBackupState(state: AppState): void {
+  try {
+    const exportPayload = {
+      metadata: {
+        version: '2026.1',
+        exportedAt: new Date().toISOString(),
+        institution: state.institutions?.[0]?.nombre || 'Instituto Bíblico',
+        summary: {
+          subjects: state.subjects?.length || 0,
+          semesters: state.semesters?.length || 0,
+          parciales: state.parciales?.length || 0,
+          users: state.users?.length || 0,
+          exams: state.exams?.length || 0,
+          gradeRecords: state.gradeRecords?.length || 0,
+          assignments: state.assignments?.length || 0
+        }
+      },
+      users: state.users || [],
+      institutions: state.institutions || [],
+      subjects: state.subjects || [],
+      semesters: state.semesters || [],
+      parciales: state.parciales || [],
+      exams: state.exams || [],
+      submissions: state.submissions || [],
+      gradeRecords: state.gradeRecords || [],
+      assignments: state.assignments || [],
+      assignmentSubmissions: state.assignmentSubmissions || []
+    };
+
+    const jsonStr = JSON.stringify(exportPayload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().split('T')[0];
+    a.href = url;
+    a.download = `respaldo_completo_instituto_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Error exporting full backup:', err);
+    throw err;
+  }
 }
 
-function buildDefaultSeedData(): AppState {
-  const uAdminId = 'admin-fallback-id';
-  const uDocenteId = 'docente-fallback-id';
-  const uEstudiante1Id = 'estudiante1-fallback-id';
-  const uEstudiante2Id = 'estudiante2-fallback-id';
+export function validateAndParseBackup(jsonString: string): AppState {
+  const parsed = JSON.parse(jsonString);
+  const target = parsed.users ? parsed : (parsed.data || parsed);
+  
+  const ensureArray = <T>(val: any): T[] => Array.isArray(val) ? val : [];
 
-  const defaultUsers: User[] = [
-    { id: uAdminId, nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: now() },
-    { id: uDocenteId, nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: now() },
-    { id: uEstudiante1Id, nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
-    { id: uEstudiante2Id, nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: now() },
-  ];
-
-  const subMathId = 'sub-math-id';
-  const subSocialId = 'sub-social-id';
-  const subLangId = 'sub-lang-id';
-
-  const defaultSubjects: Subject[] = [
-    { id: subMathId, nombre: 'MATEMÁTICAS', codigo: 'MAT-101', docenteId: uDocenteId, creado: now() },
-    { id: subSocialId, nombre: 'CIENCIAS SOCIALES', codigo: 'SOC-102', docenteId: uDocenteId, creado: now() },
-    { id: subLangId, nombre: 'LENGUA Y LITERATURA', codigo: 'LEN-103', docenteId: uDocenteId, creado: now() },
-  ];
-
-  const sem1Id = 'sem-1-id';
-  const sem2Id = 'sem-2-id';
-
-  const defaultSemesters: Semester[] = [
-    { id: sem1Id, nombre: 'SEMESTRE 2026-I', codigo: 'SEM-26A', estado: 'activo', creado: now() },
-    { id: sem2Id, nombre: 'SEMESTRE 2026-II', codigo: 'SEM-26B', estado: 'inactivo', creado: now() },
-  ];
-
-  const arc1Id = 'arc-1-id';
-  const arc2Id = 'arc-2-id';
-
-  const defaultParciales: Parcial[] = [
-    { id: arc1Id, nombre: 'PRIMER CORTE - 30%', semestre: sem1Id, asignatura: subMathId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-02-01', fechaFin: '2026-04-10', creado: now() },
-    { id: arc2Id, nombre: 'SEGUNDO CORTE - 30%', semestre: sem1Id, asignatura: subSocialId, estado: 'abierto', porcentaje: 30, fechaInicio: '2026-04-11', fechaFin: '2026-06-30', creado: now() },
-  ];
-
-  const defaultGradeRecords: GradeRecord[] = [
-    {
-      id: 'grade-1-id',
-      estudianteId: uEstudiante1Id,
-      asignaturaId: subMathId,
-      parcialId: arc1Id,
-      nota: 4.2,
-      notaEV1: 4.3,
-      notaEV2: 4.7,
-      notaTrabajo: 3.6,
-      aprobado: true,
-      comentario: 'EXCELENTE SUSTENTACIÓN DEL ANÁLISIS DIFERENCIAL.',
-      creado: now(),
-      actualizado: now(),
-    },
-    {
-      id: 'grade-2-id',
-      estudianteId: uEstudiante2Id,
-      asignaturaId: subSocialId,
-      parcialId: arc2Id,
-      nota: 2.8,
-      notaEV1: 2.5,
-      notaEV2: 3.0,
-      notaTrabajo: 2.9,
-      aprobado: false,
-      comentario: 'REQUIERE REPASAR LOS HITOS DEL FRENTE DE REFORMA SOCIAL COLOMBIANA.',
-      creado: now(),
-      actualizado: now(),
-    },
-  ];
-
-  const defaultAssignments: Assignment[] = [
-    {
-      id: 'assignment-1-id',
-      titulo: 'ENSAYO CRÍTICO DE SOCIALES',
-      descripcion: 'REDACTA UN ANÁLISIS DE 500 PALABRAS SOBRE EL IMPACTO INSTITUCIONAL DEL FRENTE NACIONAL.',
-      parcialId: arc2Id,
-      puntos: 100,
-      fechaEntrega: '2026-06-25',
-      creado: now(),
-      actualizado: now(),
-    },
-  ];
-
-  const defaultInstitutions: Institution[] = [
-    {
-      id: 'inst-1-id',
-      nombre: 'INSTITUTO SYNAPSIS',
-      tipo: 'Colegio',
-      codigo: 'NIT-322199',
-      ciudad: 'BOGOTÁ D.C.',
-      direccion: 'AVENIDA EL DORADO #68-12',
-      telefono: '+57 (1) 456-7890',
-      email: 'contacto@synapsis.edu',
-      creado: now(),
-    },
-  ];
-
-  const defaultExams: Exam[] = [
-    {
-      id: 'exam-1-id',
-      titulo: 'ÁLGEBRA BÁSICA Y ECUACIONES',
-      materia: 'Matemáticas',
-      parcialId: arc1Id,
-      descripcion: 'EVALUACIÓN CRONOMETRADA DE SISTEMAS DE ECUACIONES DE PRIMER Y SEGUNDO GRADO.',
-      docenteId: uDocenteId,
-      estado: 'activo',
-      tiempo: 60,
-      intentos: 1,
-      aprobacion: 60,
-      aleatorio: false,
-      mostrarNota: true,
-      creado: now(),
-      preguntas: [
-        {
-          id: 'q1-id',
-          texto: '¿CUÁL ES EL VALOR DE X QUE SATISFACE LA ECUACIÓN: 2X - 3 = 7?',
-          tipo: 'multiple',
-          puntos: 25,
-          opciones: ['x = 2', 'x = 5', 'x = 4', 'x = 10'],
-          correctas: [1],
-        },
-        {
-          id: 'q2-id',
-          texto: 'RESUELVE EL SIGUIENTE BINOMIO AL CUADRADO: (A + B)².',
-          tipo: 'multiple',
-          puntos: 25,
-          opciones: [
-            'a² + 2ab + b²',
-            'a² + b²',
-            'a² - 2ab + b²',
-            '2a + 2b',
-          ],
-          correctas: [0],
-        },
-        {
-          id: 'q3-id',
-          texto: '¿LA FÓRMULA CUADRÁTICA PERMITE OBTENER LAS RAÍCES DE FUNCIONES POLINÓMICAS DE GRADO 2?',
-          tipo: 'tf',
-          puntos: 25,
-          opciones: ['Verdadero', 'Falso'],
-          correctas: [0],
-        },
-      ],
-    },
-  ];
-
-  return {
-    users: defaultUsers,
-    institutions: defaultInstitutions,
-    subjects: defaultSubjects,
-    semesters: defaultSemesters,
-    parciales: defaultParciales,
-    exams: defaultExams,
-    submissions: [],
-    gradeRecords: defaultGradeRecords,
-    assignments: defaultAssignments,
-    assignmentSubmissions: [],
+  const restoredState: AppState = {
+    users: ensureArray(target.users),
+    institutions: ensureArray(target.institutions),
+    subjects: ensureArray(target.subjects),
+    semesters: ensureArray(target.semesters),
+    parciales: ensureArray(target.parciales),
+    exams: ensureArray(target.exams),
+    submissions: ensureArray(target.submissions),
+    gradeRecords: ensureArray(target.gradeRecords),
+    assignments: ensureArray(target.assignments),
+    assignmentSubmissions: ensureArray(target.assignmentSubmissions)
   };
+
+  // Restore deleted IDs protection
+  const backupIds = new Set<string>();
+  const keys: (keyof AppState)[] = [
+    'users', 'institutions', 'subjects', 'semesters', 'parciales',
+    'exams', 'submissions', 'gradeRecords', 'assignments', 'assignmentSubmissions'
+  ];
+  keys.forEach(k => {
+    (restoredState[k] as any[]).forEach(item => {
+      if (item && item.id) backupIds.add(item.id);
+    });
+  });
+  const existingDeleted = getDeletedIds();
+  backupIds.forEach(id => existingDeleted.delete(id));
+  try {
+    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(existingDeleted)));
+  } catch (e) {
+    console.warn('Failed to update ep_deleted_ids:', e);
+  }
+
+  saveState(restoredState);
+  return restoredState;
+}
+
+export function restoreBackupState(): AppState {
+  const backup = buildDefaultSeedData();
+  const backupIds = new Set<string>();
+  const keys: (keyof AppState)[] = [
+    'users',
+    'institutions',
+    'subjects',
+    'semesters',
+    'parciales',
+    'exams',
+    'submissions',
+    'gradeRecords',
+    'assignments',
+    'assignmentSubmissions'
+  ];
+  keys.forEach(k => {
+    ((backup[k] || []) as any[]).forEach(item => {
+      if (item && item.id) backupIds.add(item.id);
+    });
+  });
+
+  const existingDeleted = getDeletedIds();
+  backupIds.forEach(id => existingDeleted.delete(id));
+  try {
+    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(existingDeleted)));
+  } catch (e) {
+    console.warn('Failed to update ep_deleted_ids:', e);
+  }
+
+  saveState(backup);
+  return backup;
+}
+
+export function buildDefaultSeedData(): AppState {
+  return JSON.parse(JSON.stringify(backupAppState));
 }
 
 export function getDeletedIds(): Set<string> {
@@ -326,6 +280,19 @@ export function getInitialState(): AppState {
   const deletedIds = getDeletedIds();
   const isInitialized = localStorage.getItem('ep_initialized') === 'true';
 
+  try {
+    const rawU = localStorage.getItem('ep_users');
+    const existingU: any[] = rawU ? JSON.parse(rawU) : [];
+    const rawInst = localStorage.getItem('ep_instituciones');
+    const existingInst: any[] = rawInst ? JSON.parse(rawInst) : [];
+    const hasPatricio = existingInst.some((i: any) => i.nombre && i.nombre.toUpperCase().includes('PATRICIO'));
+    if (!isInitialized || existingU.length < 15 || !hasPatricio) {
+      return restoreBackupState();
+    }
+  } catch (e) {
+    return restoreBackupState();
+  }
+
   const loadCollection = (key: string, defaultItems: any[] = []) => {
     try {
       const raw = localStorage.getItem(key);
@@ -346,14 +313,56 @@ export function getInitialState(): AppState {
 
   const users = loadCollection('ep_users', defaults.users);
   const institutions = loadCollection('ep_instituciones', defaults.institutions);
-  const subjects = loadCollection('ep_subjects', defaults.subjects);
-  const semesters = loadCollection('ep_semesters', defaults.semesters);
+  const rawSubjects = loadCollection('ep_subjects', defaults.subjects);
+  const rawSemesters = loadCollection('ep_semesters', defaults.semesters);
   const parciales = loadCollection('ep_parciales', defaults.parciales);
   const exams = loadCollection('ep_exams', defaults.exams);
   const submissions = loadCollection('ep_submissions', defaults.submissions);
   const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
   const assignments = loadCollection('ep_trabajos', defaults.assignments);
   const assignmentSubmissions = loadCollection('ep_entregas_trabajos', defaults.assignmentSubmissions);
+
+  // Guarantee that all 36 biblical subjects from curriculum are present
+  const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const subMap = new Map<string, Subject>();
+  defaultSubs.forEach(s => subMap.set(s.id, s));
+  rawSubjects.forEach(s => {
+    if (!s || !s.id || deletedIds.has(s.id)) return;
+    const matchingDefault = defaultSubs.find(ds => (ds.nombre || '').toLowerCase().trim() === (s.nombre || '').toLowerCase().trim());
+    if (matchingDefault) {
+      subMap.set(matchingDefault.id, {
+        ...matchingDefault,
+        ...s,
+        id: matchingDefault.id,
+        nivel: s.nivel || matchingDefault.nivel,
+        semestre: s.semestre || matchingDefault.semestre,
+        codigo: s.codigo || matchingDefault.codigo,
+      });
+    } else {
+      subMap.set(s.id, s);
+    }
+  });
+  const subjects = Array.from(subMap.values());
+
+  // Guarantee that all 9 academic semesters are present
+  const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const semMap = new Map<string, Semester>();
+  defaultSems.forEach(s => semMap.set(s.id, s));
+  rawSemesters.forEach(s => {
+    if (!s || !s.id || deletedIds.has(s.id)) return;
+    const matchingDefault = defaultSems.find(ds => (ds.nombre || '').toLowerCase().trim() === (s.nombre || '').toLowerCase().trim());
+    if (matchingDefault) {
+      semMap.set(matchingDefault.id, {
+        ...matchingDefault,
+        ...s,
+        id: matchingDefault.id,
+        nivel: s.nivel || matchingDefault.nivel,
+      });
+    } else {
+      semMap.set(s.id, s);
+    }
+  });
+  const semesters = Array.from(semMap.values());
 
   const state: AppState = {
     users,
@@ -373,24 +382,28 @@ export function getInitialState(): AppState {
 }
 
 export function saveState(state: AppState) {
-  const deletedIds = getDeletedIds();
+  try {
+    const deletedIds = getDeletedIds();
 
-  const filterAlive = (list: any[] = []) => {
-    if (!Array.isArray(list)) return [];
-    return list.filter(item => item && item.id && !deletedIds.has(item.id));
-  };
+    const filterAlive = (list: any[] = []) => {
+      if (!Array.isArray(list)) return [];
+      return list.filter(item => item && item.id && !deletedIds.has(item.id));
+    };
 
-  localStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
-  localStorage.setItem('ep_instituciones', JSON.stringify(filterAlive(state.institutions)));
-  localStorage.setItem('ep_subjects', JSON.stringify(filterAlive(state.subjects)));
-  localStorage.setItem('ep_semesters', JSON.stringify(filterAlive(state.semesters)));
-  localStorage.setItem('ep_parciales', JSON.stringify(filterAlive(state.parciales)));
-  localStorage.setItem('ep_exams', JSON.stringify(filterAlive(state.exams)));
-  localStorage.setItem('ep_submissions', JSON.stringify(filterAlive(state.submissions)));
-  localStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
-  localStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
-  localStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
-  localStorage.setItem('ep_initialized', 'true');
+    localStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
+    localStorage.setItem('ep_instituciones', JSON.stringify(filterAlive(state.institutions)));
+    localStorage.setItem('ep_subjects', JSON.stringify(filterAlive(state.subjects)));
+    localStorage.setItem('ep_semesters', JSON.stringify(filterAlive(state.semesters)));
+    localStorage.setItem('ep_parciales', JSON.stringify(filterAlive(state.parciales)));
+    localStorage.setItem('ep_exams', JSON.stringify(filterAlive(state.exams)));
+    localStorage.setItem('ep_submissions', JSON.stringify(filterAlive(state.submissions)));
+    localStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
+    localStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
+    localStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
+    localStorage.setItem('ep_initialized', 'true');
+  } catch (e) {
+    console.warn('Unable to persist full state to localStorage:', e);
+  }
 }
 
 export function mergeStates(local: AppState, remote: AppState): AppState {
@@ -445,6 +458,40 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
         }
       }
     });
+
+    // 3. Guarantee that official subjects and semesters are present
+    if (key === 'subjects') {
+      const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultSubs.forEach(dSub => {
+        const existingByName = Array.from(itemMap.values()).find(
+          (item: any) => (item.nombre || '').toLowerCase().trim() === (dSub.nombre || '').toLowerCase().trim()
+        );
+        if (!existingByName) {
+          itemMap.set(dSub.id, dSub);
+        } else {
+          // Keep the existing subject but ensure nivel, semestre and codigo are set
+          if (!existingByName.nivel || !existingByName.semestre || !existingByName.codigo) {
+            existingByName.nivel = existingByName.nivel || dSub.nivel;
+            existingByName.semestre = existingByName.semestre || dSub.semestre;
+            existingByName.codigo = existingByName.codigo || dSub.codigo;
+          }
+        }
+      });
+    }
+
+    if (key === 'semesters') {
+      const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultSems.forEach(dSem => {
+        const existingByName = Array.from(itemMap.values()).find(
+          (item: any) => (item.nombre || '').toLowerCase().trim() === (dSem.nombre || '').toLowerCase().trim()
+        );
+        if (!existingByName) {
+          itemMap.set(dSem.id, dSem);
+        } else if (!existingByName.nivel) {
+          existingByName.nivel = dSem.nivel;
+        }
+      });
+    }
 
     merged[key] = Array.from(itemMap.values()) as any;
   });

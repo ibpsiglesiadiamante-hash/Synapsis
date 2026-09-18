@@ -236,7 +236,7 @@ export default function Tablon({ currentUser, users, toast }: TablonProps) {
     const matchCategory = activeCategory === 'all' || n.categoria === activeCategory;
 
     return hasRoleAccess && matchCategory;
-  }).sort((a, b) => b.creado.localeCompare(a.creado));
+  }).sort((a, b) => (b.creado || '').localeCompare(a.creado || ''));
 
   const totalPages = Math.ceil(filteredNotices.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;

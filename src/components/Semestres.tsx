@@ -14,6 +14,9 @@ interface SemestresProps {
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
+export const NIVEL_PASTORAL = 'NIVEL I : Biblioteología Pastoral';
+export const NIVEL_MINISTERIAL = 'NIVEL II : Biblioteología Ministerial';
+
 export default function Semestres({ semesters, onUpdateSemesters, toast }: SemestresProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -21,16 +24,24 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   // Form states
   const [nombre, setNombre] = useState('');
   const [codigo, setCodigo] = useState('');
+  const [nivel, setNivel] = useState<string>(NIVEL_PASTORAL);
   const [estado, setEstado] = useState<'activo' | 'inactivo'>('activo');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [filterNivel, setFilterNivel] = useState<string>('todos');
+
+  // Filtered list
+  const filteredSemesters = semesters.filter(s => {
+    if (filterNivel === 'todos') return true;
+    return s.nivel === filterNivel;
+  });
 
   // Pagination states & calculations
   const itemsPerPage = 7;
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(semesters.length / itemsPerPage) || 1;
+  const totalPages = Math.ceil(filteredSemesters.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;
 
-  const currentSemesters = semesters.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+  const currentSemesters = filteredSemesters.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
   const [isCodeAuto, setIsCodeAuto] = useState(true);
 
@@ -40,6 +51,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
     setIsCodeAuto(true);
     const autoCode = generateSemesterCode('', semesters);
     setCodigo(autoCode);
+    setNivel(NIVEL_PASTORAL);
     setEstado('activo');
     setIsModalOpen(true);
   };
@@ -48,6 +60,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
     setEditingId(sem.id);
     setNombre(sem.nombre);
     setCodigo(sem.codigo || generateSemesterCode(sem.nombre, semesters));
+    setNivel(sem.nivel || (['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V'].includes(sem.nombre) ? NIVEL_PASTORAL : NIVEL_MINISTERIAL));
     setIsCodeAuto(false);
     setEstado(sem.estado);
     setIsModalOpen(true);
@@ -57,6 +70,11 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
     setNombre(val);
     if (!editingId && isCodeAuto) {
       setCodigo(generateSemesterCode(val, semesters));
+    }
+    if (['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX', 'VI', 'VII', 'VIII', 'IX'].some(k => val.includes(k))) {
+      setNivel(NIVEL_MINISTERIAL);
+    } else if (['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V', 'I', 'II', 'III', 'IV', 'V'].some(k => val.includes(k))) {
+      setNivel(NIVEL_PASTORAL);
     }
   };
 
@@ -83,6 +101,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
           ...nextSems[idx],
           nombre: nombre.trim(),
           codigo: finalCode,
+          nivel,
           estado,
           actualizado: now(),
         };
@@ -94,6 +113,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
         id: uid(),
         nombre: nombre.trim(),
         codigo: finalCode,
+        nivel,
         estado,
         creado: now(),
       };
@@ -112,7 +132,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
 
   return (
     <div className="page-semestres animate-fade-in pb-12">
-      <div className="page-header flex items-center justify-between gap-3 mb-6">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
             Semestres académicos
@@ -121,22 +141,36 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
             Abre y cierra periodos de matrículas, cortes y cronogramas de exámenes en el instituto
           </div>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
-          style={{ backgroundColor: 'var(--primary)' }}
-        >
-          <CalendarDays className="w-4 h-4" />
-          <span>Nuevo periodo</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <select
+            value={filterNivel}
+            onChange={(e) => {
+              setFilterNivel(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="bg-white border border-slate-200 text-slate-700 text-xs rounded-xl px-3 py-2 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer shadow-xs"
+          >
+            <option value="todos">Todos los Niveles</option>
+            <option value={NIVEL_PASTORAL}>Nivel I: Pastoral (Sem I-V)</option>
+            <option value={NIVEL_MINISTERIAL}>Nivel II: Ministerial (Sem VI-IX)</option>
+          </select>
+          <button
+            onClick={handleOpenCreateModal}
+            className="btn btn-primary flex items-center gap-1.5 px-4 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer text-xs"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span>Nuevo periodo</span>
+          </button>
+        </div>
       </div>
 
       <div className="card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden theme-bg-surface theme-border">
-        {semesters.length === 0 ? (
+        {filteredSemesters.length === 0 ? (
           <div className="empty py-12 text-center text-slate-500 flex flex-col items-center">
             <CalendarDays className="w-12 h-12 text-slate-300 mb-3" />
-            <h4 className="font-bold text-slate-750">No hay semestres creados</h4>
-            <button onClick={handleOpenCreateModal} className="text-xs text-indigo-600 hover:underline mt-2">Crear el primer semestre ahora</button>
+            <h4 className="font-bold text-slate-750">No hay semestres para este filtro</h4>
+            <button onClick={handleOpenCreateModal} className="text-xs text-indigo-600 hover:underline mt-2">Crear semestre ahora</button>
           </div>
         ) : (
           <div className="overflow-x-auto w-full">
@@ -145,6 +179,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
                 <tr className="bg-slate-50 text-slate-400 font-medium text-xs uppercase tracking-wider theme-bg-surface border-b border-slate-200">
                   <th className="py-3 px-4">Semestre / Ciclo</th>
                   <th className="py-3 px-4">Código único</th>
+                  <th className="py-3 px-4">Nivel Académico</th>
                   <th className="py-3 px-4">Estado del Ciclo</th>
                   <th className="py-3 px-4">Registrado</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
@@ -153,6 +188,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
               <tbody className="divide-y divide-slate-100 font-medium">
                 {currentSemesters.map(sem => {
                   const isActive = sem.estado === 'activo';
+                  const isNivel1 = (sem.nivel || '').includes('NIVEL I') || ['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V'].includes(sem.nombre);
                   return (
                     <tr key={sem.id} className="hover:bg-slate-50/50">
                       <td className="py-4 px-4">
@@ -167,6 +203,15 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
                       </td>
                       <td className="py-4 px-4 font-mono text-xs font-bold text-slate-500 tracking-wider">
                         {sem.codigo}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                          isNivel1
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        }`}>
+                          {isNivel1 ? 'Nivel I: Pastoral' : 'Nivel II: Ministerial'}
+                        </span>
                       </td>
                       <td className="py-4 px-4">
                         {isActive ? (
@@ -330,6 +375,18 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
                 <p className="text-[10px] text-slate-400 mt-1 font-medium">
                   Se genera automáticamente con el formato académico o puedes personalizarlo si lo prefieres.
                 </p>
+              </div>
+
+              <div className="form-group flex flex-col">
+                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nivel Académico</label>
+                <select
+                  value={nivel}
+                  onChange={e => setNivel(e.target.value)}
+                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-600 bg-white cursor-pointer text-slate-700 font-semibold"
+                >
+                  <option value={NIVEL_PASTORAL}>Nivel I : Biblioteología Pastoral (Sem I-V)</option>
+                  <option value={NIVEL_MINISTERIAL}>Nivel II : Biblioteología Ministerial (Sem VI-IX)</option>
+                </select>
               </div>
 
               <div className="form-group flex flex-col">

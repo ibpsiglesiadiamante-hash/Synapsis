@@ -1,0 +1,892 @@
+{
+  "exams": [
+    {
+      "id": "1a07ee6da22_94cffda5",
+      "titulo": "EXAMEN DE GEOGRAFIA",
+      "materia": "1a07f7e04bd_8cea04b1",
+      "docenteId": "admin-fallback-id",
+      "semestre": "mu5smr56ua268",
+      "parcialId": "mu5t4ckxk2fpw",
+      "descripcion": "",
+      "tiempo": 60,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-08T02:44:11.810Z",
+      "preguntas": [
+        {
+          "id": "1a07eedfc59_ecda58b0",
+          "tipo": "opcion_multiple",
+          "enunciado": " ¿Cuántos continentes abarca el mundo bíblico y cuáles son?",
+          "puntos": 10,
+          "opciones": [
+            " 4: África, Asia, Europa y Oceanía",
+            " 3: Asia, África y Europa",
+            " 2: Asia y África",
+            " 5: Asia, África, Europa, América y Oceanía"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07eeed130_94cffda5",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué mares importantes bordean el escenario bíblico?",
+          "puntos": 10,
+          "opciones": [
+            "Mar Báltico, Mar del Norte y Mar Caribe",
+            "Mar Mediterráneo, Mar Negro, Mar Caspio, Mar Rojo y Golfo Pérsico",
+            "Mar Muerto, Mar de Galilea y Océano Atlántico",
+            "Mar Rojo y Océano Índico solamente"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07eefab31_5e0858b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué región es conocida como \"la cuna de la civilización\"?",
+          "puntos": 10,
+          "opciones": [
+            "Egipto",
+            "Mesopotamia",
+            "Canaán",
+            "Grecia"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07ef054ee_ecda58b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué ríos delimitan la región de Mesopotamia?",
+          "puntos": 10,
+          "opciones": [
+            "Nilo y Jordán",
+            "Tigris y Éufrates",
+            "Danubio y Rin",
+            "Jordán y Éufrates"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07ef11867_94cffda5",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿De qué ciudad mesopotámica salió Abraham cuando Dios lo llamó?",
+          "puntos": 10,
+          "opciones": [
+            "Babilonia",
+            "Nínive",
+            "Ur de los Caldeos",
+            "Harán"
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "1a07ef1d23a_5e0858b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué era conocida la Media Luna Fértil?",
+          "puntos": 10,
+          "opciones": [
+            "Por ser una zona desértica sin agua",
+            "Por sus tierras agrícolas productivas que conectaban Mesopotamia con Egipto",
+            "Por tener grandes montañas inaccesibles",
+            "Por ser el centro del Imperio Romano"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07ef2a6d4_ecda58b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál era la principal fuente de vida para Egipto?",
+          "puntos": 10,
+          "opciones": [
+            "Las lluvias de primavera",
+            "El río Nilo y sus inundaciones",
+            "El Mar Rojo",
+            "Los pozos del desierto"
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "1a07ef35a8f_94cffda5",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué región de Egipto se establecieron los israelitas durante los días de José?",
+          "puntos": 10,
+          "opciones": [
+            "Tebas",
+            "Alejandría",
+            "Galaad",
+            "Gosén, en el delta del Nilo"
+          ],
+          "correcta": 3
+        },
+        {
+          "id": "1a07ef41870_5e0858b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué era Palestina (Canaán) una tierra estratégicamente importante?",
+          "puntos": 10,
+          "opciones": [
+            "Porque era el puente terrestre natural entre tres continentes",
+            "Porque tenía grandes minas de oro y plata",
+            "Porque estaba completamente aislada de otras naciones",
+            "Porque tenía el río más caudaloso del mundo"
+          ],
+          "correcta": 0
+        },
+        {
+          "id": "1a07ef4f0ef_ecda58b0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuáles eran las dos grandes rutas comerciales que cruzaban Palestina?",
+          "puntos": 10,
+          "opciones": [
+            "La Vía Apia y la Ruta de la Seda",
+            "La Vía Maris (Camino del Mar) y el Camino Real",
+            "La Ruta del Nilo y el Camino de Damasco",
+            "La Vía Romana y la Ruta Fenicia"
+          ],
+          "correcta": 1
+        }
+      ]
+    },
+    {
+      "id": "mu65r9f4r5v8o",
+      "titulo": "INTRODUCCION AL ANTIGUO TESTAMENTO",
+      "materia": "1a07ecf79cf_e82cbf49",
+      "docenteId": "mu646uivlewlf",
+      "semestre": "1a07f7bbeff_1c4eba4c",
+      "parcialId": "mu5st18axq472",
+      "descripcion": "EVALUACION I",
+      "tiempo": 30,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-17T23:25:47.441Z",
+      "preguntas": [
+        {
+          "id": "mu65spb703xfe",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es el significado etimológico principal de la palabra «Testamento» en el contexto bíblico (hebreo berith / griego diatheke)?",
+          "puntos": 10,
+          "opciones": [
+            "Un documento de última voluntad que se abre únicamente tras la muerte.",
+            "Un pacto, alianza o acuerdo soberano establecido entre Dios y su pueblo.",
+            "Una compilación de leyes civiles y ceremoniales exclusivas de Israel.",
+            "Un relato puramente histórico de las guerras del Medio Oriente antiguo."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65taesw3kgi",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En cuántos libros se divide el canon del Antiguo Testamento en las Biblias cristianas protestantes?",
+          "puntos": 10,
+          "opciones": [
+            "24 libros.",
+            "39 libros.",
+            "46 libros.",
+            "66 libros."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65tx610s33o",
+          "tipo": "opcion_multiple",
+          "enunciado": "La división tradicional judía de las Escrituras (TaNaJ) organiza los libros en tres grandes secciones. ¿Cuáles son?",
+          "puntos": 10,
+          "opciones": [
+            "Pentateuco, Históricos y Epístolas.",
+            "Torá (Ley), Nevi'im (Profetas) y Ketuvim (Escritos).",
+            "Ley, Libros Poéticos y Apocalípticos.",
+            "Génesis, Salmos y Profetas Menores."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65uii3x6kgy",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué idiomas originales fue redactado principalmente el Antiguo Testamento?",
+          "puntos": 10,
+          "opciones": [
+            "Griego koiné y Latín.",
+            "Hebreo bíblico con algunas porciones breves en Arameo.",
+            "Arameo antiguo y Siríaco.",
+            "Hebreo rabínico y Árabe preislámico."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65uxy6s8gbb",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la traducción griega más antigua e influyente del Antiguo Testamento, realizada en Alejandría alrededor del siglo III a.C.?",
+          "puntos": 10,
+          "opciones": [
+            "La Vulgata.",
+            "La Septuaginta (LXX).",
+            "La Peshitta.",
+            "El Targum de Onquelos."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65ve6r8x4x8",
+          "tipo": "opcion_multiple",
+          "enunciado": "De acuerdo con el orden canónico protestante, ¿cuáles son las cuatro grandes categorías en que se clasifican los 39 libros del A.T.?",
+          "puntos": 10,
+          "opciones": [
+            "Evangelios, Hechos, Epístolas y Revelación.",
+            "Pentateuco (Ley), Libros Históricos, Libros Poéticos/Sapienciales y Profetas (Mayores y Menores).",
+            "Narrativas, Salmos, Proverbios y Crónicas.",
+            "Pacto Sinaítico, Monarquía, Exilio y Pos-exilio."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65vvp8s0784",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué criterio fundamental distingue a los llamados «Profetas Mayores» de los «Profetas Menores»?",
+          "puntos": 10,
+          "opciones": [
+            "La mayor importancia doctrinal y espiritual de su mensaje.",
+            "La extensión y volumen literario de sus escritos, no su autoridad divina.",
+            "La época histórica: los Mayores profetizaron antes del Exilio y los Menores después.",
+            "El cargo jerárquico que ocupaban dentro del templo de Jerusalén."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65wbrt3o3vd",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es el propósito teológico central del Antiguo Testamento según la revelación bíblica progresiva?",
+          "puntos": 10,
+          "opciones": [
+            "Exponer exclusivamente la historia política y militar del reino de Judá.",
+            "Revelar el carácter santo de Dios, su pacto de redención y preparar el camino para la venida del Mesías.",
+            "Proveer un código moral inalcanzable para juzgar a las naciones paganas.",
+            "Documentar mitologías antiguas semejantes a los pueblos cananeos."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65ws9078h5d",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué descubrimiento arqueológico en 1947 confirmó de manera asombrosa la fidelidad y preservación del texto hebreo del A.T. transmitido por los masoretas?",
+          "puntos": 10,
+          "opciones": [
+            "La Piedra de Rosetta.",
+            "Los Manuscritos del Mar Muerto (Qumrán).",
+            "El Código de Hammurabi.",
+            "Las Cartas de Amarna."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu65x99d217q0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Quién es tradicionalmente reconocido tanto por el testimonio bíblico como por la tradición judía y cristiana como el autor humano principal del Pentateuco?",
+          "puntos": 10,
+          "opciones": [
+            "Abraham.",
+            "Moisés.",
+            "Esdras.",
+            "Josué."
+          ],
+          "correcta": 1
+        }
+      ]
+    },
+    {
+      "id": "mu66hfs0t2qwb",
+      "titulo": "APOCALIPSIS I",
+      "materia": "1a07ed96600_e4b34393",
+      "docenteId": "mu646uivlewlf",
+      "semestre": "mu5sp76a2k6j5",
+      "parcialId": "mu5vr3lmt1n2w",
+      "descripcion": "EVALUACION I",
+      "tiempo": 30,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-17T23:46:08.556Z",
+      "preguntas": [
+        {
+          "id": "mu66ijcvy7q58",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es el significado literal de la palabra griega «Apokalypsis» (Apocalipsis)?",
+          "puntos": 10,
+          "opciones": [
+            "Destrucción mundial o catástrofe cósmica.",
+            "Revelación, desvelar o quitar el velo.",
+            "Enigma oculto para tiempos postreros.",
+            "Sentencia de condenación judicial."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66j5c4u739y",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Quién es el autor humano del libro de Apocalipsis y en qué lugar se encontraba desterrado cuando recibió la visión?",
+          "puntos": 10,
+          "opciones": [
+            "El apóstol Pablo en Roma.",
+            "El apóstol Pedro en Babilonia.",
+            "El apóstol Juan en la isla de Patmos.",
+            "Juan el Bautista en el desierto de Judea."
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "mu66jm5w5b0o9",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿A cuántas iglesias históricas de la provincia romana de Asia Menor va dirigida inicialmente la carta profética?",
+          "puntos": 10,
+          "opciones": [
+            "12 iglesias.",
+            "7 iglesias.",
+            "10 iglesias.",
+            "3 iglesias."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66k9j51b72e",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la clave o bosquejo divino de división del libro provisto en Apocalipsis 1:19?",
+          "puntos": 10,
+          "opciones": [
+            "«El principio, el medio y el fin».",
+            "«Las cosas que has visto, las que son, y las que han de ser después de estas».",
+            "«El juicio de Israel, el juicio de Roma y el juicio del diablo».",
+            "«Los sellos, las trompetas y las copas de ira»."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66kpt013v1n",
+          "tipo": "opcion_multiple",
+          "enunciado": "En la visión de apertura (cap. 1), ¿en medio de qué se encuentra el Cristo glorificado y qué sostiene en su mano derecha?",
+          "puntos": 10,
+          "opciones": [
+            "En medio de nubes de trueno, con una espada de dos filos en su mano.",
+            "En medio de siete candeleros de oro, sosteniendo siete estrellas.",
+            "Sobre un caballo blanco, sosteniendo una corona triunfal.",
+            "Junto al arca del pacto, sosteniendo un libro sellado."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66l96ovvj5k",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué reproche central le hace el Señor a la iglesia de Éfeso en Apocalipsis 2:4 a pesar de sus arduas obras y sana doctrina?",
+          "puntos": 10,
+          "opciones": [
+            "Haber tolerado la doctrina de Balaam.",
+            "Haber dejado su primer amor.",
+            "Ser una iglesia tibia y confiada en sus riquezas.",
+            "Haber permitido la hechicería de Jezabel."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66m8a6y0a22",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿A cuál de las siete iglesias no se le hace ningún reproche o reprensión, sino que se le exhorta a ser fiel hasta la muerte para recibir la corona de la vida?",
+          "puntos": 10,
+          "opciones": [
+            "Sardis.",
+            "Laodicea.",
+            "Esmirna.",
+            "Pérgamo."
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "mu66mt1qphm8z",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál de las siguientes escuelas de interpretación sostiene que la mayor parte del Apocalipsis describe acontecimientos todavía futuros vinculados al fin de los tiempos y el regreso de Cristo?",
+          "puntos": 10,
+          "opciones": [
+            "Escuela Preterista.",
+            "Escuela Historicista.",
+            "Escuela Futurista.",
+            "Escuela Idealista o Simbólica."
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "mu66nde40114t",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué iglesia es descrita severamente como «tibia, que no es fría ni caliente», a la cual el Señor advierte que vomitará de su boca si no se arrepiente?",
+          "puntos": 10,
+          "opciones": [
+            "Tiatira.",
+            "Filadelfia.",
+            "Laodicea.",
+            "Éfeso."
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "mu66nt2u0o10d",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la bienaventuranza especial prometida en Apocalipsis 1:3 para quien interactúa con esta profecía?",
+          "puntos": 10,
+          "opciones": [
+            "«Bienaventurado el que descifra todas las fechas y misterios numéricos».",
+            "«Bienaventurado el que lee, y los que oyen las palabras de esta profecía, y guardan las cosas en ella escritas».",
+            "«Bienaventurado el que no teme al dragón ni a sus espíritus inmundos».",
+            "«Bienaventurados los que se aíslan del mundo para esperar el fin»."
+          ],
+          "correcta": 1
+        }
+      ]
+    },
+    {
+      "id": "mu66pff0s3f2e",
+      "titulo": "PROFETAS MAYORES I",
+      "materia": "1a07edb096f_a6d48429",
+      "docenteId": "mu646uivlewlf",
+      "semestre": "mu5sqf5uuaacj",
+      "parcialId": "mu5vvone8m16o",
+      "descripcion": "EVALUACION I",
+      "tiempo": 30,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-17T23:52:20.173Z",
+      "preguntas": [
+        {
+          "id": "mu66qebh7t770",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuáles son los cuatro libros proféticos clasificados tradicionalmente como los «Profetas Mayores» en el canon bíblico protestante (además de Lamentaciones)?",
+          "puntos": 10,
+          "opciones": [
+            "Oseas, Joel, Amós y Abdías.",
+            "Isaías, Jeremías, Ezequiel y Daniel.",
+            "Elías, Eliseo, Samuel y Natán.",
+            "Miqueas, Nahúm, Habacuc y Sofonías."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66r1l4r1k5w",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué al profeta Isaías se le conoce con frecuencia en la teología bíblica como «el profeta evangélico»?",
+          "puntos": 10,
+          "opciones": [
+            "Porque escribió uno de los cuatro Evangelios del Nuevo Testamento.",
+            "Por la abundancia, claridad y profundidad de sus profecías mesiánicas sobre la gracia y el Siervo sufriente.",
+            "Porque predicó a los gentiles en Grecia y Roma.",
+            "Porque pertenecía a la tribu sacerdotal de Leví."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66ri7jov6j8",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué año y en el contexto de qué trágico suceso nacional tuvo Isaías su majestuosa visión del Señor en el trono (Isaías 6)?",
+          "puntos": 10,
+          "opciones": [
+            "En el año de la caída de Nínive.",
+            "En el año en que murió el rey Uzías.",
+            "Durante la invasión babilónica de Nabucodonosor.",
+            "En el año de la reconstrucción del templo con Zorobabel."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66s051q5u7m",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué célebre profecía mesiánica dada por Isaías al rey Acaz anuncia el nacimiento sobrenatural del Mesías (Isaías 7:14)?",
+          "puntos": 10,
+          "opciones": [
+            "«Pero tú, Belén Efrata... de ti me saldrá el que será Señor en Israel».",
+            "«He aquí que la virgen concebirá, y dará a luz un hijo, y llamará su nombre Emanuel».",
+            "«El cetro no será quitado de Judá hasta que venga Siloh».",
+            "«Yo suscitaré a David un Renuevo justo que reinará con sabiduría»."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66sk5079y6l",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué capítulo de Isaías encontramos el conmovedor cántico del «Siervo Sufriente» que describe minuciosamente la expiación vicaria de Cristo («Él herido fue por nuestras rebeliones...»)?",
+          "puntos": 10,
+          "opciones": [
+            "Isaías 40.",
+            "Isaías 53.",
+            "Isaías 61.",
+            "Isaías 11."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66t22y8v8d2",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué calificativo es conocido comúnmente el profeta Jeremías debido a su profundo dolor por el pecado y la ruina de su pueblo?",
+          "puntos": 10,
+          "opciones": [
+            "El profeta del fuego.",
+            "El profeta llorón.",
+            "El vidente de visiones cósmicas.",
+            "El profeta de la justicia social."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66ton2p2q4a",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué gloriosa promesa profética anuncia Jeremías en el capítulo 31:31-34, clave para el Nuevo Testamento?",
+          "puntos": 10,
+          "opciones": [
+            "La reedificación de los muros de Jerusalén por Nehemías.",
+            "El establecimiento de un Nuevo Pacto escrito no en tablas de piedra, sino en sus corazones.",
+            "La destrucción definitiva del imperio Persa.",
+            "El reinado de setenta años de Saúl, David y Salomón."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66u2p628a5n",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Dónde ministró el profeta Ezequiel la mayor parte de sus visiones y mensajes proféticos?",
+          "puntos": 10,
+          "opciones": [
+            "En el palacio real de Samaria.",
+            "Entre los cautivos judíos en Babilonia, junto al río Quebar.",
+            "En el desierto de Sinaí con los beduinos.",
+            "En las sinagogas de Alejandría de Egipto."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66unecsmx6b",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué representa la impactante visión de los «Huesos Secos» en Ezequiel 37?",
+          "puntos": 10,
+          "opciones": [
+            "La victoria militar de Babilonia sobre las naciones del Nilo.",
+            "La resurrección nacional, restauración espiritual y retorno a la vida de la casa de Israel por el Espíritu de Dios.",
+            "El juicio del infierno sobre los falsos profetas de Judá.",
+            "La caída del rey Nabucodonosor por causa de su soberbia."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66v6v99j24e",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Bajo qué grandes imperios mundiales sirvió el profeta Daniel como alto estadista mientras interpretaba sueños y visiones del soberano reino de Dios?",
+          "puntos": 10,
+          "opciones": [
+            "Egipto y Asiria.",
+            "Imperio Babilónico e Imperio Medo-Persa.",
+            "Imperio Griego e Imperio Romano.",
+            "Hititas y Filisteos."
+          ],
+          "correcta": 1
+        }
+      ]
+    },
+    {
+      "id": "mu66vx2h14r4h",
+      "titulo": "GEOGRAFIA BIBLICA",
+      "materia": "1a07f7e04bd_8cea04b1",
+      "docenteId": "admin-fallback-id",
+      "semestre": "mu5smr56ua268",
+      "parcialId": "mu5t4ckxk2fpw",
+      "descripcion": "EVALUACION I",
+      "tiempo": 60,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-17T23:57:24.089Z",
+      "preguntas": [
+        {
+          "id": "mu66wmlf2j5p0",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuáles son los tres continentes cuyas tierras e intersecciones geográficas forman el escenario geográfico de la historia bíblica?",
+          "puntos": 10,
+          "opciones": [
+            "Europa, América y Asia.",
+            "Asia, África y Europa.",
+            "África, Oceanía y Europa.",
+            "Asia, África y la península Escandinava."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66x5752x27k",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué masa de agua central constituía la principal arteria marítima del mundo bíblico, llamada en las Escrituras «el Mar Grande»?",
+          "puntos": 10,
+          "opciones": [
+            "El Mar Caspio.",
+            "El Mar Rojo.",
+            "El Mar Mediterráneo.",
+            "El Golfo Pérsico."
+          ],
+          "correcta": 2
+        },
+        {
+          "id": "mu66xlyc08r8k",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué ríos delimitan y definen la emblemática región histórica de Mesopotamia («tierra entre dos ríos»)?",
+          "puntos": 10,
+          "opciones": [
+            "Nilo y Jordán.",
+            "Tigris y Éufrates.",
+            "Danubio y Éufrates.",
+            "Jordán y Jaboc."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66y5nltf12a",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿De qué antiquísima y próspera metrópoli mesopotámica salió Abraham por fe tras el llamamiento divino (Génesis 11:31)?",
+          "puntos": 10,
+          "opciones": [
+            "Nínive.",
+            "Ur de los Caldeos.",
+            "Babilonia.",
+            "Damasco."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66yp6j3h239",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cómo se denominaba a la fértil y estratégica faja en forma de arco regada por ríos que conectaba el Golfo Pérsico con Egipto?",
+          "puntos": 10,
+          "opciones": [
+            "El Desierto de Arabia.",
+            "La Media Luna Fértil.",
+            "La Gran Depresión del Jordán.",
+            "La Estepa de Anatolia."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66z8b4h4245",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál río era el motor vital indiscutible y fuente de fecundidad agrícola para la civilización del Antiguo Egipto?",
+          "puntos": 10,
+          "opciones": [
+            "El río Éufrates.",
+            "El río Nilo.",
+            "El río Tigris.",
+            "El río Jordán."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu66zr4i6z34a",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué fértil región pastoral del delta del Nilo se establecieron Jacob y sus hijos durante la estancia israelita en Egipto?",
+          "puntos": 10,
+          "opciones": [
+            "Tebas.",
+            "Tierra de Gosén.",
+            "Alejandría.",
+            "Memfis."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu670ck03g37q",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué Canaán (Palestina) ocupaba una posición geopolítica y comercial absolutamente singular y estratégica en la antigüedad?",
+          "puntos": 10,
+          "opciones": [
+            "Por poseer grandes yacimientos de hierro y carbón mineral.",
+            "Porque actuaba como el puente territorial obligado que interconectaba los imperios de Asia, África y Europa.",
+            "Porque era una península inaccesible protegida por altos volcanes.",
+            "Porque carecía de vecinos hostiles en todas sus fronteras."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu670ux58x62c",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuáles eran las dos grandes vías comerciales internacionales que atravesaban la tierra de Canaán?",
+          "puntos": 10,
+          "opciones": [
+            "La Vía Apia y la Ruta de la Seda.",
+            "La Vía Maris (Camino del Mar) y el Camino Real de los Reyes.",
+            "La Vía Augusta y el Camino del Éufrates.",
+            "La Calzada Romana y la Ruta de Fenicia."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu671c6v1b644",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la principal arteria fluvial de Palestina que nace en el monte Hermón y desemboca en el Mar Muerto?",
+          "puntos": 10,
+          "opciones": [
+            "El río Nilo.",
+            "El río Jordán.",
+            "El río Cisón.",
+            "El río Arnón."
+          ],
+          "correcta": 1
+        }
+      ]
+    },
+    {
+      "id": "mu671ve3364f9",
+      "titulo": "GEOGRAFIA BIBLICA",
+      "materia": "1a07f7e04bd_8cea04b1",
+      "docenteId": "admin-fallback-id",
+      "semestre": "1a07f7bbeff_1c4eba4c",
+      "parcialId": "mu5t4k29fgpc5",
+      "descripcion": "EVALUACION II",
+      "tiempo": 60,
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "mostrarNota": true,
+      "estado": "activo",
+      "creado": "2026-09-18T00:01:58.347Z",
+      "preguntas": [
+        {
+          "id": "mu672n178z64t",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la masa de agua continental con la mayor salinidad y la cota topográfica más baja del planeta Tierra?",
+          "puntos": 10,
+          "opciones": [
+            "El Mar de Galilea.",
+            "El Mar Muerto (Mar Salado).",
+            "El Lago de Merom.",
+            "El Mar Rojo."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu67396a5g8f4",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En qué región septentrional de Palestina desarrolló Jesús la mayor parte de su ministerio terrenal y sus milagros?",
+          "puntos": 10,
+          "opciones": [
+            "Judea.",
+            "Galilea.",
+            "Samaria.",
+            "Idumea."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu673rk27r4t2",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué monte sagrado albergó el templo de Salomón y es el corazón espiritual e histórico de la ciudad de Jerusalén?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Carmelo.",
+            "Monte Moriah (Monte del Templo / Monte Sion).",
+            "Monte Tabor.",
+            "Monte Sinaí."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu674a2p4z9l2",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál monte fue escenario de la resonante confrontación entre el profeta Elías y los profetas de Baal (1 Reyes 18)?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Nebo.",
+            "Monte Carmelo.",
+            "Monte Gilboa.",
+            "Monte Gerizim."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu674t875f1g2",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Desde qué monte al este del Jordán contempló Moisés la Tierra Prometida antes de fallecer?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Sion.",
+            "Monte Nebo (cumbre del Pisga).",
+            "Monte Hermón.",
+            "Monte de los Olivos."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu675ctp6889t",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué estrecha y fértil llanura en Palestina ha sido llamada tradicionalmente «el campo de batalla de las naciones» y se asocia con el valle de Meguido?",
+          "puntos": 10,
+          "opciones": [
+            "Llanura del Sarón.",
+            "Llanura de Esdraelón (Jezreel).",
+            "Llanura de Filistea.",
+            "Desierto de Judá."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu675we4871l9",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la cumbre montañosa más elevada del norte de Palestina, frecuentemente coronada de nieve, cuyas aguas alimentan las fuentes del Jordán?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Hermón.",
+            "Monte Gerizim.",
+            "Monte Ebal.",
+            "Monte Tabor."
+          ],
+          "correcta": 0
+        },
+        {
+          "id": "mu676dtc3d182",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué región central, situada geográficamente entre Galilea al norte y Judea al sur, fue habitada por un pueblo de culto mezclado que los judíos evitaban cruzar?",
+          "puntos": 10,
+          "opciones": [
+            "Perea.",
+            "Samaria.",
+            "Decápolis.",
+            "Fenicia."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu676wa59x37p",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿En cuál monte, ubicado al oriente de Jerusalén y separado por el valle del Cedrón, ascendió el Señor Jesús al cielo y prometió volver?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Tabor.",
+            "Monte de los Olivos.",
+            "Monte Ebal.",
+            "Monte Gilboa."
+          ],
+          "correcta": 1
+        },
+        {
+          "id": "mu677e4m0h1e2",
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué desierto árido y agreste se extiende al sur de Beerseba y constituye la frontera meridional de la Tierra Prometida?",
+          "puntos": 10,
+          "opciones": [
+            "Desierto de Damasco.",
+            "El Neguev.",
+            "Desierto de Shur.",
+            "Desierto de Moab."
+          ],
+          "correcta": 1
+        }
+      ]
+    }
+  ]
+}

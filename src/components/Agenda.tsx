@@ -218,9 +218,9 @@ export default function Agenda({ currentUser, users, subjects, semesters, toast 
     return matchSem && matchType && matchSub;
   }).sort((a, b) => {
     // Sort chronologically ascending
-    const dateCompare = a.fecha.localeCompare(b.fecha);
+    const dateCompare = (a.fecha || '').localeCompare(b.fecha || '');
     if (dateCompare !== 0) return dateCompare;
-    return a.hora.localeCompare(b.hora);
+    return (a.hora || '').localeCompare(b.hora || '');
   });
 
   return (

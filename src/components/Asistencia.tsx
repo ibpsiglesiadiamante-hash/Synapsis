@@ -269,7 +269,7 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
     const matchSub = historySubjectFilter === 'all' || s.subjectId === historySubjectFilter;
     const matchDate = !historyDateFilter || s.date === historyDateFilter;
     return matchSub && matchDate;
-  }).sort((a, b) => b.date.localeCompare(a.date));
+  }).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage) || 1;
   const activePage = currentPage > totalPages ? totalPages : currentPage;

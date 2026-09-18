@@ -53,6 +53,8 @@ service cloud.firestore {
         && data.creado is string && data.creado.size() <= 128
         && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 128))
         && (!('docenteId' in data) || (data.docenteId is string && data.docenteId.size() <= 128))
+        && (!('nivel' in data) || (data.nivel is string && data.nivel.size() <= 256))
+        && (!('semestre' in data) || (data.semestre is string && data.semestre.size() <= 128))
         && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128));
     }
 

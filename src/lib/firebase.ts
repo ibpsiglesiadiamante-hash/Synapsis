@@ -500,6 +500,31 @@ export async function pushAllStateToFirestore(state: AppState): Promise<number> 
 }
 
 /**
+ * Specifically uploads all 36 official biblical subjects and their academic semester configuration to Firestore
+ */
+export async function uploadTheologicalSubjectsToFirestore(subjects: Subject[]): Promise<number> {
+  enableFirestore();
+  let count = 0;
+  const deletedIds = getDeletedIds();
+  const promises: Promise<void>[] = [];
+
+  for (const sub of subjects) {
+    if (sub && sub.id && !deletedIds.has(sub.id)) {
+      count++;
+      promises.push(saveDocToFirestore('subjects', sub).catch(e => {
+        console.warn(`Error writing subject ${sub.nombre} to Firestore:`, e);
+      }));
+    }
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+    console.log(`Uploaded ${count} subjects to Cloud Firestore.`);
+  }
+  return count;
+}
+
+/**
  * Synchronizes auxiliary collections stored in localStorage with Cloud Firestore
  */
 export async function syncSecondaryCollections(): Promise<number> {
