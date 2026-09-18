@@ -24,7 +24,8 @@ import {
   UserPlus,
   CheckCircle2,
   Phone,
-  CreditCard
+  CreditCard,
+  Camera
 } from 'lucide-react';
 
 import { 
@@ -63,6 +64,8 @@ import {
   registerDeletedId,
   uploadTheologicalSubjectsToFirestore,
   uploadAllStudentsToFirestore,
+  uploadAllExamsToFirestore,
+  uploadAllParcialesToFirestore,
   saveDocToFirestore
 } from './lib/firebase';
 
@@ -113,9 +116,11 @@ export default function App() {
           initializeSyncCache(remoteDb);
           // Sync any newly restored or merged documents to Firestore
           syncToFirestore(mergedDb).catch(e => console.warn('Background sync error:', e));
-          // Explicitly guarantee all 36 biblical subjects and all 53 students are saved to Firestore
+          // Explicitly guarantee all 36 biblical subjects, 53 students, institutional exams and parciales are saved to Firestore
           uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(e => console.warn('Background subjects sync error:', e));
           uploadAllStudentsToFirestore(mergedDb.users).catch(e => console.warn('Background students sync error:', e));
+          uploadAllExamsToFirestore(mergedDb.exams).catch(e => console.warn('Background exams sync error:', e));
+          uploadAllParcialesToFirestore(mergedDb.parciales).catch(e => console.warn('Background parciales sync error:', e));
         } else {
           // No remote database found, let's seed with current default list
           console.log('Firestore dataset is empty. Writing initial educational seed in background...');
@@ -123,6 +128,8 @@ export default function App() {
           seedFirestore(localSeed).catch(e => console.warn('Background seed error:', e));
           uploadTheologicalSubjectsToFirestore(localSeed.subjects).catch(e => console.warn('Background subjects seed error:', e));
           uploadAllStudentsToFirestore(localSeed.users).catch(e => console.warn('Background students seed error:', e));
+          uploadAllExamsToFirestore(localSeed.exams).catch(e => console.warn('Background exams seed error:', e));
+          uploadAllParcialesToFirestore(localSeed.parciales).catch(e => console.warn('Background parciales seed error:', e));
           setDb(localSeed);
           saveState(localSeed);
           initializeSyncCache(localSeed);
@@ -201,6 +208,7 @@ export default function App() {
   const [regCelular, setRegCelular] = useState('');
   const [regSemestre, setRegSemestre] = useState('SEMESTRE I');
   const [regPass, setRegPass] = useState('');
+  const [regFoto, setRegFoto] = useState('');
   const [regShowPass, setRegShowPass] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -432,6 +440,7 @@ export default function App() {
         cedula: regCedula.trim() || undefined,
         celular: regCelular.trim() || undefined,
         semestre: regSemestre || 'SEMESTRE I',
+        foto: regFoto.trim() || undefined,
         creado: now(),
         actualizado: now()
       };
@@ -448,6 +457,7 @@ export default function App() {
       setRegCedula('');
       setRegCelular('');
       setRegPass('');
+      setRegFoto('');
 
       // Automatically log in newly registered student
       setCurrentUser(newStudent);
@@ -1004,6 +1014,25 @@ export default function App() {
                         Exámenes
                       </span>
                     </button>
+
+                    <button 
+                      type="button"
+                      onClick={() => setLoginTab('register')}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl border border-emerald-700/60 bg-emerald-950/30 hover:bg-emerald-950/60 hover:border-emerald-500 transition-all cursor-pointer group text-left mt-2"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-900/80 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                          <UserPlus className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-emerald-200">Nuevo Estudiante</div>
+                          <div className="text-[10px] text-slate-400">Matricularse y registrar carnet</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-300 bg-emerald-900/60 px-2 py-1 rounded-md border border-emerald-700/60">
+                        + Registrar
+                      </span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1039,7 +1068,7 @@ export default function App() {
                 </p>
 
                 {/* TABS SWITCHER: Iniciar Sesión / Nuevo Estudiante */}
-                <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 mb-6 gap-2">
+                <div className="grid grid-cols-2 p-1.5 rounded-2xl bg-slate-950/90 border border-slate-700/80 mb-6 gap-2 shadow-inner">
                   <button
                     type="button"
                     onClick={() => setLoginTab('login')}
@@ -1056,14 +1085,19 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setLoginTab('register')}
-                    className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                    className={`py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-all relative ${
                       loginTab === 'register'
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30'
-                        : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/30'
+                        : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 bg-emerald-950/20 border border-emerald-800/40'
                     }`}
                   >
                     <UserPlus className="w-4 h-4" />
                     <span>Nuevo Estudiante</span>
+                    {loginTab !== 'register' && (
+                      <span className="hidden sm:inline-block absolute -top-1.5 -right-1 text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded-full shadow">
+                        ¡Matrícula!
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -1226,6 +1260,53 @@ export default function App() {
                           <option value="SEMESTRE VIII">SEMESTRE VIII</option>
                           <option value="SEMESTRE IX">SEMESTRE IX</option>
                         </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Foto / Captura del Estudiante (Opcional - Carnet Institucional)
+                      </label>
+                      <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-700/80 bg-slate-950/80">
+                        <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0">
+                          {regFoto ? (
+                            <img src={regFoto} alt="Captura" className="w-full h-full object-cover" />
+                          ) : (
+                            <Camera className="w-5 h-5 text-slate-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-wrap items-center gap-2">
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg cursor-pointer border border-slate-600 transition-colors">
+                            <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>{regFoto ? 'Cambiar Captura' : 'Subir o Capturar Foto'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="user"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = () => setRegFoto(reader.result as string);
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                          {regFoto && (
+                            <button
+                              type="button"
+                              onClick={() => setRegFoto('')}
+                              className="text-xs font-semibold text-rose-400 hover:text-rose-300 cursor-pointer"
+                            >
+                              Eliminar foto
+                            </button>
+                          )}
+                          <span className="w-full text-[10px] text-slate-400">
+                            Cámara web o archivo de imagen (JPG, PNG).
+                          </span>
+                        </div>
                       </div>
                     </div>
 

@@ -15,6 +15,8 @@ export interface User {
   asignaturas?: string[];
   semestre?: string;
   codigo?: string;
+  foto?: string;
+  avatarUrl?: string;
   actualizado?: string;
 }
 
@@ -137,7 +139,7 @@ export interface Institution {
 export interface Question {
   id: string;
   texto: string;
-  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table';
+  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table' | 'table_matching';
   puntos: number;
   opciones: string[]; // Options / Caja de palabras (list of terms to match)
   opcionIds?: string[]; // Stable internal IDs for options to prevent UI collision on deletion
@@ -147,13 +149,12 @@ export interface Question {
   enunciadoIds?: string[]; // Stable internal IDs for enunciados to prevent UI collision on deletion
   matchCorrectos?: number[]; // Match indices corresponding to opciones for each enunciado
   columnas?: string[]; // Encabezados de columnas para tabla
-  tableRows?: {
-    cells: {
-      tipo: 'texto' | 'blank';
-      valor: string; // Para celdas fijas
-      correctOptionIdx?: number; // Para espacios por llenar, apunta a la opciones
-    }[];
-  }[];
+  tableColumns?: string[];
+  tableOptions?: string[];
+  palabrasCaja?: string[];
+  parejas?: any[];
+  filas?: any[];
+  tableRows?: any[];
 }
 
 export interface Exam {

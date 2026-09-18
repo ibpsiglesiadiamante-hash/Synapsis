@@ -159,13 +159,16 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanNombre = (nombre || '').trim();
+    const form = e.currentTarget as HTMLFormElement;
+    const inputElement = form.elements.namedItem('nombre') as HTMLInputElement | null;
+    const cleanNombre = (inputElement?.value || nombre || '').trim();
     if (!cleanNombre) {
       toast('El nombre de la materia es obligatorio', 'error');
       return;
     }
 
-    const finalCode = (codigo || '').trim() || generateSubjectCode(cleanNombre, subjects);
+    const inputCodigo = form.elements.namedItem('codigo') as HTMLInputElement | null;
+    const finalCode = (inputCodigo?.value || codigo || '').trim() || generateSubjectCode(cleanNombre, subjects);
     const safeSubs = Array.isArray(subjects) ? subjects.filter((s): s is Subject => Boolean(s && s.id)) : [];
     const nextSubs = [...safeSubs];
 

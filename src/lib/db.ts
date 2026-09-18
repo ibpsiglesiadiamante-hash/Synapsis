@@ -335,8 +335,8 @@ export function getInitialState(): AppState {
   const institutions = loadCollection('ep_instituciones', defaults.institutions);
   const rawSubjects = loadCollection('ep_subjects', defaults.subjects);
   const rawSemesters = loadCollection('ep_semesters', defaults.semesters);
-  const parciales = loadCollection('ep_parciales', defaults.parciales);
-  const exams = loadCollection('ep_exams', defaults.exams);
+  const rawParciales = loadCollection('ep_parciales', defaults.parciales);
+  const rawExams = loadCollection('ep_exams', defaults.exams);
   const submissions = loadCollection('ep_submissions', defaults.submissions);
   const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
   const assignments = loadCollection('ep_trabajos', defaults.assignments);
@@ -398,6 +398,26 @@ export function getInitialState(): AppState {
     }
   });
   const semesters = Array.from(semMap.values());
+
+  // Guarantee that all institutional exams from backup curriculum are present
+  const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const examMap = new Map<string, Exam>();
+  defaultExams.forEach(e => examMap.set(e.id, e));
+  rawExams.forEach(e => {
+    if (!e || !e.id || deletedIds.has(e.id)) return;
+    examMap.set(e.id, e);
+  });
+  const exams = Array.from(examMap.values());
+
+  // Guarantee that all institutional parciales from backup curriculum are present
+  const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const parcMap = new Map<string, Parcial>();
+  defaultParcs.forEach(p => parcMap.set(p.id, p));
+  rawParciales.forEach(p => {
+    if (!p || !p.id || deletedIds.has(p.id)) return;
+    parcMap.set(p.id, p);
+  });
+  const parciales = Array.from(parcMap.values());
 
   const state: AppState = {
     users,
@@ -537,6 +557,26 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
           itemMap.set(dSem.id, dSem);
         } else if (!existingByName.nivel) {
           existingByName.nivel = dSem.nivel;
+        }
+      });
+    }
+
+    if (key === 'exams') {
+      const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultExams.forEach(dExam => {
+        const existing = itemMap.get(dExam.id);
+        if (!existing) {
+          itemMap.set(dExam.id, dExam);
+        }
+      });
+    }
+
+    if (key === 'parciales') {
+      const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultParcs.forEach(dParc => {
+        const existing = itemMap.get(dParc.id);
+        if (!existing) {
+          itemMap.set(dParc.id, dParc);
         }
       });
     }

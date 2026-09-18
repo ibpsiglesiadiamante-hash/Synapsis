@@ -294,6 +294,24 @@ export default function ExamTakeScreen({
         } else {
           incorrectCount++;
         }
+      } else if (q.tipo === 'table_matching') {
+        const userMatchedObj = ans || {};
+        const rows = q.tableRows || [];
+        let correctCountInTable = 0;
+        rows.forEach((row: any, rIdx: number) => {
+          const userVal = userMatchedObj[rIdx];
+          const correctVal = row.correctOptionIdx;
+          if (userVal !== undefined && userVal !== '' && Number(userVal) === Number(correctVal)) {
+            correctCountInTable++;
+          }
+        });
+        const fraction = rows.length > 0 ? (correctCountInTable / rows.length) : 0;
+        autoEarnedSum += q.puntos * fraction;
+        if (rows.length > 0 && correctCountInTable === rows.length) {
+          correctCount++;
+        } else {
+          incorrectCount++;
+        }
       }
     });
 
@@ -841,7 +859,7 @@ export default function ExamTakeScreen({
                               const currentMap = answers[qItem.id] || {};
                               return (
                                 <tr key={rIdx} className="border-b border-slate-150 dark:border-slate-800 last:border-0 hover:bg-slate-50/20 dark:hover:bg-slate-900/10 transition">
-                                  {row.cells.map((cell, cIdx) => {
+                                  {row.cells.map((cell: any, cIdx: number) => {
                                     const selectedValue = currentMap[`${rIdx}-${cIdx}`] !== undefined ? currentMap[`${rIdx}-${cIdx}`] : '';
                                     const hasValue = selectedValue !== '';
 
@@ -898,6 +916,117 @@ export default function ExamTakeScreen({
                                       </td>
                                     );
                                   })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {qItem.tipo === 'table_matching' && (
+                    <div className="space-y-4 mt-2 text-left animate-fade-in">
+                      {/* Word bank banner */}
+                      {qItem.tableOptions && qItem.tableOptions.length > 0 && (
+                        <div className="bg-indigo-50/40 border border-indigo-100/80 p-4 rounded-xl text-left shadow-sm dark:bg-slate-900/40 dark:border-slate-800">
+                          <span className="text-[11px] font-extrabold text-indigo-750 dark:text-cyan-400 uppercase tracking-wider block mb-2 select-none">
+                            📦 Opciones para la tabla (Se tachan al seleccionarlas)
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {qItem.tableOptions.map((opt, oIdx) => {
+                              const currentMap = answers[qItem.id] || {};
+                              const isUsed = Object.values(currentMap).includes(oIdx);
+                              return (
+                                <span
+                                  key={oIdx}
+                                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
+                                    isUsed
+                                      ? 'bg-slate-100/80 border-slate-200 text-slate-400 line-through dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-500'
+                                      : 'bg-white border-slate-205 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-105 hover:border-indigo-300'
+                                  }`}
+                                >
+                                  {isUsed && (
+                                    <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
+                                  )}
+                                  <span>{opt}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Interactive Table Grid */}
+                      <div className="overflow-x-auto rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="bg-slate-105/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                              {(qItem.tableColumns || []).map((col, colIdx) => (
+                                <th
+                                  key={colIdx}
+                                  className="p-4.5 text-xs font-black text-slate-600 dark:text-slate-350 uppercase tracking-wider text-left border-r border-slate-150 dark:border-slate-800 last:border-0"
+                                >
+                                  {col}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(qItem.tableRows || []).map((row: any, rIdx: number) => {
+                              const currentMap = answers[qItem.id] || {};
+                              const selectedValue = currentMap[rIdx] !== undefined ? currentMap[rIdx] : '';
+                              const hasValue = selectedValue !== '';
+
+                              return (
+                                <tr key={rIdx} className="border-b border-slate-150 dark:border-slate-800 last:border-0 hover:bg-slate-50/20 dark:hover:bg-slate-900/10 transition">
+                                  {(row.cells || []).map((cellText: string, cIdx: number) => (
+                                    <td
+                                      key={cIdx}
+                                      className="p-4 text-slate-850 dark:text-slate-200 border-r border-slate-120 dark:border-slate-800 font-medium whitespace-normal align-middle"
+                                    >
+                                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{cellText}</span>
+                                    </td>
+                                  ))}
+                                  {/* Final column with the select */}
+                                  <td className="p-4 border-r-0 align-middle">
+                                    <div className="flex items-center gap-1.5 my-1 min-w-[180px]">
+                                      <select
+                                        value={selectedValue}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => {
+                                          const nextValue = e.target.value !== '' ? Number(e.target.value) : '';
+                                          const nextMap = { ...currentMap, [rIdx]: nextValue };
+                                          handleSetAnswer(qItem.id, nextMap);
+                                        }}
+                                        className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-sm cursor-pointer focus:outline-none focus:border-indigo-550 dark:bg-slate-900 dark:text-slate-100 ${
+                                          hasValue
+                                            ? 'border-indigo-400 text-indigo-755 dark:border-indigo-805 dark:text-indigo-305'
+                                            : 'border-slate-220 dark:border-slate-750 text-slate-600'
+                                        }`}
+                                      >
+                                        <option value="">-- Seleccionar --</option>
+                                        {(qItem.tableOptions || []).map((opt, oIdx) => (
+                                          <option key={oIdx} value={oIdx}>{opt}</option>
+                                        ))}
+                                      </select>
+                                      {hasValue && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const nextMap = { ...currentMap };
+                                            delete nextMap[rIdx];
+                                            handleSetAnswer(qItem.id, nextMap);
+                                          }}
+                                          className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-955 rounded-lg border border-rose-200 dark:border-rose-900/40 transition shrink-0 cursor-pointer"
+                                          title="Quitar selección"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
                                 </tr>
                               );
                             })}

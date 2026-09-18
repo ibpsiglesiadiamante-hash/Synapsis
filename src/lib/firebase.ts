@@ -550,6 +550,56 @@ export async function uploadAllStudentsToFirestore(users: User[]): Promise<numbe
 }
 
 /**
+ * Uploads all registered exams to Cloud Firestore
+ */
+export async function uploadAllExamsToFirestore(exams: Exam[]): Promise<number> {
+  enableFirestore();
+  let count = 0;
+  const deletedIds = getDeletedIds();
+  const promises: Promise<void>[] = [];
+
+  for (const exam of exams) {
+    if (exam && exam.id && !deletedIds.has(exam.id)) {
+      count++;
+      promises.push(saveDocToFirestore('exams', exam).catch(e => {
+        console.warn(`Error writing exam ${exam.titulo} to Firestore:`, e);
+      }));
+    }
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+    console.log(`Uploaded ${count} exams to Cloud Firestore.`);
+  }
+  return count;
+}
+
+/**
+ * Uploads all registered parciales to Cloud Firestore
+ */
+export async function uploadAllParcialesToFirestore(parciales: Parcial[]): Promise<number> {
+  enableFirestore();
+  let count = 0;
+  const deletedIds = getDeletedIds();
+  const promises: Promise<void>[] = [];
+
+  for (const p of parciales) {
+    if (p && p.id && !deletedIds.has(p.id)) {
+      count++;
+      promises.push(saveDocToFirestore('parciales', p).catch(e => {
+        console.warn(`Error writing parcial ${p.nombre} to Firestore:`, e);
+      }));
+    }
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+    console.log(`Uploaded ${count} parciales to Cloud Firestore.`);
+  }
+  return count;
+}
+
+/**
  * Synchronizes auxiliary collections stored in localStorage with Cloud Firestore
  */
 export async function syncSecondaryCollections(): Promise<number> {
