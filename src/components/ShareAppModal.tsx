@@ -7,8 +7,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import { 
   QrCode, Copy, Check, Download, Printer, Share2, ExternalLink, Smartphone, 
-  Database, CheckCircle2, RefreshCw, Server, Globe, Upload, FileText, AlertTriangle
+  Database, CheckCircle2, RefreshCw, Server, Globe, Upload, FileText, AlertTriangle, Layers, ShieldCheck
 } from 'lucide-react';
+import { SUPABASE_URL, testSupabaseConnection, pushAllStateToSupabase } from '../lib/supabase';
 
 interface ShareAppModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface ShareAppModalProps {
   onExportBackup?: () => void;
   onImportBackup?: (jsonString: string) => Promise<any> | void;
   isSyncing?: boolean;
+  currentState?: any;
   stats?: {
     subjects: number;
     semesters: number;
@@ -25,10 +27,11 @@ interface ShareAppModalProps {
     users: number;
     exams?: number;
     grades?: number;
+    submissions?: number;
   };
 }
 
-// Official working portal link on Firebase Hosting (Project ID: synapsis-edu / synapsis-ec)
+// Official working portal link on Firebase Hosting (Project ID: synapsis-ec)
 export const OFFICIAL_PORTAL_URL = 'https://synapsis-ec.web.app';
 export const SHORT_URL = 'https://tinyurl.com/2ad5gh2c';
 export const FULL_URL = 'https://ais-pre-4wzwuwhx24ttdai2gesabg-794631310365.us-east1.run.app/';
@@ -42,14 +45,21 @@ export default function ShareAppModal({
   onExportBackup,
   onImportBackup,
   isSyncing = false,
+  currentState,
   stats
 }: ShareAppModalProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedShort, setCopiedShort] = useState(false);
+  const [copiedSupabaseUrl, setCopiedSupabaseUrl] = useState(false);
   const [localSyncState, setLocalSyncState] = useState<'idle' | 'syncing' | 'success'>('idle');
   const [lastSyncCount, setLastSyncCount] = useState<number | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [supabaseTesting, setSupabaseTesting] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<{ ok: boolean; message: string; counts?: Record<string, number> } | null>(null);
+  const [supabaseSyncing, setSupabaseSyncing] = useState(false);
+  const [supabaseSyncSuccess, setSupabaseSyncSuccess] = useState(false);
+  const [supabasePushedCount, setSupabasePushedCount] = useState<number | null>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,8 +75,47 @@ export default function ShareAppModal({
       })
         .then((url) => setQrDataUrl(url))
         .catch((err) => console.error('Error generating QR Code:', err));
+
+      // Test Supabase connection in background
+      testSupabaseConnection()
+        .then(res => setSupabaseStatus(res))
+        .catch(() => {});
     }
   }, [isOpen]);
+
+  const handleTestSupabase = async () => {
+    setSupabaseTesting(true);
+    try {
+      const res = await testSupabaseConnection();
+      setSupabaseStatus(res);
+    } catch (e: any) {
+      setSupabaseStatus({ ok: false, message: e.message || 'Error al conectar' });
+    } finally {
+      setSupabaseTesting(false);
+    }
+  };
+
+  const handleSyncSupabaseOnly = async () => {
+    if (!currentState) return;
+    setSupabaseSyncing(true);
+    try {
+      await pushAllStateToSupabase(currentState);
+      const res = await testSupabaseConnection();
+      setSupabaseStatus(res);
+      setSupabaseSyncSuccess(true);
+      setTimeout(() => setSupabaseSyncSuccess(false), 3500);
+    } catch (e) {
+      console.error('Error syncing Supabase:', e);
+    } finally {
+      setSupabaseSyncing(false);
+    }
+  };
+
+  const handleCopySupabaseUrl = () => {
+    navigator.clipboard.writeText(SUPABASE_URL);
+    setCopiedSupabaseUrl(true);
+    setTimeout(() => setCopiedSupabaseUrl(false), 2500);
+  };
 
   if (!isOpen) return null;
 
@@ -127,7 +176,7 @@ export default function ShareAppModal({
     if (!qrDataUrl) return;
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = `codigo-qr-synapsis-edu.png`;
+    link.download = `codigo-qr-synapsis-ec.png`;
     link.click();
   };
 
@@ -255,7 +304,7 @@ export default function ShareAppModal({
                 Enlace Oficial & Acceso al Portal
               </h3>
               <p className="text-[11px] text-emerald-300 font-medium font-mono">
-                synapsis-edu.web.app
+                synapsis-ec.web.app
               </p>
             </div>
           </div>
@@ -283,7 +332,7 @@ export default function ShareAppModal({
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                   </p>
                   <p className="text-[11px] text-emerald-800">
-                    Proyecto: <span className="font-mono font-bold text-indigo-900">synapsis-edu</span>
+                    Proyecto: <span className="font-mono font-bold text-indigo-900">synapsis-ec</span>
                   </p>
                 </div>
               </div>
@@ -299,7 +348,7 @@ export default function ShareAppModal({
                 <span className="text-slate-600 font-medium text-[11px]">App Web Firebase:</span>
               </div>
               <span className="font-mono font-bold text-indigo-700 text-[11px] bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                synapsis-edu (ai-studio-applet-webapp)
+                synapsis-ec (webapp)
               </span>
             </div>
 
@@ -315,7 +364,7 @@ export default function ShareAppModal({
                     Plan 2026
                   </span>
                 </div>
-                <div className="grid grid-cols-4 gap-1.5 text-center">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-center">
                   <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
                     <div className="text-xs font-black text-indigo-900">{stats.subjects}</div>
                     <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Materias</div>
@@ -331,6 +380,14 @@ export default function ShareAppModal({
                   <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
                     <div className="text-xs font-black text-indigo-900">{stats.users}</div>
                     <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Usuarios</div>
+                  </div>
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.exams ?? 0}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Exámenes</div>
+                  </div>
+                  <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <div className="text-xs font-black text-indigo-900">{stats.submissions ?? 0}</div>
+                    <div className="text-[9px] text-slate-500 font-medium leading-none mt-0.5">Realizados</div>
                   </div>
                 </div>
               </div>
@@ -416,6 +473,115 @@ export default function ShareAppModal({
                 </span>
               </button>
             )}
+          </div>
+
+          {/* Supabase PostgreSQL Database Integration Card */}
+          <div className="bg-gradient-to-br from-emerald-950/5 via-teal-950/10 to-slate-900/5 border border-emerald-300/80 rounded-2xl p-4 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900">Base de Datos Supabase (PostgreSQL)</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Conectado
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    hbkgtsqeeudpwewopazy.supabase.co
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleTestSupabase}
+                disabled={supabaseTesting}
+                className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                title="Comprobar conexión directa con Supabase"
+              >
+                <RefreshCw className={`w-3 h-3 text-emerald-600 ${supabaseTesting ? 'animate-spin' : ''}`} />
+                <span>{supabaseTesting ? 'Probando...' : 'Probar Conexión'}</span>
+              </button>
+            </div>
+
+            {/* Supabase Table Record Counts */}
+            <div className="bg-white border border-emerald-100 rounded-xl p-2.5 shadow-2xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>Tablas activas en Supabase:</span>
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-700">
+                  {supabaseStatus?.ok ? '✓ Sincronización Lista' : 'Comprobando...'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 text-center">
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.users ?? stats?.users ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Usuarios</div>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.subjects ?? stats?.subjects ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Materias</div>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.semesters ?? stats?.semesters ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Semestres</div>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.parciales ?? stats?.parciales ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Parciales</div>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.exams ?? stats?.exams ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Exámenes</div>
+                </div>
+                <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                  <div className="text-xs font-black text-emerald-800">{supabaseStatus?.counts?.submissions ?? stats?.submissions ?? 0}</div>
+                  <div className="text-[9px] text-slate-500 font-medium">Entregas</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Supabase URL & Copy */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-[11px] font-mono text-slate-700 truncate shadow-2xs">
+                <span className="truncate">{SUPABASE_URL}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopySupabaseUrl}
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1 shadow-2xs transition-colors cursor-pointer shrink-0"
+              >
+                {copiedSupabaseUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedSupabaseUrl ? 'Copiado' : 'Copiar URL'}</span>
+              </button>
+            </div>
+
+            {/* Sync button for Supabase */}
+            <button
+              type="button"
+              onClick={handleSyncSupabaseOnly}
+              disabled={supabaseSyncing}
+              className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                supabaseSyncSuccess
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-emerald-800 hover:bg-emerald-900 text-white'
+              } disabled:opacity-75`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${supabaseSyncing ? 'animate-spin' : ''}`} />
+              <span>
+                {supabaseSyncing
+                  ? 'Subiendo todos los registros a Supabase...'
+                  : supabaseSyncSuccess
+                    ? `¡Base de datos sincronizada con Supabase! ${supabasePushedCount ? `(${supabasePushedCount} registros)` : ''}`
+                    : 'Sincronizar Todos los Registros a Supabase (PostgreSQL)'
+                }
+              </span>
+            </button>
           </div>
 
           {/* Active Verified Firebase Hosting URL Section */}

@@ -27,7 +27,11 @@ service cloud.firestore {
         && (!('celular' in data) || (data.celular is string && data.celular.size() <= 64))
         && (!('asignaturas' in data) || data.asignaturas is list)
         && (!('semestre' in data) || (data.semestre is string && data.semestre.size() <= 128))
-        && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 64));
+        && (!('codigo' in data) || (data.codigo is string && data.codigo.size() <= 64))
+        && (!('telefono' in data) || (data.telefono is string && data.telefono.size() <= 64))
+        && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128))
+        && (!('foto' in data) || (data.foto is string && data.foto.size() <= 2000000))
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048));
     }
 
     // Validation Blueprint for Institution

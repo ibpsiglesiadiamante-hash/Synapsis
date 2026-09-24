@@ -222,6 +222,13 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
           {expandedGroups.estudiante && (
             <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
               <div 
+                onClick={() => onPageChange('misMaterias')} 
+                className={navItemClass('misMaterias')}
+              >
+                <BookOpen className="w-[18px] h-[18px] shrink-0" />
+                <span>Mis Asignaturas</span>
+              </div>
+              <div 
                 onClick={() => onPageChange('misExamenesTake')} 
                 className={navItemClass('misExamenesTake')}
               >
@@ -326,7 +333,7 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
           type="button"
           onClick={onOpenShareModal}
           className="mt-4 flex items-center justify-center gap-2 p-2.5 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 rounded-xl text-[11px] font-bold tracking-tight transition cursor-pointer select-none border border-indigo-200 shrink-0 shadow-xs"
-          title="Ver enlace oficial synapsis-edu.web.app y código QR"
+          title="Ver enlace oficial synapsis-ec.web.app y código QR"
         >
           <QrCode className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>Enlace Oficial & QR</span>

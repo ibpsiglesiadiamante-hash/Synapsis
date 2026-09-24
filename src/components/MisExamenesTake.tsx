@@ -4,17 +4,20 @@
  */
 
 import React, { useState } from 'react';
-import { BookOpen, Clock, RefreshCw, Award, CheckCircle, HelpCircle, Search, Lock, Shield, X, AlertCircle } from 'lucide-react';
-import { User, Exam, Submission } from '../types';
+import { BookOpen, Clock, RefreshCw, Award, CheckCircle, HelpCircle, Search, Lock, Shield, X, AlertCircle, GraduationCap } from 'lucide-react';
+import { User, Exam, Submission, Subject, Semester } from '../types';
+import { cleanExamTitle, getStudentAssignedSubjects } from '../lib/db';
 
 interface MisExamenesTakeProps {
   currentUser: User;
   exams: Exam[];
   submissions: Submission[];
+  subjects?: Subject[];
+  semesters?: Semester[];
   onTakeExam: (examId: string) => void;
 }
 
-export default function MisExamenesTake({ currentUser, exams, submissions, onTakeExam }: MisExamenesTakeProps) {
+export default function MisExamenesTake({ currentUser, exams, submissions, subjects = [], semesters = [], onTakeExam }: MisExamenesTakeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -44,12 +47,27 @@ export default function MisExamenesTake({ currentUser, exams, submissions, onTak
     }
   };
 
+  const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
+  const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
+  const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
+
   const activeExams = exams
     .filter(e => e.estado === 'activo')
     .filter(e => {
+      if (currentUser.rol === 'admin' || currentUser.rol === 'docente' || myAssignedSubjects.length === 0) return true;
+      if (e.materia && assignedIds.has(e.materia)) return true;
+      const eMat = (e.materia || '').toLowerCase().trim();
+      if (assignedNames.has(eMat)) return true;
+      const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
+      if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
+      return false;
+    })
+    .filter(e => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
-      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q);
+      const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      const subjName = subj ? subj.nombre.toLowerCase() : '';
+      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
     });
 
   const mySubs = submissions.filter(s => s.estudianteId === currentUser.id);
@@ -74,6 +92,61 @@ export default function MisExamenesTake({ currentUser, exams, submissions, onTak
           Selecciona una evaluación disponible para responder. Lee las instrucciones de los docentes detenidamente.
         </div>
       </div>
+
+      {/* Banner de Asignaturas Asignadas para el Estudiante */}
+      {currentUser.rol === 'estudiante' && (
+        <div className="mb-6 p-4 bg-indigo-50/60 border border-indigo-150 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-left">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-sm shrink-0">
+              <GraduationCap className="w-5 h-5" />
+            </span>
+            <div>
+              <p className="text-xs font-bold text-slate-900">Tus materias asignadas:</p>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {myAssignedSubjects.length > 0 ? (
+                  myAssignedSubjects.map(subj => {
+                    const name = subj.nombre;
+                    const isFilteringThis = searchQuery.toLowerCase().trim() === name.toLowerCase().trim();
+                    return (
+                      <button
+                        key={subj.id}
+                        type="button"
+                        onClick={() => setSearchQuery(isFilteringThis ? '' : name)}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer flex items-center gap-1.5 ${
+                          isFilteringThis 
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                            : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50 shadow-xs'
+                        }`}
+                        title="Haz clic para filtrar evaluaciones de esta materia"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>{name}</span>
+                        {subj.codigo && (
+                          <span className={`text-[9px] font-mono px-1 py-0.2 rounded uppercase ${
+                            isFilteringThis ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            {subj.codigo}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-slate-500 italic">No tienes materias asignadas actualmente</span>
+                )}
+              </div>
+            </div>
+          </div>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer"
+            >
+              Ver todas las materias
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Caja de Búsqueda de Exámenes Disponibles */}
       <div className="mb-6 flex flex-col md:flex-row items-center gap-4 bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border justify-between">
@@ -130,10 +203,20 @@ export default function MisExamenesTake({ currentUser, exams, submissions, onTak
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-2.5">
                       <div>
-                        <h4 className="font-bold text-base text-slate-800 leading-snug" style={{ color: 'var(--gray-900)' }}>{e.titulo}</h4>
-                        <span className="badge mt-2 inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
-                          {e.materia}
-                        </span>
+                        {(() => {
+                          const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+                          const subjName = subj?.nombre || e.materia;
+                          return (
+                            <>
+                              <h4 className="font-bold text-base text-slate-800 leading-snug" style={{ color: 'var(--gray-900)' }} title={e.titulo}>
+                                {cleanExamTitle(e.titulo)}
+                              </h4>
+                              <span className="badge mt-2 inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
+                                {subjName}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {lastAttempt && (

@@ -29,12 +29,14 @@
       "email": "quinoneswash70@gmail.com",
       "pass": "053507",
       "rol": "docente",
-      "creado": "2026-09-17T22:41:55.207Z"
+      "creado": "2026-09-17T22:41:55.207Z",
+      "asignaturas": [
+        "1a07ed96600_e4b34393"
+      ]
     },
     {
       "email": "andersonfcc@gmail.com",
       "asignaturas": [
-        "1a098f1b4d4_ae34adfd",
         "1a07f7e04bd_8cea04b1"
       ],
       "rol": "estudiante",
@@ -51,7 +53,6 @@
       "pass": "Uni2026",
       "codigo": "T4VS",
       "asignaturas": [
-        "1a098efffdd_ce06e4fb",
         "1a07ecf79cf_e82cbf49"
       ],
       "cedula": "1107065653",
@@ -78,7 +79,6 @@
       "pass": "Paulina07",
       "codigo": "5VP6",
       "asignaturas": [
-        "1a098f1b4d4_ae34adfd",
         "1a07ed96600_e4b34393"
       ],
       "cedula": "1110485808",
@@ -125,7 +125,6 @@
       "nombre": "MARCELA TRUJILLO RAMOS",
       "pass": "kecajuanes",
       "asignaturas": [
-        "1a098f29063_36705202",
         "1a07edb096f_a6d48429"
       ],
       "cedula": "1130596235",
@@ -149,7 +148,6 @@
       "id": "mu45rdbgpo0xo",
       "cedula": "10490424",
       "asignaturas": [
-        "1a098f29063_36705202",
         "1a07edb096f_a6d48429"
       ],
       "nombre": "EDUARDO CABAL",
@@ -193,7 +191,6 @@
       "nombre": "FRANCISCO JAVIER BETANCOURT",
       "creado": "2026-09-16T14:14:43.356Z",
       "asignaturas": [
-        "1a098f1b4d4_ae34adfd",
         "1a07ed96600_e4b34393"
       ],
       "id": "mu46mqhoemydv",
@@ -233,7 +230,6 @@
       "cedula": "1107051097",
       "nombre": "PAOLA GUACA",
       "asignaturas": [
-        "1a098f29063_36705202",
         "1a07edb096f_a6d48429"
       ],
       "semestre": "mu5sqf5uuaacj",
@@ -570,7 +566,7 @@
       "rol": "estudiante",
       "semestre": "1a07f7bbeff_1c4eba4c",
       "asignaturas": [
-        "sub-intro-at"
+        "1a07ecf79cf_e82cbf49"
       ],
       "id": "mu69ilvjagtj9",
       "email": "anyupa12@gmail.com",
@@ -591,7 +587,7 @@
       "cedula": "67038446",
       "codigo": "9ORM",
       "asignaturas": [
-        "sub-intro-at"
+        "1a07ecf79cf_e82cbf49"
       ]
     },
     {
@@ -605,6 +601,22 @@
       "nombre": "MONICA MUÑOZ",
       "semestre": "1a07f7bbeff_1c4eba4c",
       "creado": "2026-09-18T01:13:41.137Z"
+    },
+    {
+      "id": "muecvgv0",
+      "nombre": "DORA INES LOPEZ SANTA",
+      "cedula": "3683714",
+      "celular": "3103811504",
+      "telefono": "3103811504",
+      "codigo": "MUECVGV0",
+      "email": "doraineslopezsanta061@gmail.com",
+      "pass": "3683714",
+      "rol": "estudiante",
+      "semestre": "mu5sqf5uuaacj",
+      "asignaturas": [
+        "1a07edb096f_a6d48429"
+      ],
+      "creado": "2026-09-18T12:00:00.000Z"
     }
   ]
 }

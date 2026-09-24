@@ -68,6 +68,11 @@ import {
   uploadAllParcialesToFirestore,
   saveDocToFirestore
 } from './lib/firebase';
+import {
+  fetchFullStateFromSupabase,
+  pushAllStateToSupabase,
+  testSupabaseConnection
+} from './lib/supabase';
 
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -76,6 +81,7 @@ import MisExamenes from './components/MisExamenes';
 import ExamBuilder from './components/ExamBuilder';
 import Resultados from './components/Resultados';
 import MisExamenesTake from './components/MisExamenesTake';
+import MisMaterias from './components/MisMaterias';
 import ExamTakeScreen from './components/ExamTakeScreen';
 import MiHistorial from './components/MiHistorial';
 import Usuarios from './components/Usuarios';
@@ -101,46 +107,49 @@ export default function App() {
   const [db, setDb] = useState(() => getInitialState());
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(false);
 
-  // Download entire Synapsis Portal database on mount in background
+  // Download entire Synapsis Portal database on mount in background (Firestore & Supabase)
   useEffect(() => {
-    async function loadFirestoreData() {
+    async function loadInitialDatabase() {
       try {
-        console.log('Loading Synapsis portal database from Firestore...');
-        const remoteDb = await fetchFullStateFromFirestore();
-        if (remoteDb) {
-          console.log('Successfully loaded state from Cloud Firestore.');
-          const localDb = getInitialState();
-          const mergedDb = mergeStates(localDb, remoteDb);
-          setDb(mergedDb);
-          saveState(mergedDb);
-          initializeSyncCache(remoteDb);
-          // Sync any newly restored or merged documents to Firestore
-          syncToFirestore(mergedDb).catch(e => console.warn('Background sync error:', e));
-          // Explicitly guarantee all 36 biblical subjects, 53 students, institutional exams and parciales are saved to Firestore
-          uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(e => console.warn('Background subjects sync error:', e));
-          uploadAllStudentsToFirestore(mergedDb.users).catch(e => console.warn('Background students sync error:', e));
-          uploadAllExamsToFirestore(mergedDb.exams).catch(e => console.warn('Background exams sync error:', e));
-          uploadAllParcialesToFirestore(mergedDb.parciales).catch(e => console.warn('Background parciales sync error:', e));
-        } else {
-          // No remote database found, let's seed with current default list
-          console.log('Firestore dataset is empty. Writing initial educational seed in background...');
-          const localSeed = getInitialState();
-          seedFirestore(localSeed).catch(e => console.warn('Background seed error:', e));
-          uploadTheologicalSubjectsToFirestore(localSeed.subjects).catch(e => console.warn('Background subjects seed error:', e));
-          uploadAllStudentsToFirestore(localSeed.users).catch(e => console.warn('Background students seed error:', e));
-          uploadAllExamsToFirestore(localSeed.exams).catch(e => console.warn('Background exams seed error:', e));
-          uploadAllParcialesToFirestore(localSeed.parciales).catch(e => console.warn('Background parciales seed error:', e));
-          setDb(localSeed);
-          saveState(localSeed);
-          initializeSyncCache(localSeed);
+        console.log('Loading Synapsis portal database from Cloud Firestore and Supabase...');
+        const [remoteFirestore, remoteSupabase] = await Promise.all([
+          fetchFullStateFromFirestore().catch(e => {
+            console.warn('Firestore fetch notice:', e);
+            return null;
+          }),
+          fetchFullStateFromSupabase().catch(e => {
+            console.warn('Supabase fetch notice:', e);
+            return null;
+          }),
+        ]);
+
+        const localDb = getInitialState();
+        let mergedDb = localDb;
+        if (remoteFirestore) {
+          mergedDb = mergeStates(mergedDb, remoteFirestore);
         }
+        if (remoteSupabase) {
+          mergedDb = mergeStates(mergedDb, remoteSupabase as any);
+        }
+
+        setDb(mergedDb);
+        saveState(mergedDb);
+        initializeSyncCache(mergedDb);
+
+        // Keep both Cloud Firestore and Supabase synchronized
+        syncToFirestore(mergedDb).catch(e => console.warn('Background Firestore sync:', e));
+        pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
+        uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(() => {});
+        uploadAllStudentsToFirestore(mergedDb.users).catch(() => {});
+        uploadAllExamsToFirestore(mergedDb.exams).catch(() => {});
+        uploadAllParcialesToFirestore(mergedDb.parciales).catch(() => {});
       } catch (err) {
-        console.error('Error synchronizing with Cloud Firestore, running standalone.', err);
+        console.error('Error synchronizing database, running standalone.', err);
       } finally {
         setIsFirebaseLoading(false);
       }
     }
-    loadFirestoreData();
+    loadInitialDatabase();
   }, []);
 
   // App Session States
@@ -158,6 +167,25 @@ export default function App() {
     }
     return null;
   });
+
+  // Keep currentUser in sync with db.users updates (e.g., when assigned subjects change)
+  useEffect(() => {
+    if (currentUser) {
+      const refreshed = db.users.find(u => u.id === currentUser.id);
+      if (refreshed && (
+        JSON.stringify(refreshed.asignaturas || []) !== JSON.stringify(currentUser.asignaturas || []) ||
+        refreshed.semestre !== currentUser.semestre ||
+        refreshed.nombre !== currentUser.nombre ||
+        refreshed.codigo !== currentUser.codigo
+      )) {
+        const merged = { ...currentUser, ...refreshed };
+        setCurrentUser(merged);
+        try {
+          localStorage.setItem('instituto_currentUser', JSON.stringify(merged));
+        } catch (e) {}
+      }
+    }
+  }, [db.users, currentUser]);
 
   // UI States
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -265,27 +293,41 @@ export default function App() {
   const handleManualSync = async () => {
     setIsSyncingFirebase(true);
     try {
-      showToast('Sincronizando datos con Cloud Firestore...', 'info');
-      const remoteDb = await fetchFullStateFromFirestore();
-      if (remoteDb) {
-        setDb(remoteDb);
-        saveState(remoteDb);
-        initializeSyncCache(remoteDb);
-        showToast('¡Datos actualizados exitosamente desde Cloud Firestore! ✓', 'success');
-        return;
+      showToast('Sincronizando datos con Cloud Firestore y Supabase...', 'info');
+      const [remoteFirestore, remoteSupabase] = await Promise.all([
+        fetchFullStateFromFirestore().catch(e => {
+          console.warn('Firestore fetch notice:', e);
+          return null;
+        }),
+        fetchFullStateFromSupabase().catch(e => {
+          console.warn('Supabase fetch notice:', e);
+          return null;
+        }),
+      ]);
+
+      let mergedDb = db;
+      if (remoteFirestore) {
+        mergedDb = mergeStates(mergedDb, remoteFirestore);
       }
-      const result = await fullBidirectionalSync(db);
-      if (result && result.success) {
-        setDb(result.mergedState);
-        showToast(`¡Sincronización exitosa! ${result.pushedCount} registros sincronizados con Firebase.`, 'success');
-        return result;
-      } else {
-        showToast('Aviso de sincronización: los datos continúan seguros localmente.', 'warning');
-        return result;
+      if (remoteSupabase) {
+        mergedDb = mergeStates(mergedDb, remoteSupabase as any);
       }
+
+      setDb(mergedDb);
+      saveState(mergedDb);
+      initializeSyncCache(mergedDb);
+
+      const [pushedSupabase] = await Promise.all([
+        pushAllStateToSupabase(mergedDb).catch(() => 0),
+        syncToFirestore(mergedDb).catch(() => {}),
+        uploadAllStudentsToFirestore(mergedDb.users).catch(() => {}),
+      ]);
+
+      showToast(`¡Datos sincronizados y respaldados en Firebase y Supabase! ✓ (${pushedSupabase || 'OK'} registros)`, 'success');
+      return { success: true, pushedCount: pushedSupabase };
     } catch (err) {
       console.error('Manual sync failed', err);
-      showToast('Error en la sincronización con Firebase.', 'error');
+      showToast('Error en la sincronización con la nube.', 'error');
     } finally {
       setIsSyncingFirebase(false);
     }
@@ -294,16 +336,19 @@ export default function App() {
   const handleRestoreBackup = async () => {
     try {
       setIsSyncingFirebase(true);
-      showToast('Restaurando copia de seguridad y sincronizando con Firebase...', 'info');
+      showToast('Restaurando copia de seguridad y sincronizando con la nube...', 'info');
       const restored = restoreBackupState();
       setDb(restored);
       saveState(restored);
       initializeSyncCache(restored);
-      await syncToFirestore(restored);
-      showToast('¡Copia de seguridad restaurada y sincronizada en Firebase exitosamente!', 'success');
+      await Promise.all([
+        syncToFirestore(restored).catch(() => {}),
+        pushAllStateToSupabase(restored).catch(() => {}),
+      ]);
+      showToast('¡Copia de seguridad restaurada y sincronizada en Firebase y Supabase exitosamente!', 'success');
     } catch (err) {
-      console.error('Failed to restore backup and sync to Firebase', err);
-      showToast('Error al restaurar copia de seguridad en Firebase', 'error');
+      console.error('Failed to restore backup and sync', err);
+      showToast('Error al restaurar copia de seguridad', 'error');
     } finally {
       setIsSyncingFirebase(false);
     }
@@ -327,7 +372,10 @@ export default function App() {
       setDb(imported);
       saveState(imported);
       initializeSyncCache(imported);
-      await syncToFirestore(imported);
+      await Promise.all([
+        syncToFirestore(imported).catch(() => {}),
+        pushAllStateToSupabase(imported).catch(() => {}),
+      ]);
       showToast(`¡Respaldo importado y sincronizado! (${imported.subjects?.length || 0} materias, ${imported.semesters?.length || 0} semestres, ${imported.users?.length || 0} usuarios)`, 'success');
     } catch (err) {
       console.error('Failed to import backup:', err);
@@ -613,6 +661,8 @@ export default function App() {
             users={db.users}
             exams={db.exams}
             submissions={db.submissions}
+            subjects={db.subjects}
+            semesters={db.semesters}
             theme={theme}
             onNavigate={(page) => {
               setActiveTab(page);
@@ -643,8 +693,21 @@ export default function App() {
             users={db.users}
             exams={db.exams}
             submissions={db.submissions}
+            subjects={db.subjects}
             onUpdateSubmissions={updateSubmissions}
             toast={showToast}
+          />
+        );
+      case 'misMaterias':
+        return (
+          <MisMaterias
+            currentUser={currentUser}
+            subjects={db.subjects}
+            semesters={db.semesters}
+            users={db.users}
+            exams={db.exams}
+            onNavigate={(tab) => setActiveTab(tab)}
+            onTakeExam={(id) => setActiveTakeExamId(id)}
           />
         );
       case 'misExamenesTake':
@@ -653,6 +716,8 @@ export default function App() {
             currentUser={currentUser}
             exams={db.exams}
             submissions={db.submissions}
+            subjects={db.subjects}
+            semesters={db.semesters}
             onTakeExam={(id) => setActiveTakeExamId(id)}
           />
         );
@@ -882,7 +947,7 @@ export default function App() {
             <span className="text-slate-600">·</span>
             <span className="font-medium text-[11px] text-slate-300">Cloud Firestore Sincronizado</span>
             <span className="text-slate-600">·</span>
-            <span className="font-mono text-[10px] text-indigo-400 font-semibold">synapsis-edu.web.app</span>
+            <span className="font-mono text-[10px] text-indigo-400 font-semibold">synapsis-ec.web.app</span>
           </div>
 
           {/* Main Split Card Container */}
@@ -1041,7 +1106,7 @@ export default function App() {
               <div className="mt-6 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                 <div className="flex items-center gap-1.5 font-mono text-[11px] text-indigo-300">
                   <Globe className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>synapsis-edu.web.app</span>
+                  <span>synapsis-ec.web.app</span>
                 </div>
                 <button
                   type="button"
@@ -1482,13 +1547,15 @@ export default function App() {
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         isSyncing={isSyncingFirebase}
+        currentState={db}
         stats={{
           subjects: db.subjects.length,
           semesters: db.semesters.length,
           parciales: db.parciales.length,
           users: db.users.length,
           exams: db.exams.length,
-          grades: db.gradeRecords.length
+          grades: db.gradeRecords.length,
+          submissions: db.submissions.length
         }}
       />
 

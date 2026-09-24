@@ -141,7 +141,22 @@ export default function HistorialAcademico({
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-850" style={{ color: 'var(--gray-900)' }}>{activeStudent.nombre}</h3>
-                    <p className="text-xs text-slate-400 font-semibold">{activeStudent.email} · Código curricular: {activeStudent.id.substring(0,6).toUpperCase()}</p>
+                    <p className="text-xs text-slate-400 font-semibold">{activeStudent.email} · Código curricular: {activeStudent.codigo || activeStudent.id.substring(0,6).toUpperCase()}</p>
+                    {activeStudent.asignaturas && activeStudent.asignaturas.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Materias asignadas:</span>
+                        {activeStudent.asignaturas.map(asgId => {
+                          const subj = subjects.find(s => s.id === asgId || (s.nombre || '').toLowerCase().trim() === asgId.toLowerCase().trim());
+                          const sName = subj ? subj.nombre : asgId;
+                          return (
+                            <span key={asgId} className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                              <BookOpen className="w-3 h-3 text-indigo-500" />
+                              {sName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 

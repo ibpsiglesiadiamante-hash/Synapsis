@@ -8,6 +8,7 @@ import usersAndInst from './backupUsers.json';
 import subjectsData from './backupSubjects.json';
 import semParcData from './backupSemestersParciales.json';
 import examsData from './backupExams.json';
+import subsData from './backupSubmissions.json';
 
 export const backupAppState: AppState = {
   users: usersAndInst.users as any,
@@ -16,8 +17,8 @@ export const backupAppState: AppState = {
   semesters: semParcData.semesters as any,
   parciales: semParcData.parciales as any,
   exams: examsData.exams as any,
-  submissions: [],
-  gradeRecords: [],
+  submissions: (subsData.submissions || []) as any,
+  gradeRecords: (subsData.gradeRecords || []) as any,
   assignments: [],
   assignmentSubmissions: []
 };

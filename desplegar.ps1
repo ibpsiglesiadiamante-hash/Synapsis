@@ -34,7 +34,7 @@ npx -y firebase-tools deploy --only hosting
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "=========================================================" -ForegroundColor Green
-    Write-Host "  EXITO! Abre tu aplicacion en: https://synapsis-edu.web.app/" -ForegroundColor Green
+    Write-Host "  EXITO! Abre tu aplicacion en: https://synapsis-ec.web.app/" -ForegroundColor Green
     Write-Host "=========================================================" -ForegroundColor Green
 } else {
     Write-Host "Si requieres iniciar sesion, ejecuta: npx -y firebase-tools login" -ForegroundColor Yellow

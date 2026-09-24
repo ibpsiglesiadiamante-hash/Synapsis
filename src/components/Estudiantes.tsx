@@ -8,6 +8,7 @@ import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLef
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
 import { deleteDocFromFirestore, saveDocToFirestore, uploadAllStudentsToFirestore } from '../lib/firebase';
+import { saveDocToSupabase, deleteDocFromSupabase } from '../lib/supabase';
 
 interface EstudiantesProps {
   users: User[];
@@ -41,30 +42,105 @@ export default function Estudiantes({
   const [linkingStudent, setLinkingStudent] = useState<User | null>(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState('');
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const [linkSearchQuery, setLinkSearchQuery] = useState('');
+  const [filterBySemesterOnly, setFilterBySemesterOnly] = useState(false);
+
+  const effectiveSubjects = (subjects && subjects.length > 0 ? subjects : (backupAppState.subjects as Subject[])) || [];
+  const effectiveSemesters = (semesters && semesters.length > 0 ? semesters : (backupAppState.semesters as Semester[])) || [];
 
   const handleOpenLinkModal = (st: User) => {
     setLinkingStudent(st);
-    setSelectedSemesterId(st.semestre || '');
-    setSelectedSubjectIds(st.asignaturas || []);
+    // Find matching semester object by ID or by name
+    const semMatch = effectiveSemesters.find(s => 
+      s.id === st.semestre || 
+      (s.nombre && s.nombre.toLowerCase().trim() === (st.semestre || '').toLowerCase().trim())
+    );
+    const initialSemId = semMatch ? semMatch.id : (st.semestre || '');
+    setSelectedSemesterId(initialSemId);
+
+    // Sanitize current student's asignaturas to remove any phantom IDs like 1a098f29063_36705202
+    const validSubIds = (st.asignaturas || []).filter(asgId => 
+      asgId !== '1a098f29063_36705202' &&
+      asgId !== '1a098f1b4d4_ae34adfd' &&
+      asgId !== '1a098efffdd_ce06e4fb' &&
+      effectiveSubjects.some(s => s.id === asgId || (s.nombre || '').toLowerCase().trim() === asgId.toLowerCase().trim())
+    ).map(asgId => {
+      const match = effectiveSubjects.find(s => s.id === asgId || (s.nombre || '').toLowerCase().trim() === asgId.toLowerCase().trim());
+      return match ? match.id : asgId;
+    });
+
+    // If student has a semester, but no valid subjects selected yet, preselect the subjects of that semester
+    if (validSubIds.length === 0 && semMatch) {
+      const semName = semMatch.nombre.toLowerCase().trim();
+      const semSubIds = effectiveSubjects
+        .filter(s => s.semestre === semMatch.id || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+        .map(s => s.id);
+      setSelectedSubjectIds(semSubIds);
+    } else {
+      setSelectedSubjectIds(validSubIds);
+    }
+
+    setLinkSearchQuery('');
+    setFilterBySemesterOnly(true);
     setIsLinkModalOpen(true);
+  };
+
+  const handleSemesterChange = (newSemId: string) => {
+    setSelectedSemesterId(newSemId);
+    if (newSemId) {
+      const semObj = effectiveSemesters.find(s => s.id === newSemId);
+      const semName = semObj?.nombre?.toLowerCase().trim() || '';
+      const semesterSubIds = effectiveSubjects
+        .filter(s => s.semestre === newSemId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+        .map(s => s.id);
+      
+      // Auto-assign semester subjects if student currently has 0 subjects selected
+      if (selectedSubjectIds.length === 0) {
+        setSelectedSubjectIds(semesterSubIds);
+      }
+      setFilterBySemesterOnly(true);
+    }
   };
 
   const handleSaveLinkage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkingStudent) return;
 
+    // Filter out any phantom IDs before saving
+    const cleanSubjectIds = selectedSubjectIds.filter(id => 
+      id !== '1a098f29063_36705202' &&
+      id !== '1a098f1b4d4_ae34adfd' &&
+      id !== '1a098efffdd_ce06e4fb' &&
+      effectiveSubjects.some(s => s.id === id)
+    );
+
+    let updatedStudent: User | null = null;
     const nextUsers = users.map(u => {
       if (u.id === linkingStudent.id) {
-        return {
+        updatedStudent = {
           ...u,
           semestre: selectedSemesterId || undefined,
-          asignaturas: selectedSubjectIds,
+          asignaturas: cleanSubjectIds,
+          actualizado: now()
         };
+        return updatedStudent;
       }
       return u;
     });
 
     onUpdateUsers(nextUsers);
+    if (updatedStudent) {
+      saveDocToFirestore('users', updatedStudent).catch(() => {});
+      try {
+        const currentSaved = localStorage.getItem('instituto_currentUser');
+        if (currentSaved) {
+          const cu = JSON.parse(currentSaved);
+          if (cu && cu.id === linkingStudent.id) {
+            localStorage.setItem('instituto_currentUser', JSON.stringify(updatedStudent));
+          }
+        }
+      } catch (err) {}
+    }
     toast(`Materias y período académico asignados correctamente a ${linkingStudent.nombre}`, 'success');
     setIsLinkModalOpen(false);
     setLinkingStudent(null);
@@ -74,6 +150,30 @@ export default function Estudiantes({
     setSelectedSubjectIds(prev =>
       prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
     );
+  };
+
+  const handleSelectAllInSemester = (semesterId: string) => {
+    if (!semesterId) return;
+    const semObj = effectiveSemesters.find(s => s.id === semesterId);
+    const semName = semObj?.nombre?.toLowerCase().trim() || '';
+    const semesterSubIds = effectiveSubjects
+      .filter(s => s.semestre === semesterId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+      .map(s => s.id);
+    setSelectedSubjectIds(prev => Array.from(new Set([...prev, ...semesterSubIds])));
+  };
+
+  const handleReplaceWithSemesterSubjects = (semesterId: string) => {
+    if (!semesterId) return;
+    const semObj = effectiveSemesters.find(s => s.id === semesterId);
+    const semName = semObj?.nombre?.toLowerCase().trim() || '';
+    const semesterSubIds = effectiveSubjects
+      .filter(s => s.semestre === semesterId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+      .map(s => s.id);
+    setSelectedSubjectIds(semesterSubIds);
+  };
+
+  const handleClearSelectedSubjects = () => {
+    setSelectedSubjectIds([]);
   };
 
   // Batch import modal states
@@ -504,15 +604,30 @@ export default function Estudiantes({
                     </td>
                     <td className="py-4 px-4 text-xs font-mono text-slate-600 lowercase whitespace-nowrap overflow-hidden text-ellipsis max-w-xs email-display" title={st.email.toLowerCase()}>{st.email.toLowerCase()}</td>
                     <td className="py-4 px-4">
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-1 max-w-[260px]">
                         <span className="text-xs font-bold text-violet-700 bg-violet-50/50 px-2 py-0.5 rounded border border-violet-100 max-w-max">
-                          {semesters.find(s => s.id === st.semestre)?.nombre || 'No asignado'}
+                          {effectiveSemesters.find(s => s.id === st.semestre)?.nombre || st.semestre || 'Sin semestre'}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          {st.asignaturas && st.asignaturas.length > 0 
-                            ? `${st.asignaturas.length} materia(s) vinculada(s)` 
-                            : 'Ninguna materia asociada'}
-                        </span>
+                        {st.asignaturas && st.asignaturas.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {st.asignaturas.map(asgId => {
+                              const sObj = effectiveSubjects.find(s => s.id === asgId || (s.nombre || '').toLowerCase().trim() === asgId.toLowerCase().trim());
+                              const sName = sObj ? sObj.nombre : asgId;
+                              return (
+                                <span 
+                                  key={asgId} 
+                                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md truncate max-w-full"
+                                  title={`${sName} ${sObj?.codigo ? `(${sObj.codigo})` : ''}`}
+                                >
+                                  <BookOpen className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  <span className="truncate">{sName}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium">Ninguna materia asignada</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-4 text-xs text-slate-400">{fmtDate(st.creado)}</td>
@@ -749,14 +864,24 @@ export default function Estudiantes({
 
       {/* VINCULACIÓN ACADÉMICA (ASIGNATURAS Y SEMESTRE) */}
       {isLinkModalOpen && linkingStudent && (
-        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-[200] p-4 text-left animate-fade-in">
-          <div className="modal bg-white rounded-3xl shadow-2xl w-full max-w-md theme-bg-surface overflow-hidden">
-            <div className="modal-header border-b border-slate-100 p-5 flex items-center justify-between bg-slate-50">
-              <div>
-                <h3 className="modal-title font-extrabold text-slate-900 text-base md:text-lg">
-                  Asignación Académica
-                </h3>
-                <p className="text-[11px] text-slate-500 font-medium">Vincula materias y ciclos activos a {linkingStudent.nombre}</p>
+        <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[200] p-4 text-left animate-fade-in">
+          <div className="modal bg-white rounded-3xl shadow-2xl w-full max-w-xl theme-bg-surface overflow-hidden max-h-[92vh] flex flex-col">
+            <div className="modal-header border-b border-slate-100 p-5 flex items-center justify-between bg-slate-50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm shrink-0"
+                  style={{ backgroundColor: avatarColor(linkingStudent.nombre) }}
+                >
+                  {avatarLetter(linkingStudent.nombre)}
+                </div>
+                <div>
+                  <h3 className="modal-title font-extrabold text-slate-900 text-base md:text-lg leading-tight">
+                    Asignación Académica
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Estudiante: <strong className="text-slate-800">{linkingStudent.nombre}</strong> {linkingStudent.codigo ? `(${linkingStudent.codigo})` : ''}
+                  </p>
+                </div>
               </div>
               <button 
                 onClick={() => {
@@ -769,86 +894,222 @@ export default function Estudiantes({
               </button>
             </div>
 
-            <form onSubmit={handleSaveLinkage} className="modal-body p-6 space-y-5">
+            <form onSubmit={handleSaveLinkage} className="modal-body p-5 md:p-6 space-y-4 overflow-y-auto flex-1 font-sans">
               {/* Semester Selection */}
-              <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Ciclo o Semestre Académico <span className="text-red-500">*</span>
-                </label>
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-indigo-600" />
+                    <span>Ciclo o Semestre Académico <span className="text-red-500">*</span></span>
+                  </label>
+                  {selectedSemesterId && (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Semestre seleccionado
+                    </span>
+                  )}
+                </div>
                 <select
                   required
                   value={selectedSemesterId}
-                  onChange={e => setSelectedSemesterId(e.target.value)}
-                  className="form-control w-full p-2.5 border rounded-xl text-xs sm:text-sm focus:outline-cyan-500 bg-white"
+                  onChange={e => handleSemesterChange(e.target.value)}
+                  className="form-control w-full p-2.5 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-indigo-500 bg-white font-semibold text-slate-800"
                 >
-                  <option value="">Selecciona un semestre o corte académico...</option>
-                  {semesters.map(s => (
+                  <option value="">Selecciona un semestre o período académico...</option>
+                  {effectiveSemesters.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.nombre} {s.estado === 'activo' ? ' (Activo)' : ''}
+                      {s.nombre} {s.nivel ? `— ${s.nivel}` : ''} {s.estado === 'activo' ? '(Activo)' : ''}
                     </option>
                   ))}
                 </select>
+
+                {selectedSemesterId && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleReplaceWithSemesterSubjects(selectedSemesterId)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 cursor-pointer shadow-xs transition"
+                    >
+                      ✓ Asignar materias de este semestre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllInSemester(selectedSemesterId)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold hover:bg-indigo-100 cursor-pointer transition"
+                    >
+                      + Sumar al listado
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Subjects/Asignaturas checklist */}
-              <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">
-                  Selección de Materias / Asignaturas
-                </label>
-                
-                {subjects.length === 0 ? (
-                  <div className="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400">
-                    No hay asignaturas registradas en el catálogo. Registra materias primero en la pestaña correspondiente.
+              {/* Selected subjects chips preview */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Materias Seleccionadas ({selectedSubjectIds.length})</span>
+                  </span>
+                  {selectedSubjectIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedSubjects}
+                      className="text-[11px] font-semibold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Limpiar todas
+                    </button>
+                  )}
+                </div>
+
+                {selectedSubjectIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 p-2 bg-indigo-50/40 border border-indigo-100 rounded-xl max-h-24 overflow-y-auto">
+                    {selectedSubjectIds.map(subId => {
+                      const sObj = effectiveSubjects.find(s => s.id === subId);
+                      const sName = sObj ? sObj.nombre : subId;
+                      return (
+                        <span 
+                          key={subId}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-800 bg-white border border-indigo-200 px-2 py-0.5 rounded-lg shadow-xs"
+                        >
+                          <span className="truncate max-w-[180px]">{sName}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleSubject(subId)}
+                            className="text-indigo-400 hover:text-rose-600 ml-0.5 cursor-pointer font-bold"
+                            title="Quitar esta materia"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 bg-white p-2 space-y-1">
-                    {subjects.map(sub => {
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 font-medium">
+                    ⚠️ Ninguna materia seleccionada. El estudiante no podrá ver ni presentar evaluaciones hasta que tenga materias asignadas.
+                  </p>
+                )}
+              </div>
+
+              {/* View filter tabs & search */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setFilterBySemesterOnly(true)}
+                      className={`px-3 py-1 rounded-md transition cursor-pointer ${
+                        filterBySemesterOnly 
+                          ? 'bg-white text-indigo-700 shadow-xs font-bold' 
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Materias del semestre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterBySemesterOnly(false)}
+                      className={`px-3 py-1 rounded-md transition cursor-pointer ${
+                        !filterBySemesterOnly 
+                          ? 'bg-white text-indigo-700 shadow-xs font-bold' 
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Todas las materias ({effectiveSubjects.length})
+                    </button>
+                  </div>
+
+                  <div className="relative flex-1 min-w-[160px]">
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o código..."
+                      value={linkSearchQuery}
+                      onChange={e => setLinkSearchQuery(e.target.value)}
+                      className="w-full text-xs p-1.5 pl-7 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-indigo-500"
+                    />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" />
+                  </div>
+                </div>
+
+                {/* Subject checklist */}
+                <div className="border border-slate-200 rounded-2xl max-h-56 overflow-y-auto divide-y divide-slate-100 bg-white p-1">
+                  {effectiveSubjects
+                    .filter(sub => {
+                      const q = linkSearchQuery.toLowerCase().trim();
+                      const nameMatch = !q || sub.nombre.toLowerCase().includes(q) || (sub.codigo || '').toLowerCase().includes(q);
+                      if (!nameMatch) return false;
+
+                      if (filterBySemesterOnly && selectedSemesterId) {
+                        const semObj = effectiveSemesters.find(s => s.id === selectedSemesterId);
+                        const semName = semObj?.nombre?.toLowerCase().trim() || '';
+                        const subSem = (sub.semestre || '').toLowerCase().trim();
+                        return sub.semestre === selectedSemesterId || subSem === semName || subSem.includes(semName) || semName.includes(subSem);
+                      }
+                      return true;
+                    })
+                    .map(sub => {
                       const isChecked = selectedSubjectIds.includes(sub.id);
                       return (
                         <label 
                           key={sub.id} 
-                          className={`flex items-center gap-3 p-2.5 rounded-lg text-xs sm:text-sm cursor-pointer hover:bg-slate-50 transition ${
-                            isChecked ? 'bg-indigo-50/30' : ''
+                          className={`flex items-center gap-3 p-2.5 rounded-xl text-xs sm:text-sm cursor-pointer hover:bg-slate-50 transition ${
+                            isChecked ? 'bg-indigo-50/60 border border-indigo-200' : 'border border-transparent'
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleToggleSubject(sub.id)}
-                            className="w-4 h-4 rounded text-indigo-650 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-800 truncate">{sub.nombre}</p>
-                            {sub.codigo && <p className="font-mono text-[9px] text-slate-400 uppercase">{sub.codigo}</p>}
+                            <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">{sub.nombre}</p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              {sub.codigo && (
+                                <span className="font-mono text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-150 uppercase">
+                                  {sub.codigo}
+                                </span>
+                              )}
+                              {sub.semestre && (
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                  {sub.semestre}
+                                </span>
+                              )}
+                              {sub.nivel && (
+                                <span className="text-[9px] text-slate-400 truncate">
+                                  • {sub.nivel}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </label>
                       );
                     })}
-                  </div>
-                )}
-                <p className="text-[10px] text-slate-400 font-medium mt-1.5 flex items-center gap-1.5">
-                  <span>💡 El estudiante podrá visualizar trabajos y resolver exámenes pertenecientes a las materias vinculadas.</span>
-                </p>
+                </div>
               </div>
 
-              <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4 mt-6 bg-slate-50 rounded-b-3xl -mx-6 -mb-6 p-5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsLinkModalOpen(false);
-                    setLinkingStudent(null);
-                  }}
-                  className="btn btn-secondary px-4 py-2 border rounded-xl hover:bg-slate-150 text-slate-707 bg-white cursor-pointer text-xs sm:text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary px-5 py-2 text-white font-bold rounded-xl cursor-pointer text-xs sm:text-sm"
-                  style={{ backgroundColor: 'var(--primary)' }}
-                >
-                  Guardar Asignación
-                </button>
+              <div className="modal-footer border-t border-slate-100 flex items-center justify-between pt-3 mt-4 bg-slate-50 rounded-b-3xl -mx-5 -mb-5 md:-mx-6 md:-mb-6 p-4">
+                <span className="text-xs text-slate-500 font-medium">
+                  {selectedSubjectIds.length} materias asignadas
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLinkModalOpen(false);
+                      setLinkingStudent(null);
+                    }}
+                    className="btn px-4 py-2 border rounded-xl hover:bg-slate-100 text-slate-600 bg-white cursor-pointer text-xs font-bold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn px-5 py-2 text-white font-bold rounded-xl cursor-pointer text-xs shadow-sm"
+                    style={{ backgroundColor: 'var(--primary)' }}
+                  >
+                    Guardar Asignación
+                  </button>
+                </div>
               </div>
             </form>
           </div>

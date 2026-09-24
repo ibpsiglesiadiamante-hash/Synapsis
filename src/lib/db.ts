@@ -150,6 +150,96 @@ export function generateSemesterCode(nombre: string, existingSemesters: Semester
   }
 }
 
+export function sanitizeUserAsignaturas(users: User[], subjects: Subject[]): User[] {
+  const validSubIds = new Set<string>();
+  const nameToIdMap = new Map<string, string>();
+  (subjects || []).forEach(s => {
+    if (s && s.id) {
+      validSubIds.add(s.id);
+      if (s.nombre) {
+        nameToIdMap.set(s.nombre.toLowerCase().trim(), s.id);
+      }
+    }
+  });
+
+  return (users || []).map(u => {
+    if (!u) return u;
+    const rawAsg = Array.isArray(u.asignaturas) ? u.asignaturas : [];
+    const cleanAsg: string[] = [];
+
+    rawAsg.forEach(asg => {
+      if (!asg || typeof asg !== 'string') return;
+      const cleanItem = asg.trim();
+      // Explicitly remove phantom / invalid default IDs
+      if (cleanItem === '1a098f29063_36705202' || cleanItem === '1a098f1b4d4_ae34adfd' || cleanItem === '1a098efffdd_ce06e4fb') {
+        return;
+      }
+      if (cleanItem === 'sub-intro-at') {
+        const intro = (subjects || []).find(s => (s.nombre || '').toLowerCase().includes('introducción al a.t') || s.codigo === 'IAT-101');
+        if (intro) cleanAsg.push(intro.id);
+        return;
+      }
+      if (validSubIds.has(cleanItem)) {
+        cleanAsg.push(cleanItem);
+      } else {
+        const mappedId = nameToIdMap.get(cleanItem.toLowerCase());
+        if (mappedId) {
+          cleanAsg.push(mappedId);
+        }
+      }
+    });
+
+    return {
+      ...u,
+      asignaturas: Array.from(new Set(cleanAsg))
+    };
+  });
+}
+
+export function resolveStudentSemester(studentSem: string | undefined, semesters: Semester[]): Semester | undefined {
+  if (!studentSem) return undefined;
+  const clean = studentSem.toLowerCase().trim();
+  return (semesters || []).find(s => 
+    s && (
+      s.id === studentSem || 
+      (s.nombre && s.nombre.toLowerCase().trim() === clean) || 
+      (s.codigo && s.codigo.toLowerCase().trim() === clean)
+    )
+  );
+}
+
+export function getStudentAssignedSubjects(student: User | null | undefined, subjects: Subject[], semesters: Semester[]): Subject[] {
+  if (!student) return [];
+  const userAsignaturas = student.asignaturas || [];
+  const assignedByIdOrName = (subjects || []).filter(s => {
+    if (!s || !s.id) return false;
+    if (userAsignaturas.includes(s.id)) return true;
+    if (userAsignaturas.some(asg => typeof asg === 'string' && asg.toLowerCase().trim() === (s.nombre || '').toLowerCase().trim())) return true;
+    return false;
+  });
+
+  if (assignedByIdOrName.length > 0) {
+    return assignedByIdOrName;
+  }
+
+  // Fallback: If student has a semester assigned, resolve the semester and return its curriculum subjects
+  if (student.semestre) {
+    const sem = resolveStudentSemester(student.semestre, semesters);
+    const semName = sem?.nombre?.toLowerCase().trim() || student.semestre.toLowerCase().trim();
+    const semId = sem?.id || student.semestre;
+    const semesterSubs = (subjects || []).filter(s => {
+      if (!s || !s.id) return false;
+      const subSem = (s.semestre || '').toLowerCase().trim();
+      return s.semestre === semId || (subSem && (subSem === semName || subSem.includes(semName) || semName.includes(subSem)));
+    });
+    if (semesterSubs.length > 0) {
+      return semesterSubs;
+    }
+  }
+
+  return [];
+}
+
 export function exportFullBackupState(state: AppState): void {
   try {
     const exportPayload = {
@@ -271,6 +361,15 @@ export function restoreBackupState(): AppState {
   return backup;
 }
 
+export const PROTECTED_IDS = new Set<string>();
+['users', 'subjects', 'semesters', 'parciales', 'exams', 'institutions'].forEach(k => {
+  const list = (backupAppState as any)[k] || [];
+  list.forEach((item: any) => {
+    if (item && item.id) PROTECTED_IDS.add(item.id);
+  });
+});
+PROTECTED_IDS.add('muecvgv0'); // Explicit protection for DORA INES LOPEZ SANTA
+
 export function buildDefaultSeedData(): AppState {
   return JSON.parse(JSON.stringify(backupAppState));
 }
@@ -278,14 +377,16 @@ export function buildDefaultSeedData(): AppState {
 export function getDeletedIds(): Set<string> {
   try {
     const raw = localStorage.getItem('ep_deleted_ids');
-    return new Set(raw ? JSON.parse(raw) : []);
+    const set = new Set<string>(raw ? JSON.parse(raw) : []);
+    PROTECTED_IDS.forEach(id => set.delete(id));
+    return set;
   } catch (e) {
     return new Set();
   }
 }
 
 export function markAsDeleted(id: string) {
-  if (!id) return;
+  if (!id || PROTECTED_IDS.has(id)) return;
   try {
     const deleted = getDeletedIds();
     deleted.add(id);
@@ -318,16 +419,14 @@ export function getInitialState(): AppState {
       const raw = localStorage.getItem(key);
       if (raw !== null) {
         const loaded: any[] = JSON.parse(raw);
-        if (Array.isArray(loaded)) {
-          return loaded.filter(item => item && item.id && !deletedIds.has(item.id));
+        if (Array.isArray(loaded) && loaded.length > 0) {
+          const alive = loaded.filter(item => item && item.id && !deletedIds.has(item.id));
+          if (alive.length > 0) return alive;
         }
       }
-      if (!isInitialized) {
-        return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
-      }
-      return [];
+      return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
     } catch (e) {
-      return !isInitialized ? defaultItems.filter(item => item && item.id && !deletedIds.has(item.id)) : [];
+      return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
     }
   };
 
@@ -337,10 +436,30 @@ export function getInitialState(): AppState {
   const rawSemesters = loadCollection('ep_semesters', defaults.semesters);
   const rawParciales = loadCollection('ep_parciales', defaults.parciales);
   const rawExams = loadCollection('ep_exams', defaults.exams);
-  const submissions = loadCollection('ep_submissions', defaults.submissions);
-  const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
+  const rawSubmissions = loadCollection('ep_submissions', defaults.submissions);
+  const rawGrades = loadCollection('ep_notas', defaults.gradeRecords);
   const assignments = loadCollection('ep_trabajos', defaults.assignments);
   const assignmentSubmissions = loadCollection('ep_entregas_trabajos', defaults.assignmentSubmissions);
+
+  // Guarantee that all institutional completed evaluations (submissions) are present
+  const defaultSubmissions = (defaults.submissions || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const submisMap = new Map<string, Submission>();
+  defaultSubmissions.forEach(s => submisMap.set(s.id, s));
+  rawSubmissions.forEach(s => {
+    if (!s || !s.id || deletedIds.has(s.id)) return;
+    submisMap.set(s.id, s);
+  });
+  const submissions = Array.from(submisMap.values());
+
+  // Guarantee that all institutional grade records are present
+  const defaultGrades = (defaults.gradeRecords || []).filter(item => item && item.id && !deletedIds.has(item.id));
+  const gradeMap = new Map<string, GradeRecord>();
+  defaultGrades.forEach(g => gradeMap.set(g.id, g));
+  rawGrades.forEach(g => {
+    if (!g || !g.id || deletedIds.has(g.id)) return;
+    gradeMap.set(g.id, g);
+  });
+  const gradeRecords = Array.from(gradeMap.values());
 
   // Guarantee that all students and staff from institute records are present
   const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
@@ -348,9 +467,31 @@ export function getInitialState(): AppState {
   defaultUsers.forEach(u => userMap.set(u.id, u));
   rawUsers.forEach(u => {
     if (!u || !u.id || deletedIds.has(u.id)) return;
-    const existing = userMap.get(u.id);
+    const existing = userMap.get(u.id) || Array.from(userMap.values()).find(
+      du => (du.cedula && u.cedula && du.cedula.trim() === u.cedula.trim()) ||
+            (du.email && u.email && du.email.trim().toLowerCase() === u.email.trim().toLowerCase()) ||
+            (du.codigo && u.codigo && du.codigo.trim().toUpperCase() === u.codigo.trim().toUpperCase())
+    );
     if (existing) {
-      userMap.set(u.id, { ...existing, ...u });
+      const uAsg = Array.isArray(u.asignaturas) ? u.asignaturas : [];
+      const exAsg = Array.isArray(existing.asignaturas) ? existing.asignaturas : [];
+      const mergedAsg = uAsg.length > 0 ? uAsg : exAsg;
+      const combined: User = {
+        ...existing,
+        ...u,
+        id: existing.id,
+        nombre: u.nombre || existing.nombre,
+        cedula: u.cedula || existing.cedula,
+        celular: u.celular || existing.celular,
+        email: u.email || existing.email,
+        codigo: u.codigo || existing.codigo,
+        semestre: u.semestre || existing.semestre,
+        asignaturas: mergedAsg
+      };
+      userMap.set(existing.id, combined);
+      if (u.id !== existing.id) {
+        userMap.delete(u.id);
+      }
     } else {
       userMap.set(u.id, u);
     }
@@ -420,7 +561,7 @@ export function getInitialState(): AppState {
   const parciales = Array.from(parcMap.values());
 
   const state: AppState = {
-    users,
+    users: sanitizeUserAsignaturas(users, subjects),
     institutions,
     subjects,
     semesters,
@@ -518,12 +659,36 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     if (key === 'users') {
       const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
       defaultUsers.forEach(dUser => {
-        const existing = itemMap.get(dUser.id);
+        const existing = itemMap.get(dUser.id) || Array.from(itemMap.values()).find((u: any) =>
+          (u.cedula && dUser.cedula && u.cedula.trim() === dUser.cedula.trim()) ||
+          (u.email && dUser.email && u.email.trim().toLowerCase() === dUser.email.trim().toLowerCase()) ||
+          (u.codigo && dUser.codigo && u.codigo.trim().toUpperCase() === dUser.codigo.trim().toUpperCase())
+        );
+
         if (!existing) {
           itemMap.set(dUser.id, dUser);
         } else {
-          // Merge preserving existing data but filling any blanks
-          itemMap.set(dUser.id, { ...dUser, ...existing });
+          // Preserve assigned subjects: never erase subjects if dUser has them and existing has empty
+          const dAsg = Array.isArray(dUser.asignaturas) ? dUser.asignaturas : [];
+          const eAsg = Array.isArray(existing.asignaturas) ? existing.asignaturas : [];
+          const mergedAsignaturas = eAsg.length > 0 ? eAsg : dAsg;
+
+          const mergedUser: User = {
+            ...dUser,
+            ...existing,
+            id: dUser.id,
+            nombre: existing.nombre || dUser.nombre,
+            cedula: existing.cedula || dUser.cedula,
+            celular: existing.celular || dUser.celular,
+            email: existing.email || dUser.email,
+            codigo: existing.codigo || dUser.codigo,
+            semestre: existing.semestre || dUser.semestre,
+            asignaturas: mergedAsignaturas
+          };
+          itemMap.set(dUser.id, mergedUser);
+          if (existing.id && existing.id !== dUser.id) {
+            itemMap.delete(existing.id);
+          }
         }
       });
     }
@@ -581,9 +746,51 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       });
     }
 
+    if (key === 'submissions') {
+      const defaultSubs = (defaults.submissions || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultSubs.forEach(dSub => {
+        const existing = itemMap.get(dSub.id);
+        if (!existing) {
+          itemMap.set(dSub.id, dSub);
+        }
+      });
+    }
+
+    if (key === 'gradeRecords') {
+      const defaultGrades = (defaults.gradeRecords || []).filter(item => item && item.id && !deletedIds.has(item.id));
+      defaultGrades.forEach(dGrade => {
+        const existing = itemMap.get(dGrade.id);
+        if (!existing) {
+          itemMap.set(dGrade.id, dGrade);
+        }
+      });
+    }
+
     merged[key] = Array.from(itemMap.values()) as any;
   });
+
+  if (merged.users && merged.subjects) {
+    merged.users = sanitizeUserAsignaturas(merged.users, merged.subjects);
+  }
 
   return merged;
 }
 
+export function cleanExamTitle(rawTitle?: string): string {
+  if (!rawTitle) return '—';
+  let t = rawTitle
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/EVALUACIÓN\s+(I|II|III|IV|V)\s*-\s*INSTITUTO\s+BÍBLICO\s+PATRICIO\s+SYMES\s*-\s*/gi, 'EVALUACIÓN $1 - ')
+    .replace(/APOCALIPSIS\s+(I|II|III|IV|V)\s*-\s*INSTITUTO\s+BÍBLICO\s+PATRICIO\s+SYMES\s*-\s*/gi, 'EVALUACIÓN $1 - ')
+    .replace(/INSTITUTO\s+BÍBLICO\s+PATRICIO\s+SYMES\s*-\s*/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t;
+}
+
+export function formatGrade5(score?: number): string {
+  if (typeof score !== 'number' || isNaN(score)) return '0.0';
+  const val = score <= 5 ? score : (score / 20);
+  return val.toFixed(1);
+}

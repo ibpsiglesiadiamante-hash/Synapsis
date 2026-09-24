@@ -1,55 +1,284 @@
 {
   "exams": [
     {
+      "id": "1a07ee6da22_94cffda5",
+      "actualizado": "2026-09-18T15:17:55.392Z",
+      "semestre": "mu5smr56ua268",
+      "estado": "activo",
+      "titulo": "EXAMEN DE GEOGRAFIA",
+      "tiempo": 60,
+      "parcialId": "mu5t4ckxk2fpw",
+      "aprobacion": 70,
+      "intentos": 2,
+      "preguntas": [
+        {
+          "puntos": 10,
+          "opcionIds": [
+            "opt_1a07eedfc59_ecda58b0_0_mu73rp5yn7gz0",
+            "opt_1a07eedfc59_ecda58b0_1_mu73rp5yxdf8q",
+            "opt_1a07eedfc59_ecda58b0_2_mu73rp5y8cywe",
+            "opt_1a07eedfc59_ecda58b0_3_mu73rp5ynyh7r"
+          ],
+          "correcta": 1,
+          "correctas": [],
+          "texto": "",
+          "opciones": [
+            " 4: África, Asia, Europa y Oceanía",
+            " 3: Asia, África y Europa",
+            " 2: Asia y África",
+            " 5: Asia, África, Europa, América y Oceanía"
+          ],
+          "enunciado": " ¿Cuántos continentes abarca el mundo bíblico y cuáles son?",
+          "tipo": "opcion_multiple",
+          "id": "1a07eedfc59_ecda58b0"
+        },
+        {
+          "opcionIds": [
+            "opt_1a07eeed130_94cffda5_0_mu73rp5ye5i99",
+            "opt_1a07eeed130_94cffda5_1_mu73rp5y36v7f",
+            "opt_1a07eeed130_94cffda5_2_mu73rp5y6trqz",
+            "opt_1a07eeed130_94cffda5_3_mu73rp5yqok60"
+          ],
+          "texto": "",
+          "correctas": [],
+          "id": "1a07eeed130_94cffda5",
+          "correcta": 1,
+          "opciones": [
+            "Mar Báltico, Mar del Norte y Mar Caribe",
+            "Mar Mediterráneo, Mar Negro, Mar Caspio, Mar Rojo y Golfo Pérsico",
+            "Mar Muerto, Mar de Galilea y Océano Atlántico",
+            "Mar Rojo y Océano Índico solamente"
+          ],
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué mares importantes bordean el escenario bíblico?",
+          "puntos": 10
+        },
+        {
+          "texto": "",
+          "opciones": [
+            "Egipto",
+            "Mesopotamia",
+            "Canaán",
+            "Grecia"
+          ],
+          "enunciado": "¿Qué región es conocida como \"la cuna de la civilización\"?",
+          "puntos": 10,
+          "correcta": 1,
+          "opcionIds": [
+            "opt_1a07eefab31_5e0858b0_0_mu73rp5ydtzbo",
+            "opt_1a07eefab31_5e0858b0_1_mu73rp5y9dvwl",
+            "opt_1a07eefab31_5e0858b0_2_mu73rp5ynejif",
+            "opt_1a07eefab31_5e0858b0_3_mu73rp5y2l550"
+          ],
+          "id": "1a07eefab31_5e0858b0",
+          "tipo": "opcion_multiple",
+          "correctas": []
+        },
+        {
+          "id": "1a07ef054ee_ecda58b0",
+          "texto": "",
+          "correctas": [],
+          "correcta": 1,
+          "opcionIds": [
+            "opt_1a07ef054ee_ecda58b0_0_mu73rp5yvlagl",
+            "opt_1a07ef054ee_ecda58b0_1_mu73rp5ya9lx6",
+            "opt_1a07ef054ee_ecda58b0_2_mu73rp5ygykkk",
+            "opt_1a07ef054ee_ecda58b0_3_mu73rp5yq2y5k"
+          ],
+          "puntos": 10,
+          "enunciado": "¿Qué ríos delimitan la región de Mesopotamia?",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Nilo y Jordán",
+            "Tigris y Éufrates",
+            "Danubio y Rin",
+            "Jordán y Éufrates"
+          ]
+        },
+        {
+          "enunciado": "¿De qué ciudad mesopotámica salió Abraham cuando Dios lo llamó?",
+          "puntos": 10,
+          "opciones": [
+            "Babilonia",
+            "Nínive",
+            "Ur de los Caldeos",
+            "Harán"
+          ],
+          "id": "1a07ef11867_94cffda5",
+          "correcta": 2,
+          "tipo": "opcion_multiple",
+          "texto": "",
+          "correctas": [],
+          "opcionIds": [
+            "opt_1a07ef11867_94cffda5_0_mu73rp5yntp2q",
+            "opt_1a07ef11867_94cffda5_1_mu73rp5ycjxbe",
+            "opt_1a07ef11867_94cffda5_2_mu73rp5ys07uc",
+            "opt_1a07ef11867_94cffda5_3_mu73rp5ybbvkc"
+          ]
+        },
+        {
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué era conocida la Media Luna Fértil?",
+          "texto": "",
+          "correcta": 1,
+          "id": "1a07ef1d23a_5e0858b0",
+          "opcionIds": [
+            "opt_1a07ef1d23a_5e0858b0_0_mu73rp5ye9bfp",
+            "opt_1a07ef1d23a_5e0858b0_1_mu73rp5yclvzv",
+            "opt_1a07ef1d23a_5e0858b0_2_mu73rp5yszfep",
+            "opt_1a07ef1d23a_5e0858b0_3_mu73rp5y196dk"
+          ],
+          "opciones": [
+            "Por ser una zona desértica sin agua",
+            "Por sus tierras agrícolas productivas que conectaban Mesopotamia con Egipto",
+            "Por tener grandes montañas inaccesibles",
+            "Por ser el centro del Imperio Romano"
+          ],
+          "correctas": [],
+          "puntos": 10
+        },
+        {
+          "correcta": 1,
+          "puntos": 10,
+          "correctas": [],
+          "opcionIds": [
+            "opt_1a07ef2a6d4_ecda58b0_0_mu73rp5yp4uhr",
+            "opt_1a07ef2a6d4_ecda58b0_1_mu73rp5yx3u0c",
+            "opt_1a07ef2a6d4_ecda58b0_2_mu73rp5ylkltf",
+            "opt_1a07ef2a6d4_ecda58b0_3_mu73rp5yo2zk4"
+          ],
+          "texto": "",
+          "enunciado": "¿Cuál era la principal fuente de vida para Egipto?",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Las lluvias de primavera",
+            "El río Nilo y sus inundaciones",
+            "El Mar Rojo",
+            "Los pozos del desierto"
+          ],
+          "id": "1a07ef2a6d4_ecda58b0"
+        },
+        {
+          "tipo": "opcion_multiple",
+          "id": "1a07ef35a8f_94cffda5",
+          "enunciado": "¿En qué región de Egipto se establecieron los israelitas durante los días de José?",
+          "opciones": [
+            "Tebas",
+            "Alejandría",
+            "Galaad",
+            "Gosén, en el delta del Nilo"
+          ],
+          "puntos": 10,
+          "opcionIds": [
+            "opt_1a07ef35a8f_94cffda5_0_mu73rp5y5x71b",
+            "opt_1a07ef35a8f_94cffda5_1_mu73rp5ymqkzs",
+            "opt_1a07ef35a8f_94cffda5_2_mu73rp5yzoj9y",
+            "opt_1a07ef35a8f_94cffda5_3_mu73rp5y4vcgx"
+          ],
+          "correcta": 3,
+          "correctas": [],
+          "texto": ""
+        },
+        {
+          "correcta": 0,
+          "texto": "",
+          "opcionIds": [
+            "opt_1a07ef41870_5e0858b0_0_mu73rp5y9lbgf",
+            "opt_1a07ef41870_5e0858b0_1_mu73rp5ygyugw",
+            "opt_1a07ef41870_5e0858b0_2_mu73rp5yzjmdj",
+            "opt_1a07ef41870_5e0858b0_3_mu73rp5yh9b59"
+          ],
+          "correctas": [],
+          "puntos": 10,
+          "opciones": [
+            "Porque era el puente terrestre natural entre tres continentes",
+            "Porque tenía grandes minas de oro y plata",
+            "Porque estaba completamente aislada de otras naciones",
+            "Porque tenía el río más caudaloso del mundo"
+          ],
+          "enunciado": "¿Por qué era Palestina (Canaán) una tierra estratégicamente importante?",
+          "tipo": "opcion_multiple",
+          "id": "1a07ef41870_5e0858b0"
+        },
+        {
+          "correctas": [],
+          "correcta": 1,
+          "opcionIds": [
+            "opt_1a07ef4f0ef_ecda58b0_0_mu73rp5y2ubn3",
+            "opt_1a07ef4f0ef_ecda58b0_1_mu73rp5y027b0",
+            "opt_1a07ef4f0ef_ecda58b0_2_mu73rp5yane68",
+            "opt_1a07ef4f0ef_ecda58b0_3_mu73rp5ya5lag"
+          ],
+          "tipo": "opcion_multiple",
+          "puntos": 10,
+          "enunciado": "¿Cuáles eran las dos grandes rutas comerciales que cruzaban Palestina?",
+          "texto": "",
+          "opciones": [
+            "La Vía Apia y la Ruta de la Seda",
+            "La Vía Maris (Camino del Mar) y el Camino Real",
+            "La Ruta del Nilo y el Camino de Damasco",
+            "La Vía Romana y la Ruta Fenicia"
+          ],
+          "id": "1a07ef4f0ef_ecda58b0"
+        }
+      ],
       "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
-      "aprobacion": 50,
-      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - \n INTRODUCCION ANTIGUO TESTAMENTO",
+      "docenteId": "admin-fallback-id",
+      "creado": "2026-09-08T02:44:11.810Z",
+      "mostrarNota": true,
+      "subtitulo": "",
+      "descripcion": "",
+      "aleatorio": true,
+      "materia": "1a07f7e04bd_8cea04b1"
+    },
+    {
       "id": "1a07ef37f4d_c13b0872",
-      "materia": "INTRODUCCION ANTIGUO TESTAMENTO",
-      "docenteId": "mqa7smxlwdlcj",
-      "intentos": 1,
+      "estado": "activo",
+      "tiempo": 90,
+      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - \n INTRODUCCION ANTIGUO TESTAMENTO",
       "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "materia": "INTRODUCCION ANTIGUO TESTAMENTO",
       "preguntas": [
         {
           "correctas": [
             0
           ],
-          "id": "1a07f2f1038_eed07219",
-          "texto": "A. Lea cuidadosamente cada enunciado, y seleccione la respuesta correcta:\n1. La palabra española Biblia, se deriva del griego “Biblion”, que significa :",
-          "opcionIds": [
-            "opt_1a07f2f1038_eed07219_0_mu3lmjxgmujah",
-            "opt_1a07f2f1038_eed07219_1_mu3lmjxgeprbm",
-            "opt_1a07f2f1038_eed07219_2_mu3lmjxgooqus",
-            "opt_1a07f2f1038_eed07219_3_mu3lmjxgiffsk"
-          ],
+          "tipo": "multiple",
           "opciones": [
             "a. Rollo o libro",
             "b. Manuscrito",
             "c. Tratado o documento sagrado",
             "d. Las santas palabras"
           ],
-          "tipo": "multiple",
-          "puntos": 3
+          "texto": "A. Lea cuidadosamente cada enunciado, y seleccione la respuesta correcta:\n1. La palabra española Biblia, se deriva del griego “Biblion”, que significa :",
+          "puntos": 3,
+          "id": "1a07f2f1038_eed07219",
+          "opcionIds": [
+            "opt_1a07f2f1038_eed07219_0_mu3lmjxgmujah",
+            "opt_1a07f2f1038_eed07219_1_mu3lmjxgeprbm",
+            "opt_1a07f2f1038_eed07219_2_mu3lmjxgooqus",
+            "opt_1a07f2f1038_eed07219_3_mu3lmjxgiffsk"
+          ]
         },
         {
-          "id": "1a07f4db6c9_e1ef3f78",
-          "texto": "2. Para referirnos a la Biblia, encontramos otros títulos. Uno de ellos hace hincapié en la Biblia hebrea y sus divisiones. Éste título es:",
-          "opciones": [
-            "a. Escrituras   ",
-            "b. Sagradas Escrituras",
-            "c. Ley de Moisés",
-            "d. La ley y los profetas"
-          ],
           "opcionIds": [
             "opt_1a07f4db6c9_e1ef3f78_0_mu3lmjxgiwq8m",
             "opt_1a07f4db6c9_e1ef3f78_1_mu3lmjxg0ogoi",
             "opt_1a07f4db6c9_e1ef3f78_2_mu3lmjxgno1vn",
             "opt_1a07f4db6c9_e1ef3f78_3_mu3lmjxgwhbxh"
           ],
-          "tipo": "multiple",
           "puntos": 3,
+          "id": "1a07f4db6c9_e1ef3f78",
+          "texto": "2. Para referirnos a la Biblia, encontramos otros títulos. Uno de ellos hace hincapié en la Biblia hebrea y sus divisiones. Éste título es:",
+          "tipo": "multiple",
           "correctas": [
             2
+          ],
+          "opciones": [
+            "a. Escrituras   ",
+            "b. Sagradas Escrituras",
+            "c. Ley de Moisés",
+            "d. La ley y los profetas"
           ]
         },
         {
@@ -59,49 +288,51 @@
             "opt_1a07f4ef251_330e99ca_2_mu3lmjxg22agp",
             "opt_1a07f4ef251_330e99ca_3_mu3lmjxgvv3f7"
           ],
-          "id": "1a07f4ef251_330e99ca",
           "texto": "3. Del siguiente listado de razones por las cuales la Biblia es única, seleccione la que no corresponde:",
-          "correctas": [
-            2
-          ],
+          "id": "1a07f4ef251_330e99ca",
           "opciones": [
             "a. Fue escrita en un periodo de 1600 años ",
             "c. Trata de los temas más controvertidos",
             "b. Escrita en cuatro continentes: Asia, África, Europa y América  ",
             "d. Escrita por más de 40 autores"
           ],
+          "correctas": [
+            2
+          ],
           "puntos": 3,
           "tipo": "multiple"
         },
         {
-          "texto": "4. La primera traducción de la Biblia es conocida como la:",
           "opciones": [
             "a. King James  ",
             "b. Reina-Valera ",
             "c. Nácar- Colunga",
             "d. Septuaginta"
           ],
-          "id": "1a07f502218_0ecb541b",
+          "correctas": [
+            3
+          ],
+          "texto": "4. La primera traducción de la Biblia es conocida como la:",
           "tipo": "multiple",
           "puntos": 3,
+          "id": "1a07f502218_0ecb541b",
           "opcionIds": [
             "opt_1a07f502218_0ecb541b_0_mu3lmjxh8qpdo",
             "opt_1a07f502218_0ecb541b_1_mu3lmjxhzk2y8",
             "opt_1a07f502218_0ecb541b_2_mu3lmjxhgvacg",
             "opt_1a07f502218_0ecb541b_3_mu3lmjxh0ae46"
-          ],
-          "correctas": [
-            3
           ]
         },
         {
-          "tipo": "multiple",
           "opcionIds": [
             "opt_1a07f5241e5_b12129a3_0_mu3lmjxhrboj0",
             "opt_1a07f5241e5_b12129a3_1_mu3lmjxhcvc9q",
             "opt_1a07f5241e5_b12129a3_2_mu3lmjxhxx83d",
             "opt_1a07f5241e5_b12129a3_3_mu3lmjxhbbzsd"
           ],
+          "puntos": 3,
+          "texto": "5. La revelación general indica que el hombre ha recibido de Dios un tipo de conocimiento de Él mismo “los cielos cuentan la obra de Dios, y el firmamento anuncia la obra de sus manos”. Sal 19:1. Por lo tanto, uno de los medios de la revelación general, no es: ",
+          "tipo": "multiple",
           "correctas": [
             3
           ],
@@ -111,38 +342,32 @@
             "b. La intuición",
             "c. La conciencia",
             "d. La ciencia teológica"
-          ],
-          "puntos": 3,
-          "texto": "5. La revelación general indica que el hombre ha recibido de Dios un tipo de conocimiento de Él mismo “los cielos cuentan la obra de Dios, y el firmamento anuncia la obra de sus manos”. Sal 19:1. Por lo tanto, uno de los medios de la revelación general, no es: "
+          ]
         },
         {
-          "correctas": [
-            0
-          ],
           "opciones": [
             "a. La naturaleza",
             "b. La palabra escrita",
             "c. La palabra viviente: Jesucristo",
             "d. La palabra hablada"
           ],
-          "tipo": "multiple",
+          "id": "1a093f9b7dc_df833107",
           "opcionIds": [
             "opt_1a093f9b7dc_df833107_0_mu4722b74ukmd",
             "opt_1a093f9b7dc_df833107_1_mu4722b7r5vxp",
             "opt_1a093f9b7dc_df833107_2_mu4722b7ontv4",
             "opt_1a093f9b7dc_df833107_3_mu4722b7e88oi"
           ],
-          "puntos": 3,
           "texto": "6. La revelación especial es la revelación que Dios hace de sí mismo por medio de palabra y hechos maravillosos. Se refiere específicamente a la obra redentora de Dios en la vida de su pueblo escogido. De esta forma, uno de los medios de la revelación especial no es:",
-          "id": "1a093f9b7dc_df833107"
-        },
-        {
+          "puntos": 3,
           "tipo": "multiple",
           "correctas": [
-            1
-          ],
-          "puntos": 3,
+            0
+          ]
+        },
+        {
           "id": "1a094330ec9_8ae59030",
+          "texto": "7. Existen tres posiciones básicas respecto de la Biblia como revelación de Dios. De dichas posiciones, la que considera que la Biblia contiene la Palabra de Dios junto con otra mezcla de palabras de hombres y que la Biblia no debe ser igualada con la Palabra de Dios, es la:",
           "opcionIds": [
             "opt_1a094330ec9_8ae59030_0_mu471wvnsqyd0",
             "opt_1a094330ec9_8ae59030_1_mu471wvn3cz11",
@@ -153,60 +378,63 @@
             "b. Liberal",
             "c. Conservadora"
           ],
-          "texto": "7. Existen tres posiciones básicas respecto de la Biblia como revelación de Dios. De dichas posiciones, la que considera que la Biblia contiene la Palabra de Dios junto con otra mezcla de palabras de hombres y que la Biblia no debe ser igualada con la Palabra de Dios, es la:"
+          "correctas": [
+            1
+          ],
+          "tipo": "multiple",
+          "puntos": 3
         },
         {
-          "opciones": [
-            "a. Los profetas y apóstoles recibieron el mensaje sin pleno uso de su razón",
-            "b. El énfasis de lo inspirado recae sobre lo escrito, no sobre la persona.",
-            "c. Los escritores no fueron agentes mecánicos que transmitieron la palabra dictada letra a letra. ",
-            "d. La palabra de Dios fue primero hablada y luego escrita"
-          ],
-          "id": "1a094342730_ba50ed68",
-          "puntos": 3,
-          "correctas": [
-            2
-          ],
           "opcionIds": [
             "opt_1a094342730_ba50ed68_0_mu471n43xlvgl",
             "opt_1a094342730_ba50ed68_1_mu471n43bipsj",
             "opt_1a094342730_ba50ed68_2_mu471n43zczmg",
             "opt_1a094342730_ba50ed68_3_mu471n43ylkty"
           ],
+          "puntos": 3,
+          "tipo": "multiple",
+          "id": "1a094342730_ba50ed68",
           "texto": "8. La inspiración es una influencia sobrenatural del Espíritu Santo sobre los hombres, elegidos divinamente. Por esto, sus escritos llegan a ser confiables y autoritativos. Una de sus características es que su paternidad literaria es dual, esto quiere decir que:",
-          "tipo": "multiple"
+          "correctas": [
+            2
+          ],
+          "opciones": [
+            "a. Los profetas y apóstoles recibieron el mensaje sin pleno uso de su razón",
+            "b. El énfasis de lo inspirado recae sobre lo escrito, no sobre la persona.",
+            "c. Los escritores no fueron agentes mecánicos que transmitieron la palabra dictada letra a letra. ",
+            "d. La palabra de Dios fue primero hablada y luego escrita"
+          ]
         },
         {
-          "texto": "9. La Biblia es clara en afirmar que “Toda la Escritura es inspirada por Dios” pero no nos dice cómo ocurrió esto. La teoría que propone que lo que Dios inspira no son las palabras sino las ideas o pensamientos, es llamada:",
-          "tipo": "multiple",
-          "opciones": [
-            "a. Dictado Verbal",
-            "b. Dinámica",
-            "c. De inspiración plenaria",
-            "d. Ninguna de las anteriores"
-          ],
           "opcionIds": [
             "opt_1a0943dc638_0570b9cb_0_mu47148s4us9z",
             "opt_1a0943dc638_0570b9cb_1_mu47148sw19of",
             "opt_1a0943dc638_0570b9cb_2_mu47148s6rsim",
             "opt_1a0943dc638_0570b9cb_3_mu47148si3v4h"
           ],
+          "opciones": [
+            "a. Dictado Verbal",
+            "b. Dinámica",
+            "c. De inspiración plenaria",
+            "d. Ninguna de las anteriores"
+          ],
+          "tipo": "multiple",
+          "id": "1a0943dc638_0570b9cb",
+          "puntos": 3,
           "correctas": [
             1
           ],
-          "puntos": 3,
-          "id": "1a0943dc638_0570b9cb"
+          "texto": "9. La Biblia es clara en afirmar que “Toda la Escritura es inspirada por Dios” pero no nos dice cómo ocurrió esto. La teoría que propone que lo que Dios inspira no son las palabras sino las ideas o pensamientos, es llamada:"
         },
         {
-          "texto": "10. “Es la obra del Espíritu Santo que hace clara la verdad de la Biblia para una persona en particular”.\n\nEl párrafo anterior hace referencia a:",
-          "tipo": "multiple",
+          "id": "1a09442769d_797cf258",
           "opcionIds": [
             "opt_1a09442769d_797cf258_0_mu4719ybr3b40",
             "opt_1a09442769d_797cf258_1_mu4719yba5w99",
             "opt_1a09442769d_797cf258_2_mu4719ybf8yvf",
             "opt_1a09442769d_797cf258_3_mu4719yb0fdze"
           ],
-          "id": "1a09442769d_797cf258",
+          "tipo": "multiple",
           "puntos": 3,
           "correctas": [
             1
@@ -216,53 +444,10 @@
             "b. La iluminación",
             "c. La revelación ",
             "d. La inspiración "
-          ]
+          ],
+          "texto": "10. “Es la obra del Espíritu Santo que hace clara la verdad de la Biblia para una persona en particular”.\n\nEl párrafo anterior hace referencia a:"
         },
         {
-          "enunciadoIds": [
-            "enun_mu47bhv66fq37_0_mu47bn6jxkkfe",
-            "enun_mu47bhv66fq37_1_mu48emtt4n0ni",
-            "enun_mu47bhv66fq37_2_mu48eny0fizbu",
-            "enun_mu47bhv66fq37_3_mu48epb4sb9vn",
-            "enun_mu47bhv66fq37_4_mu48eq4osfo6n",
-            "enun_mu47bhv66fq37_5_mu48ers05hkc7",
-            "enun_mu47bhv66fq37_6_mu48esmoezdnj",
-            "enun_mu47bhv66fq37_7_mu48etzk54sh3",
-            "enun_mu47bhv66fq37_8_mu48euncpb07e",
-            "enun_mu47bhv66fq37_9_mu48evogxbb73",
-            "enun_mu47bhv66fq37_10_mu48ewhcy5k8r",
-            "enun_mu47bhv66fq37_11_mu48exn4hgbhn",
-            "enun_mu47bhv66fq37_12_mu48eylk4r8dx",
-            "enun_mu47bhv66fq37_13_mu48ezgoi6y0m",
-            "enun_mu47bhv66fq37_14_mu48f0h4nyd59",
-            "enun_mu47bhv66fq37_15_mu48f1eoiremz",
-            "enun_mu47bhv66fq37_16_mu48f234wvtg7",
-            "enun_mu47bhv66fq37_17_mu48f2zk6mpez",
-            "enun_mu47bhv66fq37_18_mu48f3so4mzdq",
-            "enun_mu47bhv66fq37_19_mu48f5i8sg3a8"
-          ],
-          "opcionIds": [
-            "opt_mu47bhv66fq37_1_mu47bn6jk6374",
-            "opt_mu47bhv66fq37_2_mu47c9zegm6go",
-            "opt_mu47bhv66fq37_2_mu47gyteh3i6c",
-            "opt_mu47bhv66fq37_3_mu47h29t5e14m",
-            "opt_mu47bhv66fq37_4_mu47h2zmvka0g",
-            "opt_mu47bhv66fq37_5_mu47h5oy6visg",
-            "opt_mu47bhv66fq37_6_mu47h6e2eptge",
-            "opt_mu47bhv66fq37_7_mu47h7bds0876",
-            "opt_mu47bhv66fq37_8_mu47h81ms5tje",
-            "opt_mu47bhv66fq37_9_mu47h8k2tu5mp",
-            "opt_mu47bhv66fq37_10_mu47h9h646nu2",
-            "opt_mu47bhv66fq37_11_mu47h9yqw1rtt",
-            "opt_mu47bhv66fq37_12_mu47havuhfvem",
-            "opt_mu47bhv66fq37_13_mu47hbwp7qckp",
-            "opt_mu47bhv66fq37_14_mu47hcnu248dd",
-            "opt_mu47bhv66fq37_15_mu47hdpd3fyl1",
-            "opt_mu47bhv66fq37_16_mu47helmvhc2f",
-            "opt_mu47bhv66fq37_17_mu47hf4azfr2a",
-            "opt_mu47bhv66fq37_18_mu47hfnm4fq8l",
-            "opt_mu47bhv66fq37_19_mu47hgxep62zi"
-          ],
           "matchCorrectos": [
             3,
             8,
@@ -285,27 +470,50 @@
             18,
             0
           ],
-          "enunciados": [
-            "Contiene las enseñanzas de los antiguos doctores de la ley",
-            "Consta de lo que conocemos como el Pentateuco",
-            "3er Regreso en 458 bajo Esdras - 445 Nehemías reinicia reparación de muros",
-            "Significa origen o principio",
-            "Llegó a ser el idioma común o vulgar de los judíos al regresar del cautiverio.",
-            "Los grupos conocidos como fariseos y saduceos son formados",
-            "El tema es la santidad de Dios y la pureza del creyente en la vida cotidiana",
-            "Los papiros, secortados y organizados en un como como los de hoy.",
-            "Nos muestra al Señor en forma de cordero muriendo por nuestros pecados.",
-            "Libro escrito en el periodo del Nuevo Testamento, pero no canonizado",
-            "Significa segunda ley",
-            "Numeraron los versículos, palabras y letras de cada libro",
-            "Escrito original de los autores. No existen en la actualidad",
-            "Se anticipa el ministerio de Jesús",
-            "Describe la liberación de los israelitas cautivos en Egipto",
-            "Libros aceptados en el canon sin ser refutados o desafiados.",
-            "Otoniel, Gedeón, Sansón y otros",
-            "Dedicado a recordar que el pueblo de Israel y la tierra pertenecen a Dios",
-            "En el texto hebreo el nombres es “en el desierto”.",
-            "Cañas cortadas en tiras y usadas para la escritura"
+          "enunciadoIds": [
+            "enun_mu47bhv66fq37_0_mu47bn6jxkkfe",
+            "enun_mu47bhv66fq37_1_mu48emtt4n0ni",
+            "enun_mu47bhv66fq37_2_mu48eny0fizbu",
+            "enun_mu47bhv66fq37_3_mu48epb4sb9vn",
+            "enun_mu47bhv66fq37_4_mu48eq4osfo6n",
+            "enun_mu47bhv66fq37_5_mu48ers05hkc7",
+            "enun_mu47bhv66fq37_6_mu48esmoezdnj",
+            "enun_mu47bhv66fq37_7_mu48etzk54sh3",
+            "enun_mu47bhv66fq37_8_mu48euncpb07e",
+            "enun_mu47bhv66fq37_9_mu48evogxbb73",
+            "enun_mu47bhv66fq37_10_mu48ewhcy5k8r",
+            "enun_mu47bhv66fq37_11_mu48exn4hgbhn",
+            "enun_mu47bhv66fq37_12_mu48eylk4r8dx",
+            "enun_mu47bhv66fq37_13_mu48ezgoi6y0m",
+            "enun_mu47bhv66fq37_14_mu48f0h4nyd59",
+            "enun_mu47bhv66fq37_15_mu48f1eoiremz",
+            "enun_mu47bhv66fq37_16_mu48f234wvtg7",
+            "enun_mu47bhv66fq37_17_mu48f2zk6mpez",
+            "enun_mu47bhv66fq37_18_mu48f3so4mzdq",
+            "enun_mu47bhv66fq37_19_mu48f5i8sg3a8"
+          ],
+          "texto": "B. Ubique frente a cada enunciado, la definición que le corresponde seleccionando del listado de palabras que está en la caja inferior.",
+          "opcionIds": [
+            "opt_mu47bhv66fq37_1_mu47bn6jk6374",
+            "opt_mu47bhv66fq37_2_mu47c9zegm6go",
+            "opt_mu47bhv66fq37_2_mu47gyteh3i6c",
+            "opt_mu47bhv66fq37_3_mu47h29t5e14m",
+            "opt_mu47bhv66fq37_4_mu47h2zmvka0g",
+            "opt_mu47bhv66fq37_5_mu47h5oy6visg",
+            "opt_mu47bhv66fq37_6_mu47h6e2eptge",
+            "opt_mu47bhv66fq37_7_mu47h7bds0876",
+            "opt_mu47bhv66fq37_8_mu47h81ms5tje",
+            "opt_mu47bhv66fq37_9_mu47h8k2tu5mp",
+            "opt_mu47bhv66fq37_10_mu47h9h646nu2",
+            "opt_mu47bhv66fq37_11_mu47h9yqw1rtt",
+            "opt_mu47bhv66fq37_12_mu47havuhfvem",
+            "opt_mu47bhv66fq37_13_mu47hbwp7qckp",
+            "opt_mu47bhv66fq37_14_mu47hcnu248dd",
+            "opt_mu47bhv66fq37_15_mu47hdpd3fyl1",
+            "opt_mu47bhv66fq37_16_mu47helmvhc2f",
+            "opt_mu47bhv66fq37_17_mu47hf4azfr2a",
+            "opt_mu47bhv66fq37_18_mu47hfnm4fq8l",
+            "opt_mu47bhv66fq37_19_mu47hgxep62zi"
           ],
           "opciones": [
             "Papiro",
@@ -329,72 +537,107 @@
             "Números",
             "Deuteronomio"
           ],
+          "correctas": [],
+          "puntos": 20,
           "id": "mu47bhv66fq37",
           "tipo": "matching",
-          "correctas": [],
-          "texto": "B. Ubique frente a cada enunciado, la definición que le corresponde seleccionando del listado de palabras que está en la caja inferior.",
-          "puntos": 20
+          "enunciados": [
+            "Contiene las enseñanzas de los antiguos doctores de la ley",
+            "Consta de lo que conocemos como el Pentateuco",
+            "3er Regreso en 458 bajo Esdras - 445 Nehemías reinicia reparación de muros",
+            "Significa origen o principio",
+            "Llegó a ser el idioma común o vulgar de los judíos al regresar del cautiverio.",
+            "Los grupos conocidos como fariseos y saduceos son formados",
+            "El tema es la santidad de Dios y la pureza del creyente en la vida cotidiana",
+            "Los papiros, secortados y organizados en un como como los de hoy.",
+            "Nos muestra al Señor en forma de cordero muriendo por nuestros pecados.",
+            "Libro escrito en el periodo del Nuevo Testamento, pero no canonizado",
+            "Significa segunda ley",
+            "Numeraron los versículos, palabras y letras de cada libro",
+            "Escrito original de los autores. No existen en la actualidad",
+            "Se anticipa el ministerio de Jesús",
+            "Describe la liberación de los israelitas cautivos en Egipto",
+            "Libros aceptados en el canon sin ser refutados o desafiados.",
+            "Otoniel, Gedeón, Sansón y otros",
+            "Dedicado a recordar que el pueblo de Israel y la tierra pertenecen a Dios",
+            "En el texto hebreo el nombres es “en el desierto”.",
+            "Cañas cortadas en tiras y usadas para la escritura"
+          ]
         }
       ],
-      "headerSubtitle": "“Debes comprometerte con todo tu ser a cumplir cada uno\nde estos mandatos que hoy te entrego” Deuteronomio 6:6",
-      "descripcion": "",
-      "estado": "activo",
-      "parcialId": "1a07edfc2bc_55efa6b6",
-      "aleatorio": false,
-      "creado": "2026-09-08T02:58:02.189Z",
-      "mostrarNota": false,
       "actualizado": "2026-09-17T17:22:31.305Z",
-      "tiempo": 90,
-      "subtitulo": "“Debes comprometerte con todo tu ser a cumplir cada uno\nde estos mandatos que hoy te entrego” Deuteronomio 6:6"
+      "parcialId": "1a07edfc2bc_55efa6b6",
+      "intentos": 1,
+      "descripcion": "",
+      "subtitulo": "“Debes comprometerte con todo tu ser a cumplir cada uno\nde estos mandatos que hoy te entrego” Deuteronomio 6:6",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "mqa7smxlwdlcj",
+      "creado": "2026-09-08T02:58:02.189Z",
+      "headerSubtitle": "“Debes comprometerte con todo tu ser a cumplir cada uno\nde estos mandatos que hoy te entrego” Deuteronomio 6:6",
+      "aleatorio": false,
+      "aprobacion": 50,
+      "mostrarNota": false
     },
     {
+      "id": "1a08dd256ce_626918e9",
       "headerSubtitle": "",
-      "estado": "activo",
-      "subtitulo": "““Mas alábese en esto el que se hubiere de alabar: en entenderme y conocerme, que yo soy\nJehová, que hago misericordia, juicio y justicia”Jer. 9:24",
+      "creado": "2026-09-11T00:16:07.374Z",
+      "parcialId": "1a07f7e962d_c11ee027",
+      "aprobacion": 50,
+      "mostrarNota": true,
       "preguntas": [
         {
-          "opciones": [
-            "a. En 5:13-15, el Señor se revela a Josué como “El príncipe del ejército de Jehová”. Esta cristofanía nos muestra que Dios mismo estaba comandando la nueva vida del pueblo Israelita.",
-            "b. El cordón de grana en la ventana de Rahab, ilustra la obra redentora de Cristo en la cruz. Esta señal salvó a Rahab y su familia de la muerte, de igual forma Cristo fue colgado de una cruz, y su sangre nos salva.",
-            "c. Dios saca a Josué de Egipto siendo un muchacho, luego lo libró del desierto y ahora cruza el Jordán dándole la victoria en la tierra prometida"
-          ],
-          "texto": "A. Lea cuidadosamente cada afirmación y seleccione la respuesta correcta.\n\n1. La cristología en el libro de Josué, se evidencia en tres formas. De las siguientes opciones ¿cuál explica la forma simbólica?",
-          "id": "1a0975527e9_2e8829b9",
-          "tipo": "dropdown",
-          "correctas": [
-            1
-          ],
           "puntos": 2,
           "opcionIds": [
             "opt_1a0975527e9_2e8829b9_0_mu3lpfhnbqvxj",
             "opt_1a0975527e9_2e8829b9_1_mu3lpfhnjw51n",
             "opt_1a0975527e9_2e8829b9_2_mu4bi2et9m82g"
+          ],
+          "tipo": "dropdown",
+          "opciones": [
+            "a. En 5:13-15, el Señor se revela a Josué como “El príncipe del ejército de Jehová”. Esta cristofanía nos muestra que Dios mismo estaba comandando la nueva vida del pueblo Israelita.",
+            "b. El cordón de grana en la ventana de Rahab, ilustra la obra redentora de Cristo en la cruz. Esta señal salvó a Rahab y su familia de la muerte, de igual forma Cristo fue colgado de una cruz, y su sangre nos salva.",
+            "c. Dios saca a Josué de Egipto siendo un muchacho, luego lo libró del desierto y ahora cruza el Jordán dándole la victoria en la tierra prometida"
+          ],
+          "id": "1a0975527e9_2e8829b9",
+          "texto": "A. Lea cuidadosamente cada afirmación y seleccione la respuesta correcta.\n\n1. La cristología en el libro de Josué, se evidencia en tres formas. De las siguientes opciones ¿cuál explica la forma simbólica?",
+          "correctas": [
+            1
           ]
         },
         {
-          "tipo": "multiple",
-          "opcionIds": [
-            "opt_mu4bivespls6e_0_mu4bivessls4r",
-            "opt_mu4bivespls6e_1_mu4bives1y21a",
-            "opt_mu4bivespls6e_2_mu4bj8lg14r5h",
-            "opt_mu4bivespls6e_3_mu4bj9ckixzv5"
-          ],
-          "correctas": [
-            3
-          ],
-          "id": "mu4bivespls6e",
           "opciones": [
             "a. Cristología",
             "b. Temática",
             "c. Fe",
             "d. Pneumatología"
           ],
+          "opcionIds": [
+            "opt_mu4bivespls6e_0_mu4bivessls4r",
+            "opt_mu4bivespls6e_1_mu4bives1y21a",
+            "opt_mu4bivespls6e_2_mu4bj8lg14r5h",
+            "opt_mu4bivespls6e_3_mu4bj9ckixzv5"
+          ],
+          "puntos": 2,
+          "correctas": [
+            3
+          ],
           "texto": "2. La primera promesa de Dios para Josué es su presencia continua con él en 1:5. Es por su bendita presencia que nosotros no desfallecemos. La afirmación anterior nos habla de la ________________ en el libro de Josué.",
-          "puntos": 2
+          "id": "mu4bivespls6e",
+          "tipo": "multiple"
         },
         {
-          "texto": "3. “El libro contiene un registro de la época oscura, cuando el pueblo de Israel no tomó posesión de la tierra y abandonó al Señor para ir en pos de ídolos de las naciones vecinas; esto fue fruto de la desobediencia y falta de esfuerzo para terminar la obra que Dios les había encargado”. En este párrafo se está describiendo el libro de:",
+          "opcionIds": [
+            "opt_mu4bk090drctn_0_mu4bk0902ft0w",
+            "opt_mu4bk090drctn_1_mu4bk090m9fl1",
+            "opt_mu4bk090drctn_2_mu4bkix09m0rn",
+            "opt_mu4bk090drctn_3_mu4bkjkkmvuzx"
+          ],
           "tipo": "multiple",
+          "texto": "3. “El libro contiene un registro de la época oscura, cuando el pueblo de Israel no tomó posesión de la tierra y abandonó al Señor para ir en pos de ídolos de las naciones vecinas; esto fue fruto de la desobediencia y falta de esfuerzo para terminar la obra que Dios les había encargado”. En este párrafo se está describiendo el libro de:",
+          "correctas": [
+            0
+          ],
           "opciones": [
             "a. Jueces",
             "b. Nehemías",
@@ -402,18 +645,14 @@
             "d. Ester"
           ],
           "id": "mu4bk090drctn",
-          "correctas": [
-            0
-          ],
-          "opcionIds": [
-            "opt_mu4bk090drctn_0_mu4bk0902ft0w",
-            "opt_mu4bk090drctn_1_mu4bk090m9fl1",
-            "opt_mu4bk090drctn_2_mu4bkix09m0rn",
-            "opt_mu4bk090drctn_3_mu4bkjkkmvuzx"
-          ],
           "puntos": 2
         },
         {
+          "tipo": "multiple",
+          "id": "mu4bmjgkjttp3",
+          "correctas": [
+            2
+          ],
           "texto": "4. El tema del libro de Rut, es:",
           "opcionIds": [
             "opt_mu4bmjgkjttp3_0_mu4bmjgkn9uw0",
@@ -427,80 +666,77 @@
             "c. Mostrar la soberanía de Dios en la vida de las personas y el inicio de la genealogía de David",
             "d. Mostrar que “Jehová conforta”"
           ],
-          "correctas": [
-            2
-          ],
-          "id": "mu4bmjgkjttp3",
-          "puntos": 2,
-          "tipo": "multiple"
+          "puntos": 2
         },
         {
+          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4bs370izap3_0_mu4bs370tcs4a",
             "opt_mu4bs370izap3_1_mu4bs370sfuvg",
             "opt_mu4bs370izap3_2_mu4bs7ms1it8k",
             "opt_mu4bs370izap3_3_mu4bs8f0s0cpm"
           ],
-          "texto": "5. _______________ es el libro que narra el inicio de la monarquía por medio de _________ y su _____________ al liderar al pueblo.\nLas palabras que completan adecuadamente la anterior afirmación son:",
-          "tipo": "multiple",
-          "correctas": [
-            1
-          ],
-          "id": "mu4bs370izap3",
-          "puntos": 2,
           "opciones": [
             "a. 1 Crónicas - David - entusiasmo",
             "b. 1 Samuel - Saul - fracaso",
             "c. Esdras - Zorobabel – esfuerzo",
             "d. Esdras – Nehemías – éxito"
+          ],
+          "id": "mu4bs370izap3",
+          "puntos": 2,
+          "texto": "5. _______________ es el libro que narra el inicio de la monarquía por medio de _________ y su _____________ al liderar al pueblo.\nLas palabras que completan adecuadamente la anterior afirmación son:",
+          "correctas": [
+            1
           ]
         },
         {
+          "tipo": "multiple",
+          "id": "mu4btzes6bxsa",
+          "texto": "6. El personaje clave 2 Samuel es:",
           "opcionIds": [
             "opt_mu4btzes6bxsa_0_mu4btzesgk8p2",
             "opt_mu4btzes6bxsa_1_mu4btzesre4gy",
             "opt_mu4btzes6bxsa_2_mu4bu36kunb34",
             "opt_mu4btzes6bxsa_3_mu4bu3vo6v3xk"
           ],
-          "id": "mu4btzes6bxsa",
-          "texto": "6. El personaje clave 2 Samuel es:",
+          "correctas": [
+            3
+          ],
+          "puntos": 2,
           "opciones": [
             "a. Samuel",
             "b. Elí",
             "c. El pueblo de Israel",
             "d. David"
-          ],
-          "correctas": [
-            3
-          ],
-          "tipo": "multiple",
-          "puntos": 2
+          ]
         },
         {
+          "opcionIds": [
+            "opt_mu4buu50s2dlk_0_mu4buu50tu5cq",
+            "opt_mu4buu50s2dlk_1_mu4buu50zmh2h",
+            "opt_mu4buu50s2dlk_2_mu4buyro5oa3a",
+            "opt_mu4buu50s2dlk_3_mu4buzfggtghj"
+          ],
+          "tipo": "multiple",
+          "id": "mu4buu50s2dlk",
+          "puntos": 2,
           "opciones": [
             "a. 1 y 2 de Reyes",
             "b. 1 y 2 de Crónicas",
             "c. Esdras",
             "d. Nehemías"
           ],
-          "puntos": 2,
-          "id": "mu4buu50s2dlk",
+          "texto": "7. “El fracaso de los profetas, sacerdotes y reyes del pueblo de Dios apunta a la necesidad de que el Mesías viniera. Cristo mismo es rey, profeta y sacerdote mostrando la perfección en todos sus oficios”\nLa cristología descrita anteriormente, es propia del libro de:",
           "correctas": [
             0
-          ],
-          "texto": "7. “El fracaso de los profetas, sacerdotes y reyes del pueblo de Dios apunta a la necesidad de que el Mesías viniera. Cristo mismo es rey, profeta y sacerdote mostrando la perfección en todos sus oficios”\nLa cristología descrita anteriormente, es propia del libro de:",
-          "tipo": "multiple",
-          "opcionIds": [
-            "opt_mu4buu50s2dlk_0_mu4buu50tu5cq",
-            "opt_mu4buu50s2dlk_1_mu4buu50zmh2h",
-            "opt_mu4buu50s2dlk_2_mu4buyro5oa3a",
-            "opt_mu4buu50s2dlk_3_mu4buzfggtghj"
           ]
         },
         {
-          "id": "mu4bw4scwve2a",
-          "tipo": "multiple",
           "texto": "1 y 2 de Crónicas son libros en que se estudia el pasado de Israel, observando primariamente la bendición y la gracia de Dios para con David y su descendencia. Dichos libros fueron escritos en el periodo",
+          "puntos": 2,
+          "correctas": [
+            2
+          ],
           "opciones": [
             "a. Pre-Exílico",
             "b. Exílico",
@@ -511,96 +747,102 @@
             "opt_mu4bw4scwve2a_2_mu4bw97wk5cvm",
             "opt_mu4bw4scwve2a_3_mu4bwa2chstm6"
           ],
-          "puntos": 2,
-          "correctas": [
-            2
-          ]
+          "tipo": "multiple",
+          "id": "mu4bw4scwve2a"
         },
         {
-          "correctas": [
-            0
-          ],
-          "id": "mu4bx3twxcfbo",
           "opciones": [
             "a. Esdras",
             "b. Nehemías",
             "c. Zacarías",
             "d. Ester"
           ],
+          "correctas": [
+            0
+          ],
+          "tipo": "multiple",
           "puntos": 2,
+          "id": "mu4bx3twxcfbo",
+          "texto": "9. Este libro se divide en dos segmentos. Primero narra el retorno de los judíos bajo Zorobabel con la ayuda de los profetas Hageo y Zacarías; la segunda parte muestra otro grupo de judíos que retornan para restaurar el aspecto espiritual.\nEl libro anteriormente descrito es llamado:",
           "opcionIds": [
             "opt_mu4bx3twxcfbo_0_mu4bx3twsel1a",
             "opt_mu4bx3twxcfbo_1_mu4bx3twj0asb",
             "opt_mu4bx3twxcfbo_2_mu4bx7x8fo2r9",
             "opt_mu4bx3twxcfbo_3_mu4bx8kspjlp5"
-          ],
-          "texto": "9. Este libro se divide en dos segmentos. Primero narra el retorno de los judíos bajo Zorobabel con la ayuda de los profetas Hageo y Zacarías; la segunda parte muestra otro grupo de judíos que retornan para restaurar el aspecto espiritual.\nEl libro anteriormente descrito es llamado:",
-          "tipo": "multiple"
+          ]
         },
         {
-          "opcionIds": [
-            "opt_mu4byilo51x7e_0_mu4byilo395jj",
-            "opt_mu4byilo51x7e_1_mu4byilof55z7",
-            "opt_mu4byilo51x7e_2_mu4byo10nhe3k",
-            "opt_mu4byilo51x7e_3_mu4byoq4z2tif"
-          ],
-          "tipo": "multiple",
           "correctas": [
             1
           ],
-          "id": "mu4byilo51x7e",
-          "texto": "10. Se considera que el esfuerzo del profeta Malaquías y el líder Nehemías en erradicar el politeísmo entre los judíos fue exitoso porque:",
-          "puntos": 2,
           "opciones": [
             "a. Se han encontrado hallazgos arqueológicos",
             "b. En la época de Jesús, los judíos adoraban solo a Jehová",
             "c. En el libro de Nehemías no hubo problemas de desobediencia",
             "d. El profeta Malaquías testifica de esto en su libro profético"
+          ],
+          "tipo": "multiple",
+          "id": "mu4byilo51x7e",
+          "puntos": 2,
+          "texto": "10. Se considera que el esfuerzo del profeta Malaquías y el líder Nehemías en erradicar el politeísmo entre los judíos fue exitoso porque:",
+          "opcionIds": [
+            "opt_mu4byilo51x7e_0_mu4byilo395jj",
+            "opt_mu4byilo51x7e_1_mu4byilof55z7",
+            "opt_mu4byilo51x7e_2_mu4byo10nhe3k",
+            "opt_mu4byilo51x7e_3_mu4byoq4z2tif"
           ]
         },
         {
+          "puntos": 2,
+          "correctas": [
+            2
+          ],
+          "texto": "11. En el libro de Ester, la persona que planeó la destrucción de los judíos, y que finalmente muere ahorcado, se llama:",
+          "opcionIds": [
+            "opt_mu4c00isk5zgg_0_mu4c00isz5948",
+            "opt_mu4c00isk5zgg_1_mu4c00is2xahl",
+            "opt_mu4c00isk5zgg_2_mu4c042jtsl1a",
+            "opt_mu4c00isk5zgg_3_mu4c04q4j7b54"
+          ],
+          "id": "mu4c00isk5zgg",
           "opciones": [
             "a. Asuero",
             "b. Mardoqueo",
             "c. Amán",
             "d. Melsac"
           ],
-          "tipo": "multiple",
-          "texto": "11. En el libro de Ester, la persona que planeó la destrucción de los judíos, y que finalmente muere ahorcado, se llama:",
-          "correctas": [
-            2
-          ],
-          "id": "mu4c00isk5zgg",
-          "puntos": 2,
-          "opcionIds": [
-            "opt_mu4c00isk5zgg_0_mu4c00isz5948",
-            "opt_mu4c00isk5zgg_1_mu4c00is2xahl",
-            "opt_mu4c00isk5zgg_2_mu4c042jtsl1a",
-            "opt_mu4c00isk5zgg_3_mu4c04q4j7b54"
-          ]
+          "tipo": "multiple"
         },
         {
-          "opcionIds": [
-            "opt_mu4c1bh06rind_0_mu4c1bh0kdipp",
-            "opt_mu4c1bh06rind_1_mu4c1bh0cxhto",
-            "opt_mu4c1bh06rind_2_mu4c1ewjfsxcx",
-            "opt_mu4c1bh06rind_3_mu4c1fv8saxjz"
-          ],
-          "texto": "12. El libro que responde a la pregunta ¿por qué sufren las personas buenas y justas? Es:",
           "correctas": [
             2
           ],
-          "id": "mu4c1bh06rind",
-          "tipo": "multiple",
           "opciones": [
             "a. Eclesiastés",
             "b. Proverbios",
             "c. Job",
             "d. Salmos"
           ],
-          "puntos": 2
+          "texto": "12. El libro que responde a la pregunta ¿por qué sufren las personas buenas y justas? Es:",
+          "puntos": 2,
+          "id": "mu4c1bh06rind",
+          "tipo": "multiple",
+          "opcionIds": [
+            "opt_mu4c1bh06rind_0_mu4c1bh0kdipp",
+            "opt_mu4c1bh06rind_1_mu4c1bh0cxhto",
+            "opt_mu4c1bh06rind_2_mu4c1ewjfsxcx",
+            "opt_mu4c1bh06rind_3_mu4c1fv8saxjz"
+          ]
         },
         {
+          "id": "mu4c24wkgnt0f",
+          "tipo": "multiple",
+          "opcionIds": [
+            "opt_mu4c24wkgnt0f_0_mu4c24wkrlg8a",
+            "opt_mu4c24wkgnt0f_1_mu4c24wkxb51l",
+            "opt_mu4c24wkgnt0f_2_mu4c2ig3a2u2e",
+            "opt_mu4c24wkgnt0f_3_mu4c2jlw7cseq"
+          ],
           "texto": "13. El libro de Salmos muestra las diferentes _______________ de la __________________ con ___________\nLas palabras que completan adecuadamente la anterior afirmación, son:",
           "opciones": [
             "a. Facetas – comunión - Dios",
@@ -608,29 +850,12 @@
             "c. Interacciones - relación – el prójimo",
             "d. Conclusiones – queja – el Señor"
           ],
-          "tipo": "multiple",
           "correctas": [
             0
           ],
-          "id": "mu4c24wkgnt0f",
-          "puntos": 2,
-          "opcionIds": [
-            "opt_mu4c24wkgnt0f_0_mu4c24wkrlg8a",
-            "opt_mu4c24wkgnt0f_1_mu4c24wkxb51l",
-            "opt_mu4c24wkgnt0f_2_mu4c2ig3a2u2e",
-            "opt_mu4c24wkgnt0f_3_mu4c2jlw7cseq"
-          ]
+          "puntos": 2
         },
         {
-          "texto": "14. En el libro de Proverbios, encontramos que lo más valioso es la:",
-          "puntos": 2,
-          "id": "mu4c3hyk0oqqg",
-          "opciones": [
-            "a. Fe",
-            "b. Santidad",
-            "c. Sabiduría",
-            "d. Astucia"
-          ],
           "opcionIds": [
             "opt_mu4c3hyk0oqqg_0_mu4c3hyk7mrtc",
             "opt_mu4c3hyk0oqqg_1_mu4c3hyknzva9",
@@ -638,24 +863,33 @@
             "opt_mu4c3hyk0oqqg_3_mu4c3lwsoymfu"
           ],
           "tipo": "multiple",
+          "opciones": [
+            "a. Fe",
+            "b. Santidad",
+            "c. Sabiduría",
+            "d. Astucia"
+          ],
+          "puntos": 2,
+          "texto": "14. En el libro de Proverbios, encontramos que lo más valioso es la:",
+          "id": "mu4c3hyk0oqqg",
           "correctas": [
             2
           ]
         },
         {
+          "puntos": 2,
+          "correctas": [
+            1
+          ],
+          "id": "mu4c4qq36ugav",
           "opciones": [
             "a. Jeremías",
             "b. Isaías",
             "c. Ezequiel",
             "d. Daniel"
           ],
-          "tipo": "multiple",
           "texto": "15. El profeta ____________________ profetizó durante los reinados de Urías, Jotán, Acaz y Ezequías, la inmoralidad era creciente y la opresión de los ricos sobre los pobres se hacía cada vez más cruel.",
-          "id": "mu4c4qq36ugav",
-          "correctas": [
-            1
-          ],
-          "puntos": 2,
+          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4c4qq36ugav_0_mu4c4qq3f8wer",
             "opt_mu4c4qq36ugav_1_mu4c4qq346yxt",
@@ -664,11 +898,12 @@
           ]
         },
         {
-          "tipo": "multiple",
-          "id": "mu4c5uff4ssjl",
           "texto": "16. El profeta _____________________ inició su ministerio durante el reinado de Josías. Su tema es condenación.",
-          "correctas": [
-            0
+          "opcionIds": [
+            "opt_mu4c5uff4ssjl_0_mu4c5uffsfl0r",
+            "opt_mu4c5uff4ssjl_1_mu4c5uffmfsxn",
+            "opt_mu4c5uff4ssjl_2_mu4c5yij2b090",
+            "opt_mu4c5uff4ssjl_3_mu4c5z6bhp8bh"
           ],
           "opciones": [
             "a. Jeremías",
@@ -676,15 +911,17 @@
             "c. Ezequiel",
             "d. Daniel"
           ],
-          "opcionIds": [
-            "opt_mu4c5uff4ssjl_0_mu4c5uffsfl0r",
-            "opt_mu4c5uff4ssjl_1_mu4c5uffmfsxn",
-            "opt_mu4c5uff4ssjl_2_mu4c5yij2b090",
-            "opt_mu4c5uff4ssjl_3_mu4c5z6bhp8bh"
+          "correctas": [
+            0
           ],
-          "puntos": 2
+          "puntos": 2,
+          "tipo": "multiple",
+          "id": "mu4c5uff4ssjl"
         },
         {
+          "correctas": [
+            2
+          ],
           "puntos": 2,
           "opciones": [
             "a. Amós",
@@ -692,115 +929,182 @@
             "c. Oseas",
             "d. Abdías"
           ],
-          "correctas": [
-            2
-          ],
-          "id": "mu4c7g3vdw2yp",
+          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4c7g3vdw2yp_0_mu4c7g3vzme4p",
             "opt_mu4c7g3vdw2yp_1_mu4c7g3vxu6p9",
             "opt_mu4c7g3vdw2yp_2_mu4c7jszgc14q",
             "opt_mu4c7g3vdw2yp_3_mu4c7kfnq72ad"
           ],
-          "texto": "17. El profeta_____________________ habla del amor de Dios por Israel y la forma equivocada en que el pueblo buscó el amor en los amantes que sólo despojaron y avergonzaron su dignidad.",
-          "tipo": "multiple"
+          "id": "mu4c7g3vdw2yp",
+          "texto": "17. El profeta_____________________ habla del amor de Dios por Israel y la forma equivocada en que el pueblo buscó el amor en los amantes que sólo despojaron y avergonzaron su dignidad."
         },
         {
-          "puntos": 2,
-          "tipo": "multiple",
+          "id": "mu4c8lozss3il",
           "texto": "18. El profeta ____________________ cuyo nombre significa consolación, habla sobre el juicio sobre Nínive, que aunque se había arrepentido con la predicación de Jonás un siglo antes, ahora se había terminado de corromper y el juicio vendría inminentemente",
+          "puntos": 2,
           "opcionIds": [
             "opt_mu4c8lozss3il_0_mu4c8lozn1syz",
             "opt_mu4c8lozss3il_1_mu4c8lozedx9g",
             "opt_mu4c8lozss3il_2_mu4c8p6rcs268",
             "opt_mu4c8lozss3il_3_mu4c8qer0zjqb"
           ],
-          "id": "mu4c8lozss3il",
           "opciones": [
             "a. Miqueas",
             "b. Nahum",
             "c. Habacuc",
             "d. Sofonías"
           ],
+          "tipo": "multiple",
           "correctas": [
             1
           ]
         },
         {
-          "puntos": 2,
           "opcionIds": [
             "opt_mu4c9lub79868_0_mu51xm4l9re3f",
             "opt_mu4c9lub79868_1_mu51xm4lddsx4"
           ],
-          "correctas": [],
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
           "tipo": "abierta",
           "id": "mu4c9lub79868",
-          "texto": "B. Mencione una de las enseñanzas del sistema sacrificial"
-        },
-        {
-          "texto": "C. ¿Qué ha aprendido acerca del Señor, a partir del estudio del Antiguo Testamento?",
-          "id": "mu4ca0xv3s1ps",
+          "texto": "B. Mencione una de las enseñanzas del sistema sacrificial",
+          "puntos": 2,
           "correctas": [],
-          "tipo": "abierta",
-          "puntos": 8,
-          "opcionIds": [
-            "opt_mu4ca0xv3s1ps_0_mu51xm4lxc8hm",
-            "opt_mu4ca0xv3s1ps_1_mu51xm4ltau2e"
-          ],
           "opciones": [
             "Opción A",
             "Opción B"
           ]
+        },
+        {
+          "tipo": "abierta",
+          "id": "mu4ca0xv3s1ps",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "correctas": [],
+          "puntos": 8,
+          "texto": "C. ¿Qué ha aprendido acerca del Señor, a partir del estudio del Antiguo Testamento?",
+          "opcionIds": [
+            "opt_mu4ca0xv3s1ps_0_mu51xm4lxc8hm",
+            "opt_mu4ca0xv3s1ps_1_mu51xm4ltau2e"
+          ]
         }
       ],
-      "creado": "2026-09-11T00:16:07.374Z",
-      "parcialId": "1a07f7e962d_c11ee027",
+      "intentos": 1,
+      "materia": "INTRODUCCION ANTIGUO TESTAMENTO",
+      "descripcion": "",
       "aleatorio": false,
       "tiempo": 60,
-      "docenteId": "1a07f632c50_dd860db0",
-      "aprobacion": 50,
-      "mostrarNota": true,
-      "actualizado": "2026-09-17T05:00:15.230Z",
       "titulo": "EVALUACION II - INSTITUTO BÍBLICO PATRICIO SYMES - \nINTRODUCCION ANTIGUO TESTAMENTO",
-      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
-      "id": "1a08dd256ce_626918e9",
+      "actualizado": "2026-09-17T05:00:15.230Z",
+      "estado": "activo",
       "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "intentos": 1,
-      "descripcion": "",
-      "materia": "INTRODUCCION ANTIGUO TESTAMENTO"
+      "docenteId": "1a07f632c50_dd860db0",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "subtitulo": "““Mas alábese en esto el que se hubiere de alabar: en entenderme y conocerme, que yo soy\nJehová, que hago misericordia, juicio y justicia”Jer. 9:24"
     },
     {
-      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - \nGEOGRAFIA BIBLICA \n(UNIDAD I-IV / Páginas 8 – 51)",
-      "aprobacion": 50,
-      "docenteId": "1a07e62e17f_8c2a9988",
-      "intentos": 1,
-      "materia": "GEOGRAFIA BIBLICA",
       "id": "1a098fb7c34_c4313ab2",
-      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
-      "subtitulo": "",
-      "actualizado": "2026-09-16T21:19:25.503Z",
-      "creado": "2026-09-13T04:16:53.301Z",
       "mostrarNota": false,
+      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - \nGEOGRAFIA BIBLICA \n(UNIDAD I-IV / Páginas 8 – 51)",
       "tiempo": 90,
       "aleatorio": false,
-      "parcialId": "1a07ee1b882_6eabc7da",
-      "descripcion": "",
+      "aprobacion": 50,
       "estado": "activo",
-      "headerSubtitle": "“Del Señor es la tierra y todo lo que hay en ella; el mundo y los que en el habitan,\nPorque la fundo sobre los mares y la asentó sobre los ríos” Salmo 24:1-2",
-      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "subtitulo": "",
+      "intentos": 1,
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+      "descripcion": "",
       "preguntas": [
         {
+          "correctas": [],
+          "opcionIds": [
+            "opt_1a09902f666_6286e081_0_mu3oczblofieu",
+            "opt_1a09902f666_6286e081_1_mu3oczblx07y4"
+          ],
+          "palabrasCaja": [
+            "FALSO",
+            "VERDADERO"
+          ],
+          "opciones": [
+            "Verdadero",
+            "Falso"
+          ],
+          "parejas": [
+            {
+              "id": "1a0991fc022_68e8c339",
+              "respuesta": "VERDADERO",
+              "concepto": "a.  El Ecuador divide la Tierra en dos partes iguales "
+            },
+            {
+              "concepto": "b.  Los meridianos van de un polo a otro ",
+              "respuesta": "VERDADERO",
+              "id": "1a09922bc6e_d38b71db"
+            },
+            {
+              "concepto": "c.  El más nombrado de los meridianos es el de Greenwich ",
+              "id": "1a099233585_072926b3",
+              "respuesta": "VERDADERO"
+            },
+            {
+              "concepto": "d.  La distancia de cualquier punto de la Tierra al Ecuador es la latitud ",
+              "respuesta": "VERDADERO",
+              "id": "1a099239595_2576022c"
+            },
+            {
+              "concepto": "e.  La Geografía Humana tiene que ver con el paisaje natural.",
+              "respuesta": "FALSO",
+              "id": "1a09923ec4d_7874dcfc"
+            },
+            {
+              "respuesta": "FALSO",
+              "id": "1a099243135_2d9d5877",
+              "concepto": "f.  La Tierra no forma parte del universo."
+            },
+            {
+              "concepto": "g.  El Sol es una estrella de la cual recibimos luz y calor.",
+              "respuesta": "VERDADERO",
+              "id": "1a09924cf04_37d6a42d"
+            },
+            {
+              "respuesta": "VERDADERO",
+              "id": "1a09925505c_461b2a61",
+              "concepto": "h. La Tierra tiene la forma de un esferoide."
+            },
+            {
+              "respuesta": "FALSO",
+              "concepto": "i.  Rotación es el movimiento de la Tierra alrededor del sol en 365 días",
+              "id": "1a099259764_e7adaf25"
+            },
+            {
+              "respuesta": "FALSO",
+              "id": "1a09925d233_d2113442",
+              "concepto": "j.  Colombia está en el hemisferio del sur."
+            }
+          ],
+          "matchCorrectos": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            1,
+            1
+          ],
+          "puntos": 10,
+          "id": "1a09902f666_6286e081",
           "texto": "1. NOCIONES GENERALES \nLea cuidadosamente cada afirmación, y marque (v) si es verdadera, y (f) si es falsa.",
           "filas": [
             {
               "celulas": [
                 {
-                  "respuesta": "",
-                  "tipo": "espacio"
+                  "tipo": "espacio",
+                  "respuesta": ""
                 }
               ],
               "id": "1a0990341cf_46a9c517"
@@ -818,17 +1122,6 @@
             "enun_1a09902f666_6286e081_8_mu3og44g8cwgx",
             "enun_1a09902f666_6286e081_9_mu3ogev3dkyiq"
           ],
-          "tipo": "matching",
-          "puntos": 10,
-          "palabrasCaja": [
-            "FALSO",
-            "VERDADERO"
-          ],
-          "correctas": [],
-          "opciones": [
-            "Verdadero",
-            "Falso"
-          ],
           "enunciados": [
             "a. El Ecuador divide la Tierra en dos partes iguales",
             "b. Los meridianos van de un polo a otro",
@@ -841,79 +1134,22 @@
             "i. Rotación es el movimiento de la Tierra alrededor del sol en 365 días.",
             "j. Colombia está en el hemisferio del sur."
           ],
-          "parejas": [
-            {
-              "concepto": "a.  El Ecuador divide la Tierra en dos partes iguales ",
-              "respuesta": "VERDADERO",
-              "id": "1a0991fc022_68e8c339"
-            },
-            {
-              "id": "1a09922bc6e_d38b71db",
-              "respuesta": "VERDADERO",
-              "concepto": "b.  Los meridianos van de un polo a otro "
-            },
-            {
-              "concepto": "c.  El más nombrado de los meridianos es el de Greenwich ",
-              "respuesta": "VERDADERO",
-              "id": "1a099233585_072926b3"
-            },
-            {
-              "concepto": "d.  La distancia de cualquier punto de la Tierra al Ecuador es la latitud ",
-              "respuesta": "VERDADERO",
-              "id": "1a099239595_2576022c"
-            },
-            {
-              "id": "1a09923ec4d_7874dcfc",
-              "respuesta": "FALSO",
-              "concepto": "e.  La Geografía Humana tiene que ver con el paisaje natural."
-            },
-            {
-              "concepto": "f.  La Tierra no forma parte del universo.",
-              "id": "1a099243135_2d9d5877",
-              "respuesta": "FALSO"
-            },
-            {
-              "concepto": "g.  El Sol es una estrella de la cual recibimos luz y calor.",
-              "id": "1a09924cf04_37d6a42d",
-              "respuesta": "VERDADERO"
-            },
-            {
-              "concepto": "h. La Tierra tiene la forma de un esferoide.",
-              "respuesta": "VERDADERO",
-              "id": "1a09925505c_461b2a61"
-            },
-            {
-              "id": "1a099259764_e7adaf25",
-              "concepto": "i.  Rotación es el movimiento de la Tierra alrededor del sol en 365 días",
-              "respuesta": "FALSO"
-            },
-            {
-              "respuesta": "FALSO",
-              "id": "1a09925d233_d2113442",
-              "concepto": "j.  Colombia está en el hemisferio del sur."
-            }
-          ],
-          "id": "1a09902f666_6286e081",
-          "matchCorrectos": [
-            0,
-            0,
-            0,
-            0,
-            1,
-            1,
-            0,
-            0,
-            1,
-            1
-          ],
-          "opcionIds": [
-            "opt_1a09902f666_6286e081_0_mu3oczblofieu",
-            "opt_1a09902f666_6286e081_1_mu3oczblx07y4"
-          ]
+          "tipo": "matching"
         },
         {
-          "tipo": "matching",
+          "matchCorrectos": [
+            0,
+            3,
+            0,
+            5,
+            2,
+            6,
+            8,
+            9,
+            7
+          ],
           "id": "1a099273302_7bf4f9b3",
+          "texto": "2. Como parte del desarrollo en Antiguo Testamento se encuentra la reseña histórica de los imperios más importantes, que hicieron efecto en la vida del pueblo de Israel. (Escoja la palabra que corresponde a cada enunciado) ",
           "palabrasCaja": [
             "PERÍODO PRIMITIVO",
             "IMPERIO ANTIGUO",
@@ -926,16 +1162,17 @@
             "NABUCODONOSOR",
             "SARGÓN II"
           ],
-          "matchCorrectos": [
-            0,
-            3,
-            0,
-            5,
-            2,
-            6,
-            8,
-            9,
-            7
+          "puntos": 18,
+          "enunciados": [
+            "a. Este período abarca de Tiglat – Poleser I 1120 a.C. a Pul 745 a.C. (Imperio Asirio)",
+            "b. Sometió a los fenicios, filisteos y derrotó al ejército Egipcio.\n",
+            "c. Comprende la fundación de la Primera Colonia de Asur (Imperio Asirio)",
+            "d. 1700 hasta la derrota de Belsasar en 538 a.C.;(Imperio Babilónico",
+            "e. El período de 705 – 626 a.C. constituye e la grandeza de Asiria.",
+            "f. Uno de los nombres que se designó a Babilonia",
+            "g. Rey importante de la época",
+            "h. (722-705 a.C.) Recibió la rendición de Israel (imperio Asirio)",
+            "i.(668-626 a.C.) Fue el último de los grandes reyes de Asiria."
           ],
           "opcionIds": [
             "opt_1a099273302_7bf4f9b3_0_mu3ohsc8zqij7",
@@ -949,8 +1186,6 @@
             "opt_1a099273302_7bf4f9b3_8_mu3ojy9p3n0g3",
             "opt_1a099273302_7bf4f9b3_9_mu3ok83pexu0v"
           ],
-          "puntos": 18,
-          "texto": "2. Como parte del desarrollo en Antiguo Testamento se encuentra la reseña histórica de los imperios más importantes, que hicieron efecto en la vida del pueblo de Israel. (Escoja la palabra que corresponde a cada enunciado) ",
           "enunciadoIds": [
             "enun_1a099273302_7bf4f9b3_0_mu3ohsc8s92kr",
             "enun_1a099273302_7bf4f9b3_1_mu3okpotdphng",
@@ -962,7 +1197,6 @@
             "enun_1a099273302_7bf4f9b3_7_mu3okyj00grrv",
             "enun_1a099273302_7bf4f9b3_8_mu3okzccb32lu"
           ],
-          "correctas": [],
           "opciones": [
             "Período Primitivo",
             "Imperio Antiguo",
@@ -975,30 +1209,11 @@
             "Nabucodonosor ",
             "Sargón II"
           ],
-          "enunciados": [
-            "a. Este período abarca de Tiglat – Poleser I 1120 a.C. a Pul 745 a.C. (Imperio Asirio)",
-            "b. Sometió a los fenicios, filisteos y derrotó al ejército Egipcio.\n",
-            "c. Comprende la fundación de la Primera Colonia de Asur (Imperio Asirio)",
-            "d. 1700 hasta la derrota de Belsasar en 538 a.C.;(Imperio Babilónico",
-            "e. El período de 705 – 626 a.C. constituye e la grandeza de Asiria.",
-            "f. Uno de los nombres que se designó a Babilonia",
-            "g. Rey importante de la época",
-            "h. (722-705 a.C.) Recibió la rendición de Israel (imperio Asirio)",
-            "i.(668-626 a.C.) Fue el último de los grandes reyes de Asiria."
-          ]
+          "tipo": "matching",
+          "correctas": []
         },
         {
-          "opcionIds": [
-            "opt_1a09938ea05_91dc1ac1_0_mu3je32o3ja2l",
-            "opt_1a09938ea05_91dc1ac1_1_mu3je32ogf233",
-            "opt_1a09938ea05_91dc1ac1_2_mu3je32olbth3",
-            "opt_1a09938ea05_91dc1ac1_3_mu3je32o5ysjf",
-            "opt_1a09938ea05_91dc1ac1_4_mu3je32oo5dga"
-          ],
-          "texto": "3. Lea cuidadosamente cada enunciado y luego escoja la respuesta correcta.\n\n Rey de Egipto que dio muerte a Josias (2 Crónicas 35:20-27).",
-          "correctas": [
-            3
-          ],
+          "id": "1a09938ea05_91dc1ac1",
           "opciones": [
             "a. Sisac ",
             "b. Zera",
@@ -1006,11 +1221,69 @@
             "d. Necao ",
             "e. Tiraca"
           ],
-          "id": "1a09938ea05_91dc1ac1",
+          "correctas": [
+            3
+          ],
           "puntos": 2,
+          "texto": "3. Lea cuidadosamente cada enunciado y luego escoja la respuesta correcta.\n\n Rey de Egipto que dio muerte a Josias (2 Crónicas 35:20-27).",
+          "opcionIds": [
+            "opt_1a09938ea05_91dc1ac1_0_mu3je32o3ja2l",
+            "opt_1a09938ea05_91dc1ac1_1_mu3je32ogf233",
+            "opt_1a09938ea05_91dc1ac1_2_mu3je32olbth3",
+            "opt_1a09938ea05_91dc1ac1_3_mu3je32o5ysjf",
+            "opt_1a09938ea05_91dc1ac1_4_mu3je32oo5dga"
+          ],
           "tipo": "checkbox"
         },
         {
+          "palabrasCaja": [
+            "IMPERIO CALDEO O BABILÓNICO",
+            "IMPERIO EGIPCIO",
+            "IMPERIO MEDO-PERSA",
+            "IMPERIO SIRIO"
+          ],
+          "parejas": [
+            {
+              "concepto": "a. Daniel fue llevado cautivo a este imperio. ______",
+              "id": "1a099446845_55d0db18",
+              "respuesta": "IMPERIO CALDEO O BABILÓNICO"
+            },
+            {
+              "respuesta": "IMPERIO SIRIO",
+              "id": "1a09c1715a6_915440f4",
+              "concepto": "b. Damasco fue un centro de comercio. ______"
+            },
+            {
+              "id": "1a09c17685d_36e82112",
+              "respuesta": "IMPERIO EGIPCIO",
+              "concepto": "c. Tenía la forma de una flor de loto. _____"
+            },
+            {
+              "id": "1a09c17fc05_1b42b8fb",
+              "respuesta": "IMPERIO CALDEO O BABILÓNICO",
+              "concepto": "d. Nabucodonosor fue rey cuando destruyó Jerusalén. ______"
+            },
+            {
+              "id": "1a09c186444_a0e5c363",
+              "respuesta": "IMPERIO EGIPCIO",
+              "concepto": "e. Moisés estudió en este imperio. ______"
+            },
+            {
+              "concepto": "f. Ciro y Darío gobernaron este imperio. ______",
+              "respuesta": "IMPERIO MEDO-PERSA",
+              "id": "1a09c18d2d4_031cfacd"
+            },
+            {
+              "concepto": "g. Hazael sometió a Israel y Judá y les cobró tributo. _______",
+              "id": "1a09c192ffc_a6be9736",
+              "respuesta": "IMPERIO SIRIO"
+            },
+            {
+              "id": "1a09c199233_cd976d78",
+              "concepto": "h. Artajerjes permitió al profeta Esdras volver a Jerusalén_______",
+              "respuesta": "IMPERIO MEDO-PERSA"
+            }
+          ],
           "enunciados": [
             "a. Daniel fue llevado cautivo a este imperio.",
             "b. Damasco fue un centro de comercio.",
@@ -1020,6 +1293,13 @@
             "f. Ciro y Darío gobernaron este imperio.",
             "g. Hazael sometió a Israel y Judá y les cobró tributo",
             "h. Artajerjes permitió al profeta Esdras volver a Jerusalén"
+          ],
+          "correctas": [],
+          "opcionIds": [
+            "opt_1a0994449ad_452fefd5_0_mu3pkbi5q8x3k",
+            "opt_1a0994449ad_452fefd5_1_mu3pkbi57skcv",
+            "opt_1a0994449ad_452fefd5_2_mu3pkbi55e6s1",
+            "opt_1a0994449ad_452fefd5_3_mu3pkbi50mif2"
           ],
           "enunciadoIds": [
             "enun_1a0994449ad_452fefd5_0_mu3pkbi5rdkj1",
@@ -1031,15 +1311,8 @@
             "enun_1a0994449ad_452fefd5_6_mu3pmbddn0r60",
             "enun_1a0994449ad_452fefd5_7_mu3pmlq1gxk47"
           ],
-          "opcionIds": [
-            "opt_1a0994449ad_452fefd5_0_mu3pkbi5q8x3k",
-            "opt_1a0994449ad_452fefd5_1_mu3pkbi57skcv",
-            "opt_1a0994449ad_452fefd5_2_mu3pkbi55e6s1",
-            "opt_1a0994449ad_452fefd5_3_mu3pkbi50mif2"
-          ],
+          "tipo": "matching",
           "texto": "4. Escriba el imperio al que corresponde cada enunciado:",
-          "correctas": [],
-          "id": "1a0994449ad_452fefd5",
           "puntos": 16,
           "matchCorrectos": [
             0,
@@ -1051,104 +1324,67 @@
             3,
             2
           ],
-          "tipo": "matching",
+          "id": "1a0994449ad_452fefd5",
           "opciones": [
             "Imperio Caldeo o Babilónico",
             "Imperio Egipcio",
             "Imperio Medo-Persa",
             "Imperio Sirio"
-          ],
-          "parejas": [
-            {
-              "id": "1a099446845_55d0db18",
-              "respuesta": "IMPERIO CALDEO O BABILÓNICO",
-              "concepto": "a. Daniel fue llevado cautivo a este imperio. ______"
-            },
-            {
-              "concepto": "b. Damasco fue un centro de comercio. ______",
-              "respuesta": "IMPERIO SIRIO",
-              "id": "1a09c1715a6_915440f4"
-            },
-            {
-              "concepto": "c. Tenía la forma de una flor de loto. _____",
-              "respuesta": "IMPERIO EGIPCIO",
-              "id": "1a09c17685d_36e82112"
-            },
-            {
-              "id": "1a09c17fc05_1b42b8fb",
-              "concepto": "d. Nabucodonosor fue rey cuando destruyó Jerusalén. ______",
-              "respuesta": "IMPERIO CALDEO O BABILÓNICO"
-            },
-            {
-              "concepto": "e. Moisés estudió en este imperio. ______",
-              "respuesta": "IMPERIO EGIPCIO",
-              "id": "1a09c186444_a0e5c363"
-            },
-            {
-              "respuesta": "IMPERIO MEDO-PERSA",
-              "id": "1a09c18d2d4_031cfacd",
-              "concepto": "f. Ciro y Darío gobernaron este imperio. ______"
-            },
-            {
-              "respuesta": "IMPERIO SIRIO",
-              "concepto": "g. Hazael sometió a Israel y Judá y les cobró tributo. _______",
-              "id": "1a09c192ffc_a6be9736"
-            },
-            {
-              "concepto": "h. Artajerjes permitió al profeta Esdras volver a Jerusalén_______",
-              "id": "1a09c199233_cd976d78",
-              "respuesta": "IMPERIO MEDO-PERSA"
-            }
-          ],
-          "palabrasCaja": [
-            "IMPERIO CALDEO O BABILÓNICO",
-            "IMPERIO EGIPCIO",
-            "IMPERIO MEDO-PERSA",
-            "IMPERIO SIRIO"
           ]
         },
         {
-          "id": "1a09c1bc4da_b05a4718",
-          "puntos": 4,
-          "opcionIds": [
-            "opt_1a09c1bc4da_b05a4718_0_mu3pnlqr6zuls",
-            "opt_1a09c1bc4da_b05a4718_1_mu3pnlqrpuf7x",
-            "opt_1a09c1bc4da_b05a4718_2_mu3pnlqrr3srn",
-            "opt_1a09c1bc4da_b05a4718_3_mu3pnlqrkdik1"
-          ],
-          "tipo": "multiple",
-          "correctas": [
-            2
-          ],
-          "texto": "5. Lea cuidadosamente y escoja la respuesta correcta.\n\n Durante el siglo después de las conquistas de Alejandro Magno, Italia, que por su posición geográfica constituía el centro y corazón del Mar Mediterráneo y junto con los países circundantes, vino a constituir el centro de la gravedad política en el mundo antiguo. Roma, según las tradiciones, fue fundada en el año 754 a.C. por:\n ",
           "opciones": [
             "a. Poncio Pilato y Herodes ",
             "b. Antioco II ",
             "c. Romulo y Remo ",
             "d. Emperador Trajano"
+          ],
+          "correctas": [
+            2
+          ],
+          "puntos": 4,
+          "tipo": "multiple",
+          "texto": "5. Lea cuidadosamente y escoja la respuesta correcta.\n\n Durante el siglo después de las conquistas de Alejandro Magno, Italia, que por su posición geográfica constituía el centro y corazón del Mar Mediterráneo y junto con los países circundantes, vino a constituir el centro de la gravedad política en el mundo antiguo. Roma, según las tradiciones, fue fundada en el año 754 a.C. por:\n ",
+          "id": "1a09c1bc4da_b05a4718",
+          "opcionIds": [
+            "opt_1a09c1bc4da_b05a4718_0_mu3pnlqr6zuls",
+            "opt_1a09c1bc4da_b05a4718_1_mu3pnlqrpuf7x",
+            "opt_1a09c1bc4da_b05a4718_2_mu3pnlqrr3srn",
+            "opt_1a09c1bc4da_b05a4718_3_mu3pnlqrkdik1"
           ]
         }
-      ]
+      ],
+      "creado": "2026-09-13T04:16:53.301Z",
+      "actualizado": "2026-09-16T21:19:25.503Z",
+      "parcialId": "1a07ee1b882_6eabc7da",
+      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "headerSubtitle": "“Del Señor es la tierra y todo lo que hay en ella; el mundo y los que en el habitan,\nPorque la fundo sobre los mares y la asentó sobre los ríos” Salmo 24:1-2",
+      "materia": "GEOGRAFIA BIBLICA"
     },
     {
-      "mostrarNota": false,
-      "materia": "APOCALIPSIS I",
-      "estado": "activo",
-      "actualizado": "2026-09-16T16:02:54.422Z",
-      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
-      "descripcion": "",
-      "creado": "2026-09-13T19:11:56.981Z",
       "id": "1a09c2ef035_86cfd5db",
-      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "tiempo": 90,
-      "docenteId": "1a07e62e17f_8c2a9988",
-      "aleatorio": false,
+      "actualizado": "2026-09-16T16:02:54.422Z",
       "aprobacion": 50,
-      "headerSubtitle": "",
       "parcialId": "1a07eeeb300_be417f68",
+      "materia": "1a07ed96600_e4b34393",
+      "intentos": 1,
       "preguntas": [
         {
+          "correctas": [],
           "id": "1a09c302302_5ab7f943",
+          "columnas": [
+            "Columna 1"
+          ],
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "texto": "A. CONTESTE LAS SIGUIENTES PREGUNTAS.\n\n1. EL NOMBRE DEL AUTOR DE APOCALIPSIS ES ________ EL ________ DE JESÚS.",
+          "opcionIds": [
+            "opt_1a09c302302_5ab7f943_0_mu3jez51qlhru",
+            "opt_1a09c302302_5ab7f943_1_mu3jez51bjk55"
+          ],
+          "tipo": "abierta",
           "parejas": [
             {
               "id": "1a09c325ca2_c97b8a50",
@@ -1156,202 +1392,187 @@
               "concepto": "Concepto 1"
             }
           ],
-          "tipo": "abierta",
+          "puntos": 1
+        },
+        {
           "puntos": 1,
-          "opcionIds": [
-            "opt_1a09c302302_5ab7f943_0_mu3jez51qlhru",
-            "opt_1a09c302302_5ab7f943_1_mu3jez51bjk55"
-          ],
-          "texto": "A. CONTESTE LAS SIGUIENTES PREGUNTAS.\n\n1. EL NOMBRE DEL AUTOR DE APOCALIPSIS ES ________ EL ________ DE JESÚS.",
+          "correctas": [],
+          "tipo": "abierta",
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "columnas": [
-            "Columna 1"
-          ],
-          "correctas": []
-        },
-        {
+          "id": "1a09c3dd3c8_83df2c05",
+          "texto": "2. LA FECHA MÁS ACEPTABLE DE LA ESCRITURA DEL LIBRO DE APOCALIPSIS ES______",
           "opcionIds": [
             "opt_1a09c3dd3c8_83df2c05_0_mu3jez51s6ah0",
             "opt_1a09c3dd3c8_83df2c05_1_mu3jez51boqyh"
-          ],
-          "correctas": [],
-          "puntos": 1,
-          "tipo": "abierta",
-          "id": "1a09c3dd3c8_83df2c05",
-          "texto": "2. LA FECHA MÁS ACEPTABLE DE LA ESCRITURA DEL LIBRO DE APOCALIPSIS ES______",
-          "opciones": [
-            "Opción A",
-            "Opción B"
           ]
         },
         {
-          "tipo": "abierta",
-          "id": "1a09c3e69c7_e26bccf0",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
-          "correctas": [],
-          "puntos": 1,
           "texto": "3. ESCRIBA EL TEMA CENTRAL DEL LIBRO DE APOCALIPSIS._____",
+          "correctas": [],
+          "id": "1a09c3e69c7_e26bccf0",
           "opcionIds": [
             "opt_1a09c3e69c7_e26bccf0_0_mu3jez51kfgrq",
             "opt_1a09c3e69c7_e26bccf0_1_mu3jez51voswt"
+          ],
+          "tipo": "abierta",
+          "puntos": 1,
+          "opciones": [
+            "Opción A",
+            "Opción B"
           ]
         },
         {
-          "puntos": 1,
+          "texto": "4. EL CARÁCTER PROFÉTICO, ¿CUÁL ES? _____",
+          "correctas": [],
           "opcionIds": [
             "opt_1a09c4046fe_56fba531_0_mu3jez51svhnf",
             "opt_1a09c4046fe_56fba531_1_mu3jez51gibt9"
           ],
-          "tipo": "abierta",
-          "id": "1a09c4046fe_56fba531",
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "correctas": [],
-          "texto": "4. EL CARÁCTER PROFÉTICO, ¿CUÁL ES? _____"
+          "puntos": 1,
+          "tipo": "abierta",
+          "id": "1a09c4046fe_56fba531"
         },
         {
-          "id": "1a09c41142d_ec2fae34",
           "texto": "5. EN EL VERSÍCULO 8 DEL PRIMER CAPÍTULO TENEMOS UNA LISTA DE LOS NOMBRES DE DIOS NOMBRE TRES DE ESOS NOMBRES.",
+          "correctas": [],
+          "puntos": 1,
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
           "opcionIds": [
             "opt_1a09c41142d_ec2fae34_0_mu3jez51lv2gk",
             "opt_1a09c41142d_ec2fae34_1_mu3jez51b1y63"
           ],
-          "tipo": "abierta",
+          "id": "1a09c41142d_ec2fae34",
+          "tipo": "abierta"
+        },
+        {
           "opciones": [
             "Opción A",
             "Opción B"
           ],
           "correctas": [],
-          "puntos": 1
-        },
-        {
-          "id": "1a09c45376a_3e1b394a",
-          "puntos": 1,
           "texto": "6. COMPLETE LA SIGUIENTE BENDICIÓN TRINITARIA.\n\n “GRACIA Y _________ A VOSOTROS, DE QUE ES Y QUE ___________Y QUE HA DE VENIR, Y DE LOS SIETE ESPÍRITUS QUE ESTÁN DELANTE DE SU __________________; Y DE ______________ EL TESTIGO FIEL, EL PRIMOGÉNITO DE LOS ________________________, Y EL SOBERANO DE LOS REYES DE LA TIERRA.",
+          "puntos": 1,
+          "id": "1a09c45376a_3e1b394a",
           "tipo": "abierta",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
           "opcionIds": [
             "opt_1a09c45376a_3e1b394a_0_mu3kksq89z0xq",
             "opt_1a09c45376a_3e1b394a_1_mu3kksq8hw2qn"
-          ],
-          "correctas": []
+          ]
         },
         {
+          "id": "1a09c468519_347da929",
+          "tipo": "abierta",
+          "opcionIds": [
+            "opt_1a09c468519_347da929_0_mu3jez51b54i8",
+            "opt_1a09c468519_347da929_1_mu3jez51lnfjb"
+          ],
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "tipo": "abierta",
-          "texto": "7. EN EL PRIMER CAPÍTULO DE APOCALIPSIS, JUAN ES ORDENADO A ESCRIBIR LO QUE EL PUEDE VER EN UNA VISIÓN. ¿QUIÉN ES QUIEN SE REVELA EN ESA VISIÓN?________",
-          "puntos": 1,
           "correctas": [],
-          "id": "1a09c468519_347da929",
-          "opcionIds": [
-            "opt_1a09c468519_347da929_0_mu3jez51b54i8",
-            "opt_1a09c468519_347da929_1_mu3jez51lnfjb"
-          ]
+          "puntos": 1,
+          "texto": "7. EN EL PRIMER CAPÍTULO DE APOCALIPSIS, JUAN ES ORDENADO A ESCRIBIR LO QUE EL PUEDE VER EN UNA VISIÓN. ¿QUIÉN ES QUIEN SE REVELA EN ESA VISIÓN?________"
         },
         {
+          "id": "1a09c470b99_5b2a367a",
+          "texto": "8. En este capítulo Juan ensalza a Jesucristo, por eso tenemos la doxología. \nComplete los espacios.\n\n “Al que nos amó, y nos ________________ de nuestros pecados con su ___________________, y nos hizo reyes y _______________________para Dios, su Padre; a él sea __________________ e imperio por los ________________________ de los siglos. Amén.”",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
           "opcionIds": [
             "opt_1a09c470b99_5b2a367a_0_mu3kksq8hndjd",
             "opt_1a09c470b99_5b2a367a_1_mu3kksq80ghva"
           ],
-          "texto": "8. En este capítulo Juan ensalza a Jesucristo, por eso tenemos la doxología. \nComplete los espacios.\n\n “Al que nos amó, y nos ________________ de nuestros pecados con su ___________________, y nos hizo reyes y _______________________para Dios, su Padre; a él sea __________________ e imperio por los ________________________ de los siglos. Amén.”",
+          "tipo": "abierta",
           "correctas": [],
-          "puntos": 1,
-          "id": "1a09c470b99_5b2a367a",
+          "puntos": 1
+        },
+        {
+          "id": "1a09c4b0cb6_cf92c7df",
+          "tipo": "abierta",
+          "puntos": 3,
+          "correctas": [],
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "tipo": "abierta"
-        },
-        {
           "opcionIds": [
             "opt_1a09c4b0cb6_cf92c7df_0_mu3kksq8dgta7",
             "opt_1a09c4b0cb6_cf92c7df_1_mu3kksq8fab2d"
           ],
-          "texto": "B. SE HA TOMADO CUATRO INTERPRETACIONES O PERSPECTIVAS PARA INTERPRETAR EL LIBRO DE APOCALIPSIS. COMPLETE EL SIGUIENTE CUADRO EXPLICANDO EL ENFOQUE EN SUS PROPIAS PALABRAS.\n\nPRETERISTA",
-          "puntos": 3,
-          "id": "1a09c4b0cb6_cf92c7df",
-          "correctas": [],
-          "tipo": "abierta",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ]
+          "texto": "B. SE HA TOMADO CUATRO INTERPRETACIONES O PERSPECTIVAS PARA INTERPRETAR EL LIBRO DE APOCALIPSIS. COMPLETE EL SIGUIENTE CUADRO EXPLICANDO EL ENFOQUE EN SUS PROPIAS PALABRAS.\n\nPRETERISTA"
         },
         {
           "id": "mu3jpvp3w14w8",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "correctas": [],
+          "tipo": "abierta",
+          "puntos": 3,
           "opcionIds": [
             "opt_mu3jpvp3w14w8_0_mu3kksq8awb0e",
             "opt_mu3jpvp3w14w8_1_mu3kksq8kduqa"
           ],
-          "correctas": [],
-          "texto": "HISTORICISTA",
-          "tipo": "abierta",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
-          "puntos": 3
+          "texto": "HISTORICISTA"
         },
         {
-          "tipo": "abierta",
-          "puntos": 3,
           "opciones": [
             "Opción A",
             "Opción B"
           ],
           "id": "mu3jwdq3hcdeq",
-          "correctas": [],
-          "texto": "IDEALISTA",
           "opcionIds": [
             "opt_mu3jwdq3hcdeq_0_mu3kksq8lditt",
             "opt_mu3jwdq3hcdeq_1_mu3kksq82546t"
-          ]
+          ],
+          "correctas": [],
+          "puntos": 3,
+          "texto": "IDEALISTA",
+          "tipo": "abierta"
         },
         {
-          "tipo": "abierta",
-          "texto": "FUTURISTA",
+          "puntos": 3,
           "opcionIds": [
             "opt_mu3jwt9nzertz_0_mu3kksq8dyyil",
             "opt_mu3jwt9nzertz_1_mu3kksq8ve2qi"
           ],
-          "correctas": [],
-          "id": "mu3jwt9nzertz",
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "puntos": 3
+          "texto": "FUTURISTA",
+          "tipo": "abierta",
+          "id": "mu3jwt9nzertz",
+          "correctas": []
         },
         {
-          "tipo": "matching",
-          "id": "mu3jyzvmvwnep",
-          "matchCorrectos": [
-            3,
-            7,
-            9,
-            6,
-            5,
-            1,
-            8,
-            2,
-            4,
-            0
+          "enunciados": [
+            "A. “SÉ FIEL HASTA LA MUERTE, Y YO TE DARÉ LA CORONA DE LA VIDA.”",
+            "b. “Tienes ahí a los que retienen la doctrina de Balaam.”",
+            "c. “Yo conozco tus obras, que ni eres frío ni caliente.”",
+            "d. “Conozco tu obras, tu arduo trabajo y paciencia; que no puedes soportar a los malos.",
+            "e. “Retén lo que tienes, para que ninguno tome tu corazón.”",
+            "f. “Toleras a la mujer Jezabel, se dice profetisa, enseña y seduce.”",
+            "g. “Tienes poca fuerza, pero has guardado mi palabra, y no has negado mi nombre.”",
+            "h.”Tienes unas pocas personas que no han manchado sus vestiduras”",
+            "i. “El que tiene oído, oiga lo que el Espíritu dice a las Iglesias.”",
+            "j. “Has dejado tu primer amor.”"
           ],
+          "correctas": [],
           "opcionIds": [
             "opt_mu3jyzvmvwnep_0_mu3kc0utwkrld",
             "opt_mu3jyzvmvwnep_1_mu3kc0ut59x8f",
@@ -1364,8 +1585,6 @@
             "opt_mu3jyzvmvwnep_8_mu3kc0ut4icxc",
             "opt_mu3jyzvmvwnep_9_mu3kc0utavuvu"
           ],
-          "puntos": 10,
-          "texto": "C. APAREAR los de la columna A con los de la columna B.",
           "enunciadoIds": [
             "enun_mu3jyzvmvwnep_0_mu3kc0ut02874",
             "enun_mu3jyzvmvwnep_1_mu3l2vjb3b8s3",
@@ -1378,7 +1597,22 @@
             "enun_mu3jyzvmvwnep_8_mu3l7xez619ph",
             "enun_mu3jyzvmvwnep_9_mu3l8dnvuq8z6"
           ],
-          "correctas": [],
+          "tipo": "matching",
+          "texto": "C. APAREAR los de la columna A con los de la columna B.",
+          "puntos": 10,
+          "matchCorrectos": [
+            3,
+            7,
+            9,
+            6,
+            5,
+            1,
+            8,
+            2,
+            4,
+            0
+          ],
+          "id": "mu3jyzvmvwnep",
           "opciones": [
             "1. REPROCHE A LA IGLESIA DE ÉFESO.",
             "2.  REPROCHE A IGLESIA DE TIATIRA.",
@@ -1390,33 +1624,36 @@
             "8. REPROCHE A LA IGLESIA DE PÉRGAMO.",
             "9. ELOGIO A LA IGLESIA DE FILADELFIA.",
             "10. EL REPROCHE DE LA IGLESIA DE LAODICEA."
-          ],
-          "enunciados": [
-            "A. “SÉ FIEL HASTA LA MUERTE, Y YO TE DARÉ LA CORONA DE LA VIDA.”",
-            "b. “Tienes ahí a los que retienen la doctrina de Balaam.”",
-            "c. “Yo conozco tus obras, que ni eres frío ni caliente.”",
-            "d. “Conozco tu obras, tu arduo trabajo y paciencia; que no puedes soportar a los malos.",
-            "e. “Retén lo que tienes, para que ninguno tome tu corazón.”",
-            "f. “Toleras a la mujer Jezabel, se dice profetisa, enseña y seduce.”",
-            "g. “Tienes poca fuerza, pero has guardado mi palabra, y no has negado mi nombre.”",
-            "h.”Tienes unas pocas personas que no han manchado sus vestiduras”",
-            "i. “El que tiene oído, oiga lo que el Espíritu dice a las Iglesias.”",
-            "j. “Has dejado tu primer amor.”"
           ]
         },
         {
           "correctas": [],
-          "opcionIds": [
-            "opt_mu3l9tk2f0l72_0_mu3lo4mrwtav0",
-            "opt_mu3l9tk2f0l72_1_mu3lo4mry5s87"
-          ],
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "id": "mu3l9tk2f0l72",
           "puntos": 2,
           "texto": "D. Contestar las siguientes preguntas.\n\n1. ¿Cuál es la “bienaventuranza” que se menciona para los que leen el libro de Apocalipsis?",
+          "id": "mu3l9tk2f0l72",
+          "tipo": "abierta",
+          "opcionIds": [
+            "opt_mu3l9tk2f0l72_0_mu3lo4mrwtav0",
+            "opt_mu3l9tk2f0l72_1_mu3lo4mry5s87"
+          ]
+        },
+        {
+          "texto": "2. La iglesia de Laodicea se parece a muchas iglesias hoy en día y en peligro de ser desechados por Dios, pero hay una promesa muy especial para Laodicea si pone correctivos y vencen al enemigo. ¿Cuál es la promesa que Cristo da a esta iglesia?",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "id": "mu3lag0y1mom2",
+          "opcionIds": [
+            "opt_mu3lag0y1mom2_0_mu3lo4mrvvpph",
+            "opt_mu3lag0y1mom2_1_mu3lo4mrrhpiw"
+          ],
+          "correctas": [],
+          "puntos": 2,
           "tipo": "abierta"
         },
         {
@@ -1425,80 +1662,323 @@
             "Opción B"
           ],
           "correctas": [],
-          "opcionIds": [
-            "opt_mu3lag0y1mom2_0_mu3lo4mrvvpph",
-            "opt_mu3lag0y1mom2_1_mu3lo4mrrhpiw"
-          ],
-          "puntos": 2,
-          "id": "mu3lag0y1mom2",
-          "texto": "2. La iglesia de Laodicea se parece a muchas iglesias hoy en día y en peligro de ser desechados por Dios, pero hay una promesa muy especial para Laodicea si pone correctivos y vencen al enemigo. ¿Cuál es la promesa que Cristo da a esta iglesia?",
-          "tipo": "abierta"
-        },
-        {
           "tipo": "abierta",
           "texto": "3. El Señor le dice a la iglesia de Sardis “Yo conozco tus obras, que tienes nombre de que vives, y estás muerto…” ¿Cómo era que esto se manifestaba en la iglesia de Sardis? ",
-          "puntos": 2,
           "id": "mu3lbbnuma9qz",
           "opcionIds": [
             "opt_mu3lbbnuma9qz_0_mu3lo4ms4eo9m",
             "opt_mu3lbbnuma9qz_1_mu3lo4msj0gf2"
           ],
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
-          "correctas": []
+          "puntos": 2
         },
         {
+          "puntos": 2,
+          "tipo": "abierta",
           "correctas": [],
-          "texto": "4. El Señor reprocha a Pérgamo diciéndoles que retenían la doctrina de Balaam. ¿Cuál era la doctrina de Balaam?",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
+          "id": "mu3lbmay3b4v1",
           "opcionIds": [
             "opt_mu3lbmay3b4v1_0_mu3lo4ms29ea2",
             "opt_mu3lbmay3b4v1_1_mu3lo4msqahdj"
           ],
-          "id": "mu3lbmay3b4v1",
-          "puntos": 2,
-          "tipo": "abierta"
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "texto": "4. El Señor reprocha a Pérgamo diciéndoles que retenían la doctrina de Balaam. ¿Cuál era la doctrina de Balaam?"
         }
       ],
-      "subtitulo": "",
+      "creado": "2026-09-13T19:11:56.981Z",
+      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "headerSubtitle": "",
+      "aleatorio": false,
+      "mostrarNota": false,
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "mu646uivlewlf",
+      "descripcion": "",
+      "tiempo": 90,
       "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - \nAPOCALIPSIS I\ncapítulos 1 – 6",
-      "intentos": 1
+      "estado": "activo",
+      "subtitulo": ""
     },
     {
-      "materia": "PROFETAS MAYORES I",
-      "parcialId": "1a07ef00ed7_85da3677",
-      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - PROFETAS MAYORES I",
-      "estado": "activo",
-      "descripcion": "",
-      "actualizado": "2026-09-17T03:32:02.875Z",
-      "tiempo": 90,
-      "headerSubtitle": "“Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros. Y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz” Isaías 9:6",
-      "aleatorio": false,
+      "id": "mtuxh8dyupnnp",
       "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "mostrarNota": true,
+      "subtitulo": "““MAS ALÁBESE EN ESTO EL QUE SE HUBIERE DE ALABAR:\n EN ENTENDERME Y CONOCERME, QUE YO SOY\nJEHOVÁ, QUE HAGO MISERICORDIA, JUICIO Y JUSTICIA”JER. 9:24",
+      "materia": "INTRODUCCION ANTIGUO TESTAMENTO",
+      "aleatorio": false,
+      "descripcion": "",
+      "creado": "2026-09-10T02:48:34.486Z",
+      "actualizado": "2026-09-11T23:42:21.950Z",
+      "estado": "borrador",
       "aprobacion": 50,
-      "id": "mu4cclforh0l1",
       "intentos": 1,
-      "docenteId": "1a07f632c50_dd860db0",
+      "parcialId": "1a07ee112ca_a31b6f13",
+      "tiempo": 60,
+      "titulo": "INSTITUTO BÍBLICO PATRICIO SYMES INTRODUCCIÓN AL A.T. –EVALUACIÓN II (UNIDADES IV-VIII)",
+      "preguntas": [
+        {
+          "tipo": "multiple",
+          "opciones": [
+            "A. EN 5:13-15, EL SEÑOR SE REVELA A JOSUÉ COMO “EL PRÍNCIPE DEL EJÉRCITO DE JEHOVÁ”. ESTA CRISTOFANÍA NOS MUESTRA QUE DIOS MISMO ESTABA COMANDANDO LA NUEVA VIDA DEL PUEBLO ISRAELITA.",
+            "B. EL CORDÓN DE GRANA EN LA VENTANA DE RAHAB, ILUSTRA LA OBRA REDENTORA DE CRISTO EN LA CRUZ. ESTA SEÑAL SALVÓ A RAHAB Y SU FAMILIA DE LA MUERTE, DE IGUAL FORMA CRISTO FUE COLGADO DE UNA CRUZ, Y SU SANGRE NOS SALVA",
+            "C. DIOS SACA A JOSUÉ DE EGIPTO SIENDO UN MUCHACHO, LUEGO LO LIBRÓ DEL DESIERTO Y AHORA CRUZA EL JORDÁN DÁNDOLE LA VICTORIA EN LA TIERRA PROMETIDA"
+          ],
+          "correctas": [],
+          "id": "mtuxlp1vj63k7",
+          "puntos": 10,
+          "texto": "A. LEA CUIDADOSAMENTE CADA AFIRMACIÓN Y SELECCIONE LA RESPUESTA CORRECTA. \n\n1. LA CRISTOLOGÍA EN EL LIBRO DE JOSUÉ, SE EVIDENCIA EN TRES FORMAS. DE LAS SIGUIENTES OPCIONES ¿CUÁL EXPLICA LA FORMA SIMBÓLICA?\n",
+          "opcionIds": [
+            "opt_mtuxlp1vj63k7_0_mtxlpe2n4a9bp",
+            "opt_mtuxlp1vj63k7_1_mtxlpe2nj4png",
+            "opt_mtuxlp1vj63k7_2_mtxlpe2njahui"
+          ]
+        },
+        {
+          "puntos": 10,
+          "correctas": [],
+          "tipo": "checkbox",
+          "opcionIds": [
+            "opt_mtuxq67dvsl8f_0_mtxlpe2ns511o",
+            "opt_mtuxq67dvsl8f_1_mtxlpe2ni0bdi",
+            "opt_mtuxq67dvsl8f_2_mtxlpe2n7uzc4",
+            "opt_mtuxq67dvsl8f_3_mtxlpe2nf8x3x"
+          ],
+          "id": "mtuxq67dvsl8f",
+          "texto": "2. LA PRIMERA PROMESA DE DIOS PARA JOSUÉ ES SU PRESENCIA CONTINUA CON ÉL EN 1:5. ES POR SU BENDITA PRESENCIA QUE NOSOTROS NO DESFALLECEMOS. LA AFIRMACIÓN ANTERIOR NOS HABLA DE LA________________ EN EL LIBRO DE JOSUÉ.\n",
+          "opciones": [
+            "A. CRISTOLOGÍA",
+            "B. TEMÁTICA",
+            "C. FE",
+            "D. PNEUMATOLOGÍA"
+          ]
+        },
+        {
+          "tipo": "checkbox",
+          "correctas": [],
+          "texto": "3. “EL LIBRO CONTIENE UN REGISTRO DE LA ÉPOCA OSCURA, CUANDO EL PUEBLO DE ISRAEL NO TOMÓ POSESIÓN DE LA TIERRA Y ABANDONÓ AL SEÑOR PARA IR EN POS DE ÍDOLOS DE LAS NACIONES VECINAS; ESTO FUE FRUTO DE LA DESOBEDIENCIA Y FALTA DE ESFUERZO PARA TERMINAR LA OBRA QUE DIOS LES HABÍA ENCARGADO”. EN ESTE PÁRRAFO SE ESTÁ DESCRIBIENDO EL LIBRO DE:\n",
+          "opciones": [
+            "A. JUECES",
+            "B. NEHEMÍAS",
+            "C. 2 REYES",
+            "D. ESTER"
+          ],
+          "opcionIds": [
+            "opt_mtuxyvroiyhq2_0_mtxlpe2noxb4k",
+            "opt_mtuxyvroiyhq2_1_mtxlpe2nj07tn",
+            "opt_mtuxyvroiyhq2_2_mtxlpe2n3k5am",
+            "opt_mtuxyvroiyhq2_3_mtxlpe2n9mpau"
+          ],
+          "id": "mtuxyvroiyhq2",
+          "puntos": 10
+        },
+        {
+          "texto": "4. EL TEMA DEL LIBRO DE RUT, ES:",
+          "opciones": [
+            "Opción A",
+            "Opción B",
+            "Opción C",
+            "Opción D"
+          ],
+          "correctas": [],
+          "opcionIds": [
+            "opt_mtuya0guilyk1_0_mtxlpe2no2lbu",
+            "opt_mtuya0guilyk1_1_mtxlpe2nrzmns",
+            "opt_mtuya0guilyk1_2_mtxlpe2nymqyr",
+            "opt_mtuya0guilyk1_3_mtxlpe2nj5fwy"
+          ],
+          "id": "mtuya0guilyk1",
+          "puntos": 10,
+          "tipo": "checkbox"
+        },
+        {
+          "puntos": 10,
+          "opcionIds": [
+            "opt_mtuyag0egyqtd_0_mtxlpe2nsq43m",
+            "opt_mtuyag0egyqtd_1_mtxlpe2n4rtyn",
+            "opt_mtuyag0egyqtd_2_mtxlpe2n8fcve",
+            "opt_mtuyag0egyqtd_3_mtxlpe2nbhoqa"
+          ],
+          "id": "mtuyag0egyqtd",
+          "tipo": "checkbox",
+          "texto": "5. _______________ ES EL LIBRO QUE NARRA EL INICIO DE LA MONARQUÍA POR MEDIO DE _________ Y SU_____________ AL LIDERAR AL PUEBLO.",
+          "opciones": [
+            "Opción A",
+            "Opción B",
+            "Opción C",
+            "Opción D"
+          ],
+          "correctas": []
+        },
+        {
+          "tipo": "checkbox",
+          "puntos": 10,
+          "id": "mtuydxscnfhjp",
+          "opcionIds": [
+            "opt_mtuydxscnfhjp_0_mtxlpe2ndd7si",
+            "opt_mtuydxscnfhjp_1_mtxlpe2n29q9k",
+            "opt_mtuydxscnfhjp_2_mtxlpe2n76hux",
+            "opt_mtuydxscnfhjp_3_mtxlpe2nl949i"
+          ],
+          "opciones": [
+            "Opción A",
+            "Opción B",
+            "Opción C",
+            "Opción D"
+          ],
+          "correctas": [],
+          "texto": ""
+        },
+        {
+          "puntos": 10,
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "correctas": [],
+          "id": "mtuyydc2a9o56",
+          "texto": "",
+          "tipo": "multiple",
+          "opcionIds": [
+            "opt_mtuyydc2a9o56_0_mtxlpe2nyw9ly",
+            "opt_mtuyydc2a9o56_1_mtxlpe2nr3pmm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mu2123se77mtu",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "tiempo": 60,
+      "titulo": "PRIMERA EVALUACIÓN - APOCALIPSIS I",
+      "aprobacion": 60,
+      "mostrarNota": true,
+      "estado": "borrador",
+      "materia": "APOCALIPSIS I",
+      "aleatorio": false,
+      "descripcion": "",
+      "creado": "2026-09-15T02:03:10.382Z",
+      "intentos": 1,
+      "parcialId": "1a07eeeb300_be417f68",
+      "preguntas": []
+    },
+    {
+      "id": "mu2y8egfgoipk",
+      "descripcion": "",
+      "creado": "2026-09-15T17:31:51.471Z",
+      "preguntas": [
+        {
+          "opciones": [
+            "A. NABHI, INSPIRADO POR DIOS, PUBLICAR, ANUNCIAR.",
+            "B. VIDENTE, VE LO QUE DIOS MUESTRA EN VISIONES O SUEÑOS.",
+            "Opción C",
+            "D. TODOS LOS ANTERIORES."
+          ],
+          "maxRespuestas": 3,
+          "correctas": [],
+          "texto": "RELACIONE LOS NOMBRES DE DIOS CON SU RESPECTIVO SIGNIFICADO ESCRIBIENDO O INDICANDO LA OPCIÓN CORRECTA EN CADA ESPACIO:\n\n1.\tLA PALABRA “PROFETA” SIGNIFICA:",
+          "puntos": 10,
+          "id": "mu2yatbz8c7d1",
+          "tipo": "checkbox",
+          "opcionIds": [
+            "opt_mu2yatbz8c7d1_0_mu32drrconqb3",
+            "opt_mu2yatbz8c7d1_1_mu32drrc4f0ps",
+            "opt_mu2yatbz8c7d1_2_mu32tgifskue4",
+            "opt_mu2yatbz8c7d1_3_mu32thonbtwbz"
+          ]
+        },
+        {
+          "id": "mu3602n1ajmnd",
+          "puntos": 10,
+          "tipo": "checkbox",
+          "opcionIds": [
+            "opt_mu3602n1ajmnd_0_mu360e7y7xi4j",
+            "opt_mu3602n1ajmnd_1_mu360e7yqgieg",
+            "opt_mu3602n1ajmnd_2_mu360gfhkrfj7",
+            "opt_mu3602n1ajmnd_3_mu360hglrw7tz"
+          ],
+          "maxRespuestas": 3,
+          "opciones": [
+            "Opción A",
+            "Opción B",
+            "Opción C",
+            "Opción D"
+          ],
+          "correctas": [],
+          "texto": ""
+        },
+        {
+          "id": "mu364aj9zp7yf",
+          "correctas": [],
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "puntos": 10,
+          "opcionIds": [
+            "opt_mu364aj9zp7yf_0_mu364aj9cys1j",
+            "opt_mu364aj9zp7yf_1_mu364aj9a2miu"
+          ],
+          "texto": "",
+          "tipo": "multiple"
+        }
+      ],
+      "parcialId": "1a07eeeb300_be417f68",
       "mostrarNota": false,
-      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "subtitulo": "“Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros. Y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz” Isaías 9:6",
+      "materia": "PROFETAS MAYORES I",
+      "subtitulo": "",
+      "intentos": 1,
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+      "titulo": "EVALUACIÓN I -  INSTITUTO BÍBLICO PATRICIO SYMES",
+      "tiempo": 60,
+      "actualizado": "2026-09-18T15:21:43.765Z",
+      "estado": "borrador",
+      "aprobacion": 50,
+      "aleatorio": false
+    },
+    {
+      "id": "mu2y8zbzrjrdl",
+      "actualizado": "2026-09-15T19:39:15.028Z",
+      "estado": "borrador",
+      "parcialId": "1a07eef2a68_87c428e5",
+      "titulo": "EVALUACIÓN II -  INSTITUTO BÍBLICO PATRICIO SYMES",
+      "tiempo": 60,
+      "preguntas": [],
+      "aprobacion": 50,
+      "aleatorio": false,
+      "mostrarNota": true,
+      "materia": "PROFETAS MAYORES I",
+      "intentos": 1,
+      "creado": "2026-09-15T17:32:18.527Z",
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+      "descripcion": "",
+      "subtitulo": ""
+    },
+    {
+      "id": "mu4cclforh0l1",
+      "mostrarNota": false,
       "creado": "2026-09-09T03:07:44.205Z",
       "preguntas": [
         {
-          "texto": "1. Seleccione las tres características de un profeta de Dios",
-          "tipo": "checkbox",
+          "id": "mu4cff9lfs208",
           "correctas": [
             0,
             1,
             2
           ],
-          "puntos": 3,
-          "id": "mu4cff9lfs208",
+          "tipo": "checkbox",
+          "texto": "1. Seleccione las tres características de un profeta de Dios",
+          "opcionIds": [
+            "opt_mu4cff9lfs208_0_mu4cfq05m90q9",
+            "opt_mu4cff9lfs208_1_mu4cfq05yv5f3",
+            "opt_mu4cff9lfs208_2_mu4cgg92m9e17",
+            "opt_mu4cff9lfs208_3_mu4cgx632598v",
+            "opt_mu4cff9lfs208_4_mu4ch5x5904x7"
+          ],
           "opciones": [
             "a. Mensaje siempre de acuerdo con las escrituras",
             "b. Predicciones que siempre se cumplían",
@@ -1506,29 +1986,22 @@
             "d. Su mensaje llamaba la atención de sus oyentes",
             "e. Usaba palabras bonitas para que los oyentes se sintieran bien"
           ],
-          "opcionIds": [
-            "opt_mu4cff9lfs208_0_mu4cfq05m90q9",
-            "opt_mu4cff9lfs208_1_mu4cfq05yv5f3",
-            "opt_mu4cff9lfs208_2_mu4cgg92m9e17",
-            "opt_mu4cff9lfs208_3_mu4cgx632598v",
-            "opt_mu4cff9lfs208_4_mu4ch5x5904x7"
-          ]
+          "puntos": 3
         },
         {
-          "enunciadoIds": [
-            "enun_mu4ci6f9m5yv1_0_mu4cifk0f339s",
-            "enun_mu4ci6f9m5yv1_1_mu4ckj2c8evp6",
-            "enun_mu4ci6f9m5yv1_2_mu4cku66n673a",
-            "enun_mu4ci6f9m5yv1_3_mu4cl5e8n2ygl",
-            "enun_mu4ci6f9m5yv1_4_mu4clczuvv002",
-            "enun_mu4ci6f9m5yv1_5_mu4clm9w0v4y6",
-            "enun_mu4ci6f9m5yv1_6_mu4clt1c6q39g",
-            "enun_mu4ci6f9m5yv1_7_mu4cm0v48u0d5",
-            "enun_mu4ci6f9m5yv1_8_mu4cm801szqve"
+          "opcionIds": [
+            "opt_mu4ci6f9m5yv1_0_mu4cifk081zvt",
+            "opt_mu4ci6f9m5yv1_1_mu4cjt12l6d8q",
+            "opt_mu4ci6f9m5yv1_2_mu4ck3w21pkm0",
+            "opt_mu4ci6f9m5yv1_3_mu4ckbv463kfs",
+            "opt_mu4ci6f9m5yv1_4_mu4cswy2vsv1n",
+            "opt_mu4ci6f9m5yv1_5_mu4ct6g0w6d7t",
+            "opt_mu4ci6f9m5yv1_6_mu4ctf21g9x6h",
+            "opt_mu4ci6f9m5yv1_7_mu4ctmrxf05u5",
+            "opt_mu4ci6f9m5yv1_8_mu4cttz3w57vd"
           ],
-          "tipo": "matching",
           "puntos": 9,
-          "texto": "2. Relacione cada una de las siguientes naciones con el juicio emitido por Dios para ellas según el libro de Isaías:",
+          "correctas": [],
           "matchCorrectos": [
             8,
             4,
@@ -1551,19 +2024,7 @@
             "8. Sus tierras fértiles serán destruidas y convertidas en ruinas por los invasores.",
             "9. Su destrucción completa será como la de Sodoma y Gomorra, y nunca más será habitada."
           ],
-          "id": "mu4ci6f9m5yv1",
-          "correctas": [],
-          "opcionIds": [
-            "opt_mu4ci6f9m5yv1_0_mu4cifk081zvt",
-            "opt_mu4ci6f9m5yv1_1_mu4cjt12l6d8q",
-            "opt_mu4ci6f9m5yv1_2_mu4ck3w21pkm0",
-            "opt_mu4ci6f9m5yv1_3_mu4ckbv463kfs",
-            "opt_mu4ci6f9m5yv1_4_mu4cswy2vsv1n",
-            "opt_mu4ci6f9m5yv1_5_mu4ct6g0w6d7t",
-            "opt_mu4ci6f9m5yv1_6_mu4ctf21g9x6h",
-            "opt_mu4ci6f9m5yv1_7_mu4ctmrxf05u5",
-            "opt_mu4ci6f9m5yv1_8_mu4cttz3w57vd"
-          ],
+          "texto": "2. Relacione cada una de las siguientes naciones con el juicio emitido por Dios para ellas según el libro de Isaías:",
           "enunciados": [
             "a. Babilonia",
             "b. Asiria",
@@ -1574,26 +2035,39 @@
             "g. Egipto",
             "h. Edom",
             "i. Arabia"
-          ]
+          ],
+          "enunciadoIds": [
+            "enun_mu4ci6f9m5yv1_0_mu4cifk0f339s",
+            "enun_mu4ci6f9m5yv1_1_mu4ckj2c8evp6",
+            "enun_mu4ci6f9m5yv1_2_mu4cku66n673a",
+            "enun_mu4ci6f9m5yv1_3_mu4cl5e8n2ygl",
+            "enun_mu4ci6f9m5yv1_4_mu4clczuvv002",
+            "enun_mu4ci6f9m5yv1_5_mu4clm9w0v4y6",
+            "enun_mu4ci6f9m5yv1_6_mu4clt1c6q39g",
+            "enun_mu4ci6f9m5yv1_7_mu4cm0v48u0d5",
+            "enun_mu4ci6f9m5yv1_8_mu4cm801szqve"
+          ],
+          "id": "mu4ci6f9m5yv1",
+          "tipo": "matching"
         },
         {
-          "opcionIds": [
-            "opt_mu4cvf3y43u70_0_mu4cvu11zwh0a",
-            "opt_mu4cvf3y43u70_1_mu4cvu11r470h",
-            "opt_mu4cvf3y43u70_2_mu4cw8jls4e49"
-          ],
-          "texto": "3. En el llamamiento y comisión del profeta Isaías, podemos ver que Dios llama a Isaías en un año específico:",
-          "id": "mu4cvf3y43u70",
           "opciones": [
             "a. El año en que murió el rey Acaz",
             "b. El año en que murió el rey Ezequías",
             "c. El año en que murió el rey Uzías"
           ],
+          "opcionIds": [
+            "opt_mu4cvf3y43u70_0_mu4cvu11zwh0a",
+            "opt_mu4cvf3y43u70_1_mu4cvu11r470h",
+            "opt_mu4cvf3y43u70_2_mu4cw8jls4e49"
+          ],
+          "tipo": "multiple",
           "puntos": 3,
           "correctas": [
             2
           ],
-          "tipo": "multiple"
+          "id": "mu4cvf3y43u70",
+          "texto": "3. En el llamamiento y comisión del profeta Isaías, podemos ver que Dios llama a Isaías en un año específico:"
         },
         {
           "enunciadoIds": [
@@ -1602,176 +2076,168 @@
             "enun_mu4cwnwz2y10f_2_mu4cxlybcf82g",
             "enun_mu4cwnwz2y10f_3_mu4cxt4i13i1j"
           ],
+          "enunciados": [
+            "a. El libro de Isaías se divide en tres secciones: Primer Isaías (caps. 1-39), Segundo Isaías (caps. 40-55) y Tercer Isaías (caps. 56-66).",
+            "b. En el llamamiento de Isaías Dios le da una visión de sí mismo y de su gloria, de la pecaminosidad del hombre, de la gracia y perdón de Dios, y del propósito de Dios.",
+            "c. Isaías 7:14 dice: \"Por tanto, el Señor mismo os dará señal: He aquí que la virgen concebirá, y dará a luz un hijo, y llamará su nombre Jesús\".",
+            "d. El nombre Isaías significa: Salvación de Jehová o Jehová salva."
+          ],
+          "correctas": [],
           "puntos": 4,
           "opcionIds": [
             "opt_mu4cwnwz2y10f_0_mu4cwx06o428a",
             "opt_mu4cwnwz2y10f_1_mu4cwx068x527"
           ],
           "tipo": "matching",
+          "id": "mu4cwnwz2y10f",
+          "texto": "4. Escriba frente a cada afirmación Falso (F) o Verdadero (V) según corresponda.",
           "matchCorrectos": [
             0,
             0,
             1,
             0
           ],
-          "texto": "4. Escriba frente a cada afirmación Falso (F) o Verdadero (V) según corresponda.",
-          "id": "mu4cwnwz2y10f",
-          "correctas": [],
           "opciones": [
             "Verdadero",
             "Falso"
-          ],
-          "enunciados": [
-            "a. El libro de Isaías se divide en tres secciones: Primer Isaías (caps. 1-39), Segundo Isaías (caps. 40-55) y Tercer Isaías (caps. 56-66).",
-            "b. En el llamamiento de Isaías Dios le da una visión de sí mismo y de su gloria, de la pecaminosidad del hombre, de la gracia y perdón de Dios, y del propósito de Dios.",
-            "c. Isaías 7:14 dice: \"Por tanto, el Señor mismo os dará señal: He aquí que la virgen concebirá, y dará a luz un hijo, y llamará su nombre Jesús\".",
-            "d. El nombre Isaías significa: Salvación de Jehová o Jehová salva."
           ]
         },
         {
-          "correctas": [
-            1
-          ],
-          "puntos": 3,
-          "id": "mu4cy7p41j7ea",
-          "tipo": "multiple",
-          "opciones": [
-            "a. Asiria",
-            "b. Babilonia",
-            "c. Egipto"
-          ],
           "opcionIds": [
             "opt_mu4cy7p41j7ea_0_mu4cyfq96q27b",
             "opt_mu4cy7p41j7ea_1_mu4cyfq95d522",
             "opt_mu4cy7p41j7ea_2_mu4cypa182m8b"
           ],
-          "texto": "5. ¿Qué imperio invadió y llevó cautivo al reino del sur Judá?"
-        },
-        {
-          "opcionIds": [
-            "opt_mu4cyy8t09l7h_0_mu4cz75c9s1v5",
-            "opt_mu4cyy8t09l7h_1_mu4cz75c87l93",
-            "opt_mu4cyy8t09l7h_2_mu4czg38p0y1h"
+          "texto": "5. ¿Qué imperio invadió y llevó cautivo al reino del sur Judá?",
+          "opciones": [
+            "a. Asiria",
+            "b. Babilonia",
+            "c. Egipto"
           ],
-          "texto": "6. ¿Quién era el rey de Babilonia cuando Judá fue llevada al cautiverio?",
-          "tipo": "multiple",
-          "id": "mu4cyy8t09l7h",
           "puntos": 3,
           "correctas": [
             1
           ],
+          "id": "mu4cy7p41j7ea",
+          "tipo": "multiple"
+        },
+        {
           "opciones": [
             "a. Senaquerib",
             "b. Nabucodonosor",
             "c. Ciro"
           ],
-          "headerSubtitle": ""
+          "id": "mu4cyy8t09l7h",
+          "tipo": "multiple",
+          "opcionIds": [
+            "opt_mu4cyy8t09l7h_0_mu4cz75c9s1v5",
+            "opt_mu4cyy8t09l7h_1_mu4cz75c87l93",
+            "opt_mu4cyy8t09l7h_2_mu4czg38p0y1h"
+          ],
+          "headerSubtitle": "",
+          "correctas": [
+            1
+          ],
+          "puntos": 3,
+          "texto": "6. ¿Quién era el rey de Babilonia cuando Judá fue llevada al cautiverio?"
         },
         {
-          "correctas": [
-            2
-          ],
-          "id": "mu4czop12n8t0",
-          "texto": "7. El libro de Isaías describe a Cristo en varias formas. ¿Cómo es presentado Cristo en los capítulos 40-55?",
-          "puntos": 3,
-          "tipo": "multiple",
-          "opciones": [
-            "a. Como el Rey Glorioso",
-            "b. Como el Libertador",
-            "c. Como el Siervo Sufriente"
-          ],
           "opcionIds": [
             "opt_mu4czop12n8t0_0_mu4czx59c04vd",
             "opt_mu4czop12n8t0_1_mu4czx59n3vvi",
             "opt_mu4czop12n8t0_2_mu4d0541r4a3q"
+          ],
+          "tipo": "multiple",
+          "puntos": 3,
+          "id": "mu4czop12n8t0",
+          "correctas": [
+            2
+          ],
+          "texto": "7. El libro de Isaías describe a Cristo en varias formas. ¿Cómo es presentado Cristo en los capítulos 40-55?",
+          "opciones": [
+            "a. Como el Rey Glorioso",
+            "b. Como el Libertador",
+            "c. Como el Siervo Sufriente"
           ]
         },
         {
-          "puntos": 6,
-          "id": "mu4d0c1c8f1eb",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
-          "correctas": [],
           "opcionIds": [
             "opt_mu4d0c1c8f1eb_0_mu4d0u52f1y1n",
             "opt_mu4d0c1c8f1eb_1_mu4d0u525z9t6"
           ],
           "tipo": "abierta",
+          "id": "mu4d0c1c8f1eb",
+          "puntos": 6,
+          "correctas": [],
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
           "texto": "8. Escriba dos enseñanzas prácticas que usted haya aprendido del estudio de los primeros 39 capítulos de Isaías para su vida personal o ministerial."
         },
         {
+          "correctas": [],
+          "tipo": "abierta",
           "id": "mu4d0wr4v43a7",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
           "puntos": 6,
           "opcionIds": [
             "opt_mu4d0wr4v43a7_0_mu4d17z1w51v6",
             "opt_mu4d0wr4v43a7_1_mu4d17z1h61j4"
           ],
-          "correctas": [],
-          "tipo": "abierta",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
           "texto": "9. Explique brevemente cuál fue la respuesta de Isaías cuando escuchó la voz del Señor diciendo: «¿A quién enviaré, y quién irá por nosotros?» y cómo aplica usted esa respuesta a su servicio a Dios hoy."
         }
-      ]
+      ],
+      "parcialId": "1a07ef00ed7_85da3677",
+      "descripcion": "",
+      "aprobacion": 50,
+      "materia": "PROFETAS MAYORES I",
+      "subtitulo": "“Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros. Y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz” Isaías 9:6",
+      "intentos": 1,
+      "actualizado": "2026-09-17T03:32:02.875Z",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "1a07f632c50_dd860db0",
+      "titulo": "EVALUACIÓN I - INSTITUTO BÍBLICO PATRICIO SYMES - PROFETAS MAYORES I",
+      "tiempo": 90,
+      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "estado": "activo",
+      "headerSubtitle": "“Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros. Y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz” Isaías 9:6",
+      "aleatorio": false
     },
     {
-      "docenteId": "1a07f632c50_dd860db0",
-      "parcialId": "1a07ef05d1f_8313e6ff",
-      "aleatorio": false,
-      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "mostrarNota": false,
-      "intentos": 1,
-      "titulo": "EVALUACION II - \nINSTITUTO BÍBLICO PATRICIO SYMES - PROFETAS MAYORES I",
-      "actualizado": "2026-09-17T03:32:41.353Z",
-      "creado": "2026-09-09T03:07:44.205Z",
-      "subtitulo": "“Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces” Jeremías 33:3",
-      "headerSubtitle": "“Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces” Jeremías 33:3",
-      "tiempo": 90,
-      "materia": "PROFETAS MAYORES I",
-      "descripcion": "",
-      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
       "id": "mu4dg4w29cn8e",
-      "estado": "activo",
+      "actualizado": "2026-09-17T03:32:41.353Z",
+      "parcialId": "1a07ef05d1f_8313e6ff",
       "aprobacion": 50,
       "preguntas": [
         {
-          "tableOptions": [
-            "Babilonia",
-            "Egipto",
-            "Filistea",
-            "Moab",
-            "Amon",
-            "Edom",
-            "Damasco",
-            "Cedar y Hazor",
-            "Elam"
-          ],
           "correctas": [],
-          "puntos": 9,
-          "texto": "1. Complete la siguiente tabla seleccionando la nación correspondiente para cada juicio profético en el libro de Jeremías:",
+          "id": "mu4dj64w68d9g",
           "tableColumns": [
             "Texto Bíblico",
             "Juicio Profético",
             "Nación"
           ],
+          "texto": "1. Complete la siguiente tabla seleccionando la nación correspondiente para cada juicio profético en el libro de Jeremías:",
+          "puntos": 9,
+          "tipo": "table_matching",
           "tableRows": [
             {
-              "correctOptionIdx": 1,
               "cells": [
                 "Jeremías 46",
                 "Será derrotada por Nabucodonosor junto al río Éufrates"
-              ]
+              ],
+              "correctOptionIdx": 1
             },
             {
+              "correctOptionIdx": 2,
               "cells": [
                 "Jeremías 47",
                 "El mar se levantará como inundación y destruirá a los habitantes de la costa"
-              ],
-              "correctOptionIdx": 2
+              ]
             },
             {
               "cells": [
@@ -1795,11 +2261,11 @@
               ]
             },
             {
-              "correctOptionIdx": 6,
               "cells": [
                 "Jeremías 49:23-27",
                 "El fuego consumirá sus murallas y los palacios de Ben-hadad"
-              ]
+              ],
+              "correctOptionIdx": 6
             },
             {
               "correctOptionIdx": 7,
@@ -1809,35 +2275,34 @@
               ]
             },
             {
+              "correctOptionIdx": 8,
               "cells": [
                 "Jeremías 49:34-39",
                 "Dios quebrará su arco principal y esparcirá a sus habitantes"
-              ],
-              "correctOptionIdx": 8
+              ]
             },
             {
+              "correctOptionIdx": 0,
               "cells": [
                 "Jeremías 50-51",
                 "Caerá repentinamente, sus ídolos serán avergonzados y no volverá a ser habitada"
-              ],
-              "correctOptionIdx": 0
+              ]
             }
           ],
-          "id": "mu4dj64w68d9g",
-          "tipo": "table_matching"
+          "tableOptions": [
+            "Babilonia",
+            "Egipto",
+            "Filistea",
+            "Moab",
+            "Amon",
+            "Edom",
+            "Damasco",
+            "Cedar y Hazor",
+            "Elam"
+          ]
         },
         {
-          "tipo": "matching",
-          "puntos": 5,
-          "enunciadoIds": [
-            "enun_mu4dl4p96p17c_0_mu4dlf19s05b2",
-            "enun_mu4dl4p96p17c_1_mu4dm1s0b72a0",
-            "enun_mu4dl4p96p17c_2_mu4dm8f8e0m6h",
-            "enun_mu4dl4p96p17c_3_mu4dmf03q63r8",
-            "enun_mu4dl4p96p17c_4_mu4dmlvw9t961"
-          ],
           "id": "mu4dl4p96p17c",
-          "correctas": [],
           "opciones": [
             "1. Baruc",
             "2. Ebed-melec",
@@ -1845,12 +2310,15 @@
             "4. Hilcías",
             "5. Pashur"
           ],
-          "opcionIds": [
-            "opt_mu4dl4p96p17c_0_mu4dlf193s6e5",
-            "opt_mu4dl4p96p17c_1_mu4dlv334360e",
-            "opt_mu4dl4p96p17c_2_mu4dm4v041o7c",
-            "opt_mu4dl4p96p17c_3_mu4dmbl1r8r5k",
-            "opt_mu4dl4p96p17c_4_mu4dmiz813k9f"
+          "texto": "2. Relacione cada personaje con su descripción en el ministerio de Jeremías:",
+          "correctas": [],
+          "tipo": "matching",
+          "matchCorrectos": [
+            3,
+            0,
+            1,
+            4,
+            2
           ],
           "enunciados": [
             "a. Padre de Jeremías, sacerdote de Anatot",
@@ -1859,17 +2327,47 @@
             "d. Sacerdote y gobernador de la casa de Jehová que golpeó y encarceló a Jeremías en el cepo",
             "e. Sacerdote enviado por el rey Sedequías para consultar a Jeremías"
           ],
-          "texto": "2. Relacione cada personaje con su descripción en el ministerio de Jeremías:",
-          "matchCorrectos": [
-            3,
-            0,
-            1,
-            4,
-            2
-          ]
+          "opcionIds": [
+            "opt_mu4dl4p96p17c_0_mu4dlf193s6e5",
+            "opt_mu4dl4p96p17c_1_mu4dlv334360e",
+            "opt_mu4dl4p96p17c_2_mu4dm4v041o7c",
+            "opt_mu4dl4p96p17c_3_mu4dmbl1r8r5k",
+            "opt_mu4dl4p96p17c_4_mu4dmiz813k9f"
+          ],
+          "enunciadoIds": [
+            "enun_mu4dl4p96p17c_0_mu4dlf19s05b2",
+            "enun_mu4dl4p96p17c_1_mu4dm1s0b72a0",
+            "enun_mu4dl4p96p17c_2_mu4dm8f8e0m6h",
+            "enun_mu4dl4p96p17c_3_mu4dmf03q63r8",
+            "enun_mu4dl4p96p17c_4_mu4dmlvw9t961"
+          ],
+          "puntos": 5
         },
         {
-          "tipo": "matching",
+          "texto": "3. Relacione cada una de las señales o acciones proféticas de Jeremías con su significado espiritual:",
+          "opciones": [
+            "1. El cinturón de lino podrido junto al Éufrates",
+            "2. La visita a la casa del alfarero",
+            "3. La vasija de barro rota en el valle de Ben-hinom",
+            "4. Los yugos de madera puestos sobre su cuello",
+            "5. La compra del campo de Hanameel en Anatot"
+          ],
+          "puntos": 5,
+          "matchCorrectos": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "id": "mu4dn9p8v25r2",
+          "enunciados": [
+            "a. Representa el orgullo de Judá y Jerusalén que quedaría completamente arruinado e inútil",
+            "b. Muestra el poder soberano de Dios para moldear, deshacer y rehacer a las naciones según su voluntad",
+            "c. Simboliza la destrucción irreparable de la ciudad de Jerusalén y sus habitantes",
+            "d. Ilustra la sumisión obligatoria que las naciones debían tener bajo el dominio de Nabucodonosor rey de Babilonia",
+            "e. Señal profética de que en el futuro los campos volverían a comprarse y poseerse en la tierra de Judá"
+          ],
           "correctas": [],
           "enunciadoIds": [
             "enun_mu4dn9p8v25r2_0_mu4dnjl6n03h0",
@@ -1878,8 +2376,6 @@
             "enun_mu4dn9p8v25r2_3_mu4dojp8w60h6",
             "enun_mu4dn9p8v25r2_4_mu4doqfl60v9j"
           ],
-          "puntos": 5,
-          "texto": "3. Relacione cada una de las señales o acciones proféticas de Jeremías con su significado espiritual:",
           "opcionIds": [
             "opt_mu4dn9p8v25r2_0_mu4dnjl64j96z",
             "opt_mu4dn9p8v25r2_1_mu4dnxx6b907c",
@@ -1887,114 +2383,100 @@
             "opt_mu4dn9p8v25r2_3_mu4dogv8q4p00",
             "opt_mu4dn9p8v25r2_4_mu4don4413o89"
           ],
-          "id": "mu4dn9p8v25r2",
-          "opciones": [
-            "1. El cinturón de lino podrido junto al Éufrates",
-            "2. La visita a la casa del alfarero",
-            "3. La vasija de barro rota en el valle de Ben-hinom",
-            "4. Los yugos de madera puestos sobre su cuello",
-            "5. La compra del campo de Hanameel en Anatot"
-          ],
-          "matchCorrectos": [
-            0,
-            1,
-            2,
-            3,
-            4
-          ],
-          "enunciados": [
-            "a. Representa el orgullo de Judá y Jerusalén que quedaría completamente arruinado e inútil",
-            "b. Muestra el poder soberano de Dios para moldear, deshacer y rehacer a las naciones según su voluntad",
-            "c. Simboliza la destrucción irreparable de la ciudad de Jerusalén y sus habitantes",
-            "d. Ilustra la sumisión obligatoria que las naciones debían tener bajo el dominio de Nabucodonosor rey de Babilonia",
-            "e. Señal profética de que en el futuro los campos volverían a comprarse y poseerse en la tierra de Judá"
-          ]
+          "tipo": "matching"
         },
         {
-          "texto": "4. ¿Durante cuántos años profetizó Jeremías que Judá estaría cautiva en Babilonia antes de ser restaurada?",
-          "id": "mu4dp8f1w663s",
-          "tipo": "multiple",
-          "correctas": [
-            2
-          ],
-          "opcionIds": [
-            "opt_mu4dp8f1w663s_0_mu4dpf795s120",
-            "opt_mu4dp8f1w663s_1_mu4dpf79b6d8p",
-            "opt_mu4dp8f1w663s_2_mu4dpnu64r90b",
-            "opt_mu4dp8f1w663s_3_mu4dpu752003h"
-          ],
-          "puntos": 3,
           "opciones": [
             "a. 40 años",
             "b. 50 años",
             "c. 70 años",
             "d. 100 años"
+          ],
+          "correctas": [
+            2
+          ],
+          "id": "mu4dp8f1w663s",
+          "tipo": "multiple",
+          "texto": "4. ¿Durante cuántos años profetizó Jeremías que Judá estaría cautiva en Babilonia antes de ser restaurada?",
+          "puntos": 3,
+          "opcionIds": [
+            "opt_mu4dp8f1w663s_0_mu4dpf795s120",
+            "opt_mu4dp8f1w663s_1_mu4dpf79b6d8p",
+            "opt_mu4dp8f1w663s_2_mu4dpnu64r90b",
+            "opt_mu4dp8f1w663s_3_mu4dpu752003h"
           ]
         },
         {
-          "puntos": 3,
+          "id": "mu4dq5u76z830",
+          "texto": "5. ¿Bajo el reinado de cuál rey piadoso comenzó Jeremías su ministerio profético?",
           "correctas": [
             0
           ],
-          "opciones": [
-            "a. Josías",
-            "b. Joacaz",
-            "c. Joacim",
-            "d. Sedequías"
-          ],
+          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4dq5u76z830_0_mu4dqf71c107m",
             "opt_mu4dq5u76z830_1_mu4dqf71v278h",
             "opt_mu4dq5u76z830_2_mu4dqme24503m",
             "opt_mu4dq5u76z830_3_mu4dqtc8s373q"
           ],
-          "texto": "5. ¿Bajo el reinado de cuál rey piadoso comenzó Jeremías su ministerio profético?",
-          "tipo": "multiple",
-          "id": "mu4dq5u76z830"
+          "puntos": 3,
+          "opciones": [
+            "a. Josías",
+            "b. Joacaz",
+            "c. Joacim",
+            "d. Sedequías"
+          ]
         },
         {
-          "puntos": 3,
           "texto": "6. ¿Qué rey de Judá quemó el rollo que contenía las profecías dictadas por Jeremías a Baruc?",
           "correctas": [
             1
           ],
-          "opciones": [
-            "a. Manasés",
-            "b. Joacim",
-            "c. Sedequías",
-            "d. Amón"
-          ],
+          "id": "mu4dr1x5e1r2v",
           "opcionIds": [
             "opt_mu4dr1x5e1r2v_0_mu4dr9381q15m",
             "opt_mu4dr1x5e1r2v_1_mu4dr938w359a",
             "opt_mu4dr1x5e1r2v_2_mu4drgh8f902v",
             "opt_mu4dr1x5e1r2v_3_mu4drn90z48e5"
           ],
-          "tipo": "multiple",
-          "id": "mu4dr1x5e1r2v"
+          "puntos": 3,
+          "opciones": [
+            "a. Manasés",
+            "b. Joacim",
+            "c. Sedequías",
+            "d. Amón"
+          ],
+          "tipo": "multiple"
         },
         {
           "correctas": [
             1
           ],
-          "texto": "7. El libro de Lamentaciones fue escrito por Jeremías después de presenciar:",
           "tipo": "multiple",
-          "puntos": 3,
-          "id": "mu4drv0557z8n",
+          "texto": "7. El libro de Lamentaciones fue escrito por Jeremías después de presenciar:",
+          "opciones": [
+            "a. La muerte del rey Josías en Meguido",
+            "b. La destrucción de Jerusalén y el templo por las fuerzas babilonias",
+            "c. La rebelión de Coré en el desierto",
+            "d. La cautividad del reino del norte Israel por Asiria"
+          ],
           "opcionIds": [
             "opt_mu4drv0557z8n_0_mu4ds2a9s196a",
             "opt_mu4drv0557z8n_1_mu4ds2a9p9v3f",
             "opt_mu4drv0557z8n_2_mu4ds8l3b708b",
             "opt_mu4drv0557z8n_3_mu4dsg423403m"
           ],
-          "opciones": [
-            "a. La muerte del rey Josías en Meguido",
-            "b. La destrucción de Jerusalén y el templo por las fuerzas babilonias",
-            "c. La rebelión de Coré en el desierto",
-            "d. La cautividad del reino del norte Israel por Asiria"
-          ]
+          "puntos": 3,
+          "id": "mu4drv0557z8n"
         },
         {
+          "tipo": "multiple",
+          "opcionIds": [
+            "opt_mu4dso553018e_0_mu4dsw61f061k",
+            "opt_mu4dso553018e_1_mu4dsw61u687k",
+            "opt_mu4dso553018e_2_mu4dt365538q1",
+            "opt_mu4dso553018e_3_mu4dta62b8d4k"
+          ],
           "id": "mu4dso553018e",
           "opciones": [
             "a. Ezequías",
@@ -2002,106 +2484,105 @@
             "c. Sedequías",
             "d. Joacaz"
           ],
-          "tipo": "multiple",
+          "puntos": 3,
+          "texto": "8. ¿Cuál fue el último rey de Judá a quien Jeremías advirtió que se rindiera al rey de Babilonia para salvar su vida y la ciudad?",
           "correctas": [
             2
-          ],
-          "texto": "8. ¿Cuál fue el último rey de Judá a quien Jeremías advirtió que se rindiera al rey de Babilonia para salvar su vida y la ciudad?",
-          "puntos": 3,
-          "opcionIds": [
-            "opt_mu4dso553018e_0_mu4dsw61f061k",
-            "opt_mu4dso553018e_1_mu4dsw61u687k",
-            "opt_mu4dso553018e_2_mu4dt365538q1",
-            "opt_mu4dso553018e_3_mu4dta62b8d4k"
           ]
         },
         {
           "texto": "9. Según Jeremías 31:31-34, ¿cuál es la característica principal del Nuevo Pacto que Dios prometió hacer con la casa de Israel y de Judá?",
+          "id": "mu4dthj9f196a",
+          "puntos": 3,
+          "correctas": [
+            1
+          ],
           "opcionIds": [
             "opt_mu4dthj9f196a_0_mu4dtov35q59d",
             "opt_mu4dthj9f196a_1_mu4dtov3s80v6",
             "opt_mu4dthj9f196a_2_mu4dtvn78q51y",
             "opt_mu4dthj9f196a_3_mu4du2h6v8b2b"
           ],
-          "id": "mu4dthj9f196a",
-          "puntos": 3,
+          "tipo": "multiple",
           "opciones": [
             "a. Se basaría en sacrificios diarios de animales en el templo",
             "b. La ley sería escrita en sus mentes y en sus corazones, y perdonaría sus maldades",
             "c. Sería únicamente para aquellos que guardaran estrictamente las leyes de Moisés",
             "d. Duraría solo mientras el pueblo mantuviera la pureza ceremonial"
-          ],
-          "tipo": "multiple",
-          "correctas": [
-            1
           ]
         },
         {
-          "puntos": 3,
-          "correctas": [
-            1
-          ],
+          "texto": "10. Jeremías 29:11 dice: «Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis». ¿En qué contexto histórico y espiritual fue dada esta promesa?",
           "opciones": [
             "a. Dios solo tiene planes de prosperidad económica para quienes ofrendan",
             "b. Los planes de Dios son de bienestar y no de calamidad, para dar un futuro y una esperanza a su pueblo aun en medio de la prueba",
             "c. El pueblo de Judá nunca sufriría ninguna consecuencia por sus pecados",
             "d. La bendición de Dios depende de que no haya dificultades en la vida"
           ],
-          "id": "mu4du990e667z",
-          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4du990e667z_0_mu4dugl1r945r",
             "opt_mu4du990e667z_1_mu4dugl1w106q",
             "opt_mu4du990e667z_2_mu4dun41f875z",
             "opt_mu4du990e667z_3_mu4dutv8v6960"
           ],
-          "texto": "10. Jeremías 29:11 dice: «Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis». ¿En qué contexto histórico y espiritual fue dada esta promesa?"
+          "tipo": "multiple",
+          "correctas": [
+            1
+          ],
+          "puntos": 3,
+          "id": "mu4du990e667z"
         },
         {
+          "correctas": [],
+          "tipo": "abierta",
           "texto": "11. Reflexione sobre la vida de Jeremías conocida como el «profeta llorón» debido a su sufrimiento y persecución por proclamar la verdad. Escriba qué lección de fidelidad y perseverancia en el ministerio extrae para su propio llamado al servicio de Dios.",
-          "puntos": 3,
+          "id": "mu4dv1l06e4a2",
           "opcionIds": [
             "opt_mu4dv1l06e4a2_0_mu4dv8l8q115y",
             "opt_mu4dv1l06e4a2_1_mu4dv8l8b64b1"
           ],
-          "tipo": "abierta",
           "opciones": [
             "Opción A",
             "Opción B"
           ],
-          "id": "mu4dv1l06e4a2",
-          "correctas": []
+          "puntos": 3
         }
-      ]
-    },
-    {
-      "materia": "GEOGRAFIA BIBLICA",
-      "parcialId": "1a07ee20111_5e0858b0",
-      "aprobacion": 50,
-      "descripcion": "",
-      "headerSubtitle": "“Porque Jehová tu Dios te introduce en la buena tierra, tierra de arroyos, de aguas, de fuentes y de manantiales, que brotan en vegas y montes” Deuteronomio 8:7",
-      "aleatorio": false,
-      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
-      "intentos": 1,
-      "creado": "2026-09-09T03:07:44.205Z",
-      "id": "mu4ls78fupuig",
-      "docenteId": "1a07e62e17f_8c2a9988",
-      "actualizado": "2026-09-17T03:33:15.918Z",
-      "titulo": "EVALUACIÓN II - INSTITUTO BÍBLICO PATRICIO SYMES - \nGEOGRAFIA BIBLICA\n(UNIDAD V-VI / Páginas54 a 104)",
+      ],
       "tiempo": 90,
+      "titulo": "EVALUACION II - \nINSTITUTO BÍBLICO PATRICIO SYMES - PROFETAS MAYORES I",
       "estado": "activo",
       "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "subtitulo": "“Porque Jehová tu Dios te introduce en la buena tierra, tierra de arroyos, de aguas, de fuentes y de manantiales, que brotan en vegas y montes” Deuteronomio 8:7",
+      "aleatorio": false,
+      "materia": "PROFETAS MAYORES I",
+      "intentos": 1,
       "mostrarNota": false,
+      "descripcion": "",
+      "docenteId": "1a07f632c50_dd860db0",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "creado": "2026-09-09T03:07:44.205Z",
+      "subtitulo": "“Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces” Jeremías 33:3",
+      "headerSubtitle": "“Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces” Jeremías 33:3"
+    },
+    {
+      "id": "mu4ls78fupuig",
+      "descripcion": "",
+      "estado": "activo",
+      "subtitulo": "“Porque Jehová tu Dios te introduce en la buena tierra, tierra de arroyos, de aguas, de fuentes y de manantiales, que brotan en vegas y montes” Deuteronomio 8:7",
+      "bannerUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "materia": "GEOGRAFIA BIBLICA",
+      "tiempo": 90,
+      "titulo": "EVALUACIÓN II - INSTITUTO BÍBLICO PATRICIO SYMES - \nGEOGRAFIA BIBLICA\n(UNIDAD V-VI / Páginas54 a 104)",
+      "intentos": 1,
+      "aleatorio": false,
+      "mostrarNota": false,
+      "headerSubtitle": "“Porque Jehová tu Dios te introduce en la buena tierra, tierra de arroyos, de aguas, de fuentes y de manantiales, que brotan en vegas y montes” Deuteronomio 8:7",
+      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "creado": "2026-09-09T03:07:44.205Z",
       "preguntas": [
         {
-          "matchCorrectos": [
-            0,
-            1,
-            2,
-            3,
-            4
-          ],
+          "correctas": [],
+          "id": "mu4lw1v166v9w",
           "opciones": [
             "1. Nombre dado por los griegos derivado de los filisteos que habitaban la llanura costera",
             "2. Significa \"tierra baja\", habitada por los descendientes de Canaán hijo de Cam",
@@ -2109,7 +2590,22 @@
             "4. Nombre adoptado por las doce tribus bajo el pacto sinaítico",
             "5. Término que resalta la consagración y presencia exclusiva del Dios verdadero"
           ],
-          "id": "mu4lw1v166v9w",
+          "tipo": "matching",
+          "matchCorrectos": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "opcionIds": [
+            "opt_mu4lw1v166v9w_0_mu4lwbv89381k",
+            "opt_mu4lw1v166v9w_1_mu4lwmh12170p",
+            "opt_mu4lw1v166v9w_2_mu4lwx63s5b1d",
+            "opt_mu4lw1v166v9w_3_mu4lx4494x78c",
+            "opt_mu4lw1v166v9w_4_mu4lxb498u32h"
+          ],
+          "texto": "1. Relacione cada uno de los nombres históricos y bíblicos de la tierra de Palestina con su significado o trasfondo:",
           "puntos": 5,
           "enunciadoIds": [
             "enun_mu4lw1v166v9w_0_mu4lwbv874720",
@@ -2124,28 +2620,9 @@
             "c. Tierra Prometida",
             "d. Tierra de Israel",
             "e. Tierra Santa"
-          ],
-          "opcionIds": [
-            "opt_mu4lw1v166v9w_0_mu4lwbv89381k",
-            "opt_mu4lw1v166v9w_1_mu4lwmh12170p",
-            "opt_mu4lw1v166v9w_2_mu4lwx63s5b1d",
-            "opt_mu4lw1v166v9w_3_mu4lx4494x78c",
-            "opt_mu4lw1v166v9w_4_mu4lxb498u32h"
-          ],
-          "texto": "1. Relacione cada uno de los nombres históricos y bíblicos de la tierra de Palestina con su significado o trasfondo:",
-          "tipo": "matching",
-          "correctas": []
+          ]
         },
         {
-          "texto": "2. Relacione cada uno de los siguientes montes bíblicos con el evento o descripción geográfica que le corresponde:",
-          "opcionIds": [
-            "opt_mu4lxm734005s_0_mu4lxue08b06r",
-            "opt_mu4lxm734005s_1_mu4ly1247076t",
-            "opt_mu4lxm734005s_2_mu4ly7635607k",
-            "opt_mu4lxm734005s_3_mu4lyd194z76l",
-            "opt_mu4lxm734005s_4_mu4lyjb28e08d"
-          ],
-          "tipo": "matching",
           "matchCorrectos": [
             0,
             1,
@@ -2153,22 +2630,6 @@
             3,
             4
           ],
-          "enunciadoIds": [
-            "enun_mu4lxm734005s_0_mu4lxue066v90",
-            "enun_mu4lxm734005s_1_mu4ly4095r70f",
-            "enun_mu4lxm734005s_2_mu4lya08s345a",
-            "enun_mu4lxm734005s_3_mu4lyg227q92e",
-            "enun_mu4lxm734005s_4_mu4lymv92b45l"
-          ],
-          "correctas": [],
-          "enunciados": [
-            "a. Monte Carmelo",
-            "b. Monte Hermón",
-            "c. Monte de los Olivos",
-            "d. Monte Nebo",
-            "e. Monte Tabor"
-          ],
-          "puntos": 5,
           "opciones": [
             "1. Escenario donde el profeta Elías desafió e hizo caer fuego del cielo contra los 450 profetas de Baal",
             "2. Es el pico más alto de la región (2.814 m), cubierto de nieve perpetua, fuente principal de los afluentes del Jordán",
@@ -2176,14 +2637,40 @@
             "4. Cumbre de Pisga desde donde Moisés contempló toda la tierra prometida antes de su muerte",
             "5. Monte cónico en el valle de Jezreel asociado a la victoria de Débora y Barac y tradicional sitio de la transfiguración"
           ],
-          "id": "mu4lxm734005s"
+          "enunciados": [
+            "a. Monte Carmelo",
+            "b. Monte Hermón",
+            "c. Monte de los Olivos",
+            "d. Monte Nebo",
+            "e. Monte Tabor"
+          ],
+          "texto": "2. Relacione cada uno de los siguientes montes bíblicos con el evento o descripción geográfica que le corresponde:",
+          "id": "mu4lxm734005s",
+          "puntos": 5,
+          "correctas": [],
+          "tipo": "matching",
+          "enunciadoIds": [
+            "enun_mu4lxm734005s_0_mu4lxue066v90",
+            "enun_mu4lxm734005s_1_mu4ly4095r70f",
+            "enun_mu4lxm734005s_2_mu4lya08s345a",
+            "enun_mu4lxm734005s_3_mu4lyg227q92e",
+            "enun_mu4lxm734005s_4_mu4lymv92b45l"
+          ],
+          "opcionIds": [
+            "opt_mu4lxm734005s_0_mu4lxue08b06r",
+            "opt_mu4lxm734005s_1_mu4ly1247076t",
+            "opt_mu4lxm734005s_2_mu4ly7635607k",
+            "opt_mu4lxm734005s_3_mu4lyd194z76l",
+            "opt_mu4lxm734005s_4_mu4lyjb28e08d"
+          ]
         },
         {
-          "texto": "3. ¿Cuál es la depresión más profunda de la corteza terrestre ubicada en el curso del río Jordán?",
-          "tipo": "multiple",
           "correctas": [
             1
           ],
+          "puntos": 3,
+          "texto": "3. ¿Cuál es la depresión más profunda de la corteza terrestre ubicada en el curso del río Jordán?",
+          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4lyts93801f_0_mu4lz0b56102l",
             "opt_mu4lyts93801f_1_mu4lz0b54067m",
@@ -2196,10 +2683,10 @@
             "b. El Mar Muerto (-420 m bajo el nivel del mar)",
             "c. El Valle de Jezreel",
             "d. El Golfo de Aqaba"
-          ],
-          "puntos": 3
+          ]
         },
         {
+          "texto": "4. De occidente a oriente, la geografía física de Palestina se divide longitudinalmente en cuatro franjas naturales bien definidas. ¿Cuáles son?",
           "opcionIds": [
             "opt_mu4m01683456h_0_mu4m09228906r",
             "opt_mu4m01683456h_1_mu4m09224b17e",
@@ -2207,51 +2694,41 @@
             "opt_mu4m01683456h_3_mu4m0m024e03v"
           ],
           "puntos": 3,
+          "id": "mu4m01683456h",
+          "tipo": "multiple",
+          "correctas": [
+            1
+          ],
           "opciones": [
             "a. Judea, Samaria y Galilea",
             "b. Llanura Costera, Cordillera Central, Depresión del Jordán y Altiplanicie Oriental",
             "c. Negeb, Sefela, Monte Ebal y Basán",
             "d. Tiro, Sidón, Filistea y Fenicia"
-          ],
-          "correctas": [
-            1
-          ],
-          "id": "mu4m01683456h",
-          "tipo": "multiple",
-          "texto": "4. De occidente a oriente, la geografía física de Palestina se divide longitudinalmente en cuatro franjas naturales bien definidas. ¿Cuáles son?"
+          ]
         },
         {
           "correctas": [
             2
           ],
-          "opcionIds": [
-            "opt_mu4m0sb27101s_0_mu4m0z904126y",
-            "opt_mu4m0sb27101s_1_mu4m0z905e08s",
-            "opt_mu4m0sb27101s_2_mu4m16551b96d",
-            "opt_mu4m0sb27101s_3_mu4m1cv92348r"
-          ],
-          "texto": "5. ¿Qué río nace en las laderas del Monte Hermón, recorre de norte a sur el valle de la grieta y desemboca en el Mar Salado?",
           "id": "mu4m0sb27101s",
-          "puntos": 3,
-          "tipo": "multiple",
           "opciones": [
             "a. El río Jaboc",
             "b. El río Arnón",
             "c. El río Jordán",
             "d. El río Cisón"
+          ],
+          "tipo": "multiple",
+          "texto": "5. ¿Qué río nace en las laderas del Monte Hermón, recorre de norte a sur el valle de la grieta y desemboca en el Mar Salado?",
+          "puntos": 3,
+          "opcionIds": [
+            "opt_mu4m0sb27101s_0_mu4m0z904126y",
+            "opt_mu4m0sb27101s_1_mu4m0z905e08s",
+            "opt_mu4m0sb27101s_2_mu4m16551b96d",
+            "opt_mu4m0sb27101s_3_mu4m1cv92348r"
           ]
         },
         {
-          "puntos": 3,
-          "correctas": [
-            0
-          ],
-          "opciones": [
-            "a. Samaria",
-            "b. Galilea",
-            "c. Judea",
-            "d. Perea"
-          ],
+          "texto": "6. En el tiempo del ministerio terrenal de Jesús, ¿cuál era la provincia intermedia cuyos habitantes estaban en enemistad religiosa y cultural con los judíos?",
           "id": "mu4m1jt86412p",
           "opcionIds": [
             "opt_mu4m1jt86412p_0_mu4m1r449b25u",
@@ -2260,52 +2737,83 @@
             "opt_mu4m1jt86412p_3_mu4m24a84e20d"
           ],
           "tipo": "multiple",
-          "texto": "6. En el tiempo del ministerio terrenal de Jesús, ¿cuál era la provincia intermedia cuyos habitantes estaban en enemistad religiosa y cultural con los judíos?"
-        },
-        {
-          "tipo": "multiple",
-          "opcionIds": [
-            "opt_mu4m2bj02450s_0_mu4m2h886712n",
-            "opt_mu4m2bj02450s_1_mu4m2h885e34a",
-            "opt_mu4m2bj02450s_2_mu4m2o194567y",
-            "opt_mu4m2bj02450s_3_mu4m2u452106x"
+          "opciones": [
+            "a. Samaria",
+            "b. Galilea",
+            "c. Judea",
+            "d. Perea"
           ],
           "puntos": 3,
-          "texto": "7. ¿En qué ciudad de Galilea creció Jesús y pasó la mayor parte de sus años previos a su ministerio público?",
           "correctas": [
-            1
-          ],
+            0
+          ]
+        },
+        {
           "opciones": [
             "a. Capernaúm",
             "b. Nazaret",
             "c. Caná de Galilea",
             "d. Betsaida"
           ],
-          "id": "mu4m2bj02450s"
+          "id": "mu4m2bj02450s",
+          "tipo": "multiple",
+          "texto": "7. ¿En qué ciudad de Galilea creció Jesús y pasó la mayor parte de sus años previos a su ministerio público?",
+          "opcionIds": [
+            "opt_mu4m2bj02450s_0_mu4m2h886712n",
+            "opt_mu4m2bj02450s_1_mu4m2h885e34a",
+            "opt_mu4m2bj02450s_2_mu4m2o194567y",
+            "opt_mu4m2bj02450s_3_mu4m2u452106x"
+          ],
+          "correctas": [
+            1
+          ],
+          "puntos": 3
         },
         {
+          "correctas": [
+            0
+          ],
           "opciones": [
             "a. Mar de Tiberias y Lago de Genesaret",
             "b. Mar Muerto y Mar Salado",
             "c. Mar Grande y Mar Mediterráneo",
             "d. Lago Merom y Mar Rojo"
           ],
+          "tipo": "multiple",
           "puntos": 3,
           "texto": "8. El Mar de Galilea recibe varios nombres en la Biblia. ¿Cuáles de los siguientes son también nombres de este lago de agua dulce?",
-          "correctas": [
-            0
-          ],
-          "id": "mu4m31h72b05r",
-          "tipo": "multiple",
           "opcionIds": [
             "opt_mu4m31h72b05r_0_mu4m38e48912q",
             "opt_mu4m31h72b05r_1_mu4m38e43456e",
             "opt_mu4m31h72b05r_2_mu4m3f208126k",
             "opt_mu4m31h72b05r_3_mu4m3lu66050b"
-          ]
+          ],
+          "id": "mu4m31h72b05r"
         },
         {
+          "opcionIds": [
+            "opt_mu4m3sh84012y_0_mu4m41a69074m",
+            "opt_mu4m3sh84012y_1_mu4m41a62450x"
+          ],
           "puntos": 4,
+          "matchCorrectos": [
+            0,
+            0,
+            1,
+            0
+          ],
+          "id": "mu4m3sh84012y",
+          "opciones": [
+            "Verdadero",
+            "Falso"
+          ],
+          "correctas": [],
+          "enunciadoIds": [
+            "enun_mu4m3sh84012y_0_mu4m41a67123r",
+            "enun_mu4m3sh84012y_1_mu4m48d95460t",
+            "enun_mu4m3sh84012y_2_mu4m4fi26712s",
+            "enun_mu4m3sh84012y_3_mu4m4m664321w"
+          ],
           "texto": "9. Marque Falso (F) o Verdadero (V) para las siguientes afirmaciones sobre los viajes apostólicos y la geografía del Nuevo Testamento:",
           "enunciados": [
             "a. El apóstol Pablo inició sus tres viajes misioneros partiendo de la iglesia en Antioquía de Siria.",
@@ -2313,106 +2821,72 @@
             "c. La isla de Patmos, donde Juan escribió el Apocalipsis, se encuentra ubicada en el Mar Muerto.",
             "d. El apóstol Pedro tuvo la visión del lienzo bajado del cielo con animales limpios e inmundos en la ciudad costera de Jope."
           ],
-          "opciones": [
-            "Verdadero",
-            "Falso"
-          ],
-          "matchCorrectos": [
-            0,
-            0,
-            1,
-            0
-          ],
-          "opcionIds": [
-            "opt_mu4m3sh84012y_0_mu4m41a69074m",
-            "opt_mu4m3sh84012y_1_mu4m41a62450x"
-          ],
-          "id": "mu4m3sh84012y",
-          "enunciadoIds": [
-            "enun_mu4m3sh84012y_0_mu4m41a67123r",
-            "enun_mu4m3sh84012y_1_mu4m48d95460t",
-            "enun_mu4m3sh84012y_2_mu4m4fi26712s",
-            "enun_mu4m3sh84012y_3_mu4m4m664321w"
-          ],
-          "tipo": "matching",
-          "correctas": []
+          "tipo": "matching"
         },
         {
-          "opciones": [
-            "a. Antioquía de Pisidia, Iconio, Listra y Derbe",
-            "b. Éfeso, Esmirna, Pérgamo y Tiatira",
-            "c. Roma, Pompeya, Neápolis y Siracusa",
-            "d. Atenas, Corinto, Berea y Tesalónica"
-          ],
+          "puntos": 3,
           "id": "mu4m4t406e12k",
+          "tipo": "multiple",
+          "correctas": [
+            0
+          ],
           "opcionIds": [
             "opt_mu4m4t406e12k_0_mu4m50l98943x",
             "opt_mu4m4t406e12k_1_mu4m50l93215p",
             "opt_mu4m50l93215p_2_mu4m57e25406t",
             "opt_mu4m50l93215p_3_mu4m5dv18924b"
           ],
-          "tipo": "multiple",
-          "correctas": [
-            0
+          "opciones": [
+            "a. Antioquía de Pisidia, Iconio, Listra y Derbe",
+            "b. Éfeso, Esmirna, Pérgamo y Tiatira",
+            "c. Roma, Pompeya, Neápolis y Siracusa",
+            "d. Atenas, Corinto, Berea y Tesalónica"
           ],
-          "puntos": 3,
           "texto": "10. Durante el primer viaje misionero de Pablo y Bernabé, las iglesias fundadas en la región del sur de Galacia fueron:"
         },
         {
-          "id": "mu4m5l809123s",
           "texto": "11. ¿Por qué es importante para el estudiante bíblico y ministro del evangelio conocer la geografía bíblica en la interpretación hermenéutica de las Escrituras?",
-          "tipo": "abierta",
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
           "puntos": 5,
-          "correctas": [],
+          "id": "mu4m5l809123s",
           "opcionIds": [
             "opt_mu4m5l809123s_0_mu4m5s604215z",
             "opt_mu4m5l809123s_1_mu4m5s607834p"
           ],
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ]
+          "correctas": [],
+          "tipo": "abierta"
         },
         {
-          "puntos": 5,
-          "id": "mu4m5z201945r",
-          "texto": "12. Mencione dos aplicaciones espirituales o devocionales que el estudio de la geografía de Palestina y los lugares donde caminó el Señor Jesús ha traído a su fe personal.",
-          "opciones": [
-            "Opción A",
-            "Opción B"
-          ],
-          "correctas": [],
           "opcionIds": [
             "opt_mu4m5z201945r_0_mu4m65v98432a",
             "opt_mu4m5z201945r_1_mu4m65v92150l"
           ],
-          "tipo": "abierta"
+          "id": "mu4m5z201945r",
+          "tipo": "abierta",
+          "texto": "12. Mencione dos aplicaciones espirituales o devocionales que el estudio de la geografía de Palestina y los lugares donde caminó el Señor Jesús ha traído a su fe personal.",
+          "correctas": [],
+          "opciones": [
+            "Opción A",
+            "Opción B"
+          ],
+          "puntos": 5
         }
-      ]
+      ],
+      "actualizado": "2026-09-17T03:33:15.918Z",
+      "parcialId": "1a07ee20111_5e0858b0",
+      "aprobacion": 50
     },
     {
-      "creado": "2026-09-09T03:07:44.205Z",
-      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
-      "materia": "APOCALIPSIS I",
       "id": "mu4w4opypuq0t",
-      "parcialId": "1a07eef2a68_87c428e5",
-      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
-      "tiempo": 90,
       "actualizado": "2026-09-17T03:33:48.882Z",
-      "aleatorio": false,
-      "headerSubtitle": "“El séptimo ángel tocó la trompeta, y hubo grandes voces en el cielo, que decían: Los reinos del mundo han venido a ser de nuestro Señor y de su Cristo; y él reinará por los siglos de los siglos” Apocalipsis 11:15",
-      "estado": "activo",
+      "parcialId": "1a07eef2a68_87c428e5",
       "aprobacion": 50,
-      "docenteId": "1a07e62e17f_8c2a9988",
-      "titulo": "APOCALIPSIS II- INSTITUTO BÍBLICO PATRICIO SYMES - APOCALIPSIS I\nCapítulos 7 – 11",
-      "subtitulo": "“El séptimo ángel tocó la trompeta, y hubo grandes voces en el cielo, que decían: Los reinos del mundo han venido a ser de nuestro Señor y de su Cristo; y él reinará por los siglos de los siglos” Apocalipsis 11:15",
-      "mostrarNota": false,
-      "descripcion": "",
-      "intentos": 1,
       "preguntas": [
         {
           "id": "mu4w8r440125e",
-          "puntos": 5,
           "texto": "1. Complete los espacios en blanco sobre la visión de Juan en el capítulo 7 de Apocalipsis:\n\n«Después de esto miré, y he aquí una gran multitud, la cual nadie podía contar, de todas ________________, y ________________, y pueblos y ________________, que estaban delante del trono y en la presencia del Cordero, vestidos de ________________ blancas, y con ________________ en las manos» (Apocalipsis 7:9)",
           "opciones": [
             "Opción A",
@@ -2422,13 +2896,16 @@
             "opt_mu4w8r440125e_0_mu4w8z117842k",
             "opt_mu4w8r440125e_1_mu4w8z112450r"
           ],
+          "correctas": [],
           "tipo": "abierta",
-          "correctas": []
+          "puntos": 5
         },
         {
-          "texto": "2. ¿Cuántos son los siervos de Dios sellados en sus frentes de todas las tribus de los hijos de Israel según Apocalipsis 7:4?",
-          "correctas": [
-            2
+          "opciones": [
+            "a. 12.000",
+            "b. 70.000",
+            "c. 144.000 (12.000 de cada una de las doce tribus)",
+            "d. Una multitud innumerable"
           ],
           "opcionIds": [
             "opt_mu4w96e85412t_0_mu4w9db98925p",
@@ -2436,28 +2913,29 @@
             "opt_mu4w96e85412t_2_mu4w9kk26743m",
             "opt_mu4w96e85412t_3_mu4w9rt14506b"
           ],
-          "tipo": "multiple",
-          "opciones": [
-            "a. 12.000",
-            "b. 70.000",
-            "c. 144.000 (12.000 de cada una de las doce tribus)",
-            "d. Una multitud innumerable"
+          "texto": "2. ¿Cuántos son los siervos de Dios sellados en sus frentes de todas las tribus de los hijos de Israel según Apocalipsis 7:4?",
+          "puntos": 3,
+          "correctas": [
+            2
           ],
-          "id": "mu4w96e85412t",
-          "puntos": 3
+          "tipo": "multiple",
+          "id": "mu4w96e85412t"
         },
         {
-          "matchCorrectos": [
-            0,
-            1,
-            2,
-            3
+          "enunciados": [
+            "a. Primera Trompeta (Apoc. 8:7)",
+            "b. Segunda Trompeta (Apoc. 8:8-9)",
+            "c. Tercera Trompeta (Apoc. 8:10-11)",
+            "d. Cuarta Trompeta (Apoc. 8:12)"
           ],
-          "opcionIds": [
-            "opt_mu4wa3m87890z_0_mu4wa9t41245v",
-            "opt_mu4wa3m87890z_1_mu4wa9t46712n",
-            "opt_mu4wa3m87890z_2_mu4wagg34509e",
-            "opt_mu4wa3m87890z_3_mu4wanm19824p"
+          "id": "mu4wa3m87890z",
+          "texto": "3. Relacione cada una de las primeras cuatro trompetas de juicio con los eventos cósmicos y terrenales que desatan:",
+          "puntos": 8,
+          "opciones": [
+            "1. Granizo y fuego mezclados con sangre fueron lanzados sobre la tierra; la tercera parte de los árboles y toda hierba verde fue quemada",
+            "2. Como una gran montaña ardiendo en fuego fue precipitada en el mar; la tercera parte del mar se convirtió en sangre",
+            "3. Cayó del cielo una gran estrella ardiendo como una antorcha (Ajenjo) sobre la tercera parte de los ríos y fuentes de aguas",
+            "4. Fue herida la tercera parte del sol, de la luna y de las estrellas, oscureciéndose en su tercera parte"
           ],
           "enunciadoIds": [
             "enun_mu4wa3m87890z_0_mu4wa9t43456l",
@@ -2465,35 +2943,34 @@
             "enun_mu4wa3m87890z_2_mu4wakb23450h",
             "enun_mu4wa3m87890z_3_mu4waqn86712r"
           ],
-          "opciones": [
-            "1. Granizo y fuego mezclados con sangre fueron lanzados sobre la tierra; la tercera parte de los árboles y toda hierba verde fue quemada",
-            "2. Como una gran montaña ardiendo en fuego fue precipitada en el mar; la tercera parte del mar se convirtió en sangre",
-            "3. Cayó del cielo una gran estrella ardiendo como una antorcha (Ajenjo) sobre la tercera parte de los ríos y fuentes de aguas",
-            "4. Fue herida la tercera parte del sol, de la luna y de las estrellas, oscureciéndose en su tercera parte"
-          ],
           "tipo": "matching",
-          "puntos": 8,
-          "enunciados": [
-            "a. Primera Trompeta (Apoc. 8:7)",
-            "b. Segunda Trompeta (Apoc. 8:8-9)",
-            "c. Tercera Trompeta (Apoc. 8:10-11)",
-            "d. Cuarta Trompeta (Apoc. 8:12)"
+          "opcionIds": [
+            "opt_mu4wa3m87890z_0_mu4wa9t41245v",
+            "opt_mu4wa3m87890z_1_mu4wa9t46712n",
+            "opt_mu4wa3m87890z_2_mu4wagg34509e",
+            "opt_mu4wa3m87890z_3_mu4wanm19824p"
           ],
           "correctas": [],
-          "texto": "3. Relacione cada una de las primeras cuatro trompetas de juicio con los eventos cósmicos y terrenales que desatan:",
-          "id": "mu4wa3m87890z"
+          "matchCorrectos": [
+            0,
+            1,
+            2,
+            3
+          ]
         },
         {
-          "puntos": 4,
+          "tipo": "matching",
+          "enunciadoIds": [
+            "enun_mu4wb2v94301y_0_mu4wb9j85671e",
+            "enun_mu4wb2v94301y_1_mu4wbgg41209s",
+            "enun_mu4wb2v94301y_2_mu4wbnk87843t",
+            "enun_mu4wb2v94301y_3_mu4wbuw23450v"
+          ],
           "enunciados": [
             "a. Al abrirse el séptimo sello en el cielo hubo silencio como por media hora.",
             "b. El ángel del abismo en la quinta trompeta tiene por nombre en hebreo Abadón y en griego Apolión.",
             "c. Los dos testigos profetizan durante mil doscientos sesenta días vestidos de ropas de fiesta y púrpura.",
             "d. Cuando el séptimo ángel tocó su trompeta, se proclamó que los reinos del mundo han venido a ser de nuestro Señor y de su Cristo."
-          ],
-          "opciones": [
-            "Verdadero",
-            "Falso"
           ],
           "matchCorrectos": [
             0,
@@ -2501,37 +2978,956 @@
             1,
             0
           ],
+          "id": "mu4wb2v94301y",
+          "puntos": 4,
+          "correctas": [],
           "opcionIds": [
             "opt_mu4wb2v94301y_0_mu4wb9j88925f",
             "opt_mu4wb2v94301y_1_mu4wb9j83412r"
           ],
-          "id": "mu4wb2v94301y",
-          "tipo": "matching",
-          "correctas": [],
-          "enunciadoIds": [
-            "enun_mu4wb2v94301y_0_mu4wb9j85671e",
-            "enun_mu4wb2v94301y_1_mu4wbgg41209s",
-            "enun_mu4wb2v94301y_2_mu4wbnk87843t",
-            "enun_mu4wb2v94301y_3_mu4wbuw23450v"
+          "opciones": [
+            "Verdadero",
+            "Falso"
           ],
           "texto": "4. Escriba frente a cada afirmación Falso (F) o Verdadero (V) según Apocalipsis capítulos 8 al 11:"
         },
         {
-          "id": "mu4wc2h58912q",
-          "texto": "5. En el capítulo 11 se describe a los dos testigos de Dios que profetizan con poder. ¿Cuál es el mensaje teológico sobre la protección divina a sus siervos hasta cumplir su ministerio y su posterior resurrección y vindicación pública?",
-          "puntos": 5,
-          "correctas": [],
           "tipo": "abierta",
+          "correctas": [],
           "opcionIds": [
             "opt_mu4wc2h58912q_0_mu4wc9e34510b",
             "opt_mu4wc2h58912q_1_mu4wc9e38924m"
           ],
+          "puntos": 5,
+          "id": "mu4wc2h58912q",
+          "texto": "5. En el capítulo 11 se describe a los dos testigos de Dios que profetizan con poder. ¿Cuál es el mensaje teológico sobre la protección divina a sus siervos hasta cumplir su ministerio y su posterior resurrección y vindicación pública?",
           "opciones": [
             "Opción A",
             "Opción B"
           ]
         }
+      ],
+      "tiempo": 90,
+      "titulo": "APOCALIPSIS II- INSTITUTO BÍBLICO PATRICIO SYMES - APOCALIPSIS I\nCapítulos 7 – 11",
+      "estado": "activo",
+      "headerImage": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80",
+      "aleatorio": false,
+      "materia": "APOCALIPSIS I",
+      "mostrarNota": false,
+      "intentos": 1,
+      "descripcion": "",
+      "creado": "2026-09-09T03:07:44.205Z",
+      "docenteId": "1a07e62e17f_8c2a9988",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "headerSubtitle": "“El séptimo ángel tocó la trompeta, y hubo grandes voces en el cielo, que decían: Los reinos del mundo han venido a ser de nuestro Señor y de su Cristo; y él reinará por los siglos de los siglos” Apocalipsis 11:15",
+      "subtitulo": "“El séptimo ángel tocó la trompeta, y hubo grandes voces en el cielo, que decían: Los reinos del mundo han venido a ser de nuestro Señor y de su Cristo; y él reinará por los siglos de los siglos” Apocalipsis 11:15"
+    },
+    {
+      "id": "mu65r9f4r5v8o",
+      "semestre": "1a07f7bbeff_1c4eba4c",
+      "mostrarNota": true,
+      "creado": "2026-09-17T23:25:47.441Z",
+      "aleatorio": true,
+      "aprobacion": 70,
+      "docenteId": "mu646uivlewlf",
+      "intentos": 2,
+      "materia": "1a07ecf79cf_e82cbf49",
+      "descripcion": "EVALUACION I",
+      "parcialId": "mu5st18axq472",
+      "tiempo": 30,
+      "titulo": "INTRODUCCION AL ANTIGUO TESTAMENTO",
+      "estado": "activo",
+      "preguntas": [
+        {
+          "enunciado": "¿Cuál es el significado etimológico principal de la palabra «Testamento» en el contexto bíblico (hebreo berith / griego diatheke)?",
+          "puntos": 10,
+          "correcta": 1,
+          "id": "mu65spb703xfe",
+          "opciones": [
+            "Un documento de última voluntad que se abre únicamente tras la muerte.",
+            "Un pacto, alianza o acuerdo soberano establecido entre Dios y su pueblo.",
+            "Una compilación de leyes civiles y ceremoniales exclusivas de Israel.",
+            "Un relato puramente histórico de las guerras del Medio Oriente antiguo."
+          ],
+          "tipo": "opcion_multiple"
+        },
+        {
+          "enunciado": "¿En cuántos libros se divide el canon del Antiguo Testamento en las Biblias cristianas protestantes?",
+          "puntos": 10,
+          "opciones": [
+            "24 libros.",
+            "39 libros.",
+            "46 libros.",
+            "66 libros."
+          ],
+          "id": "mu65taesw3kgi",
+          "tipo": "opcion_multiple",
+          "correcta": 1
+        },
+        {
+          "opciones": [
+            "Pentateuco, Históricos y Epístolas.",
+            "Torá (Ley), Nevi'im (Profetas) y Ketuvim (Escritos).",
+            "Ley, Libros Poéticos y Apocalípticos.",
+            "Génesis, Salmos y Profetas Menores."
+          ],
+          "id": "mu65tx610s33o",
+          "correcta": 1,
+          "enunciado": "La división tradicional judía de las Escrituras (TaNaJ) organiza los libros en tres grandes secciones. ¿Cuáles son?",
+          "tipo": "opcion_multiple",
+          "puntos": 10
+        },
+        {
+          "id": "mu65uii3x6kgy",
+          "correcta": 1,
+          "enunciado": "¿En qué idiomas originales fue redactado principalmente el Antiguo Testamento?",
+          "puntos": 10,
+          "opciones": [
+            "Griego koiné y Latín.",
+            "Hebreo bíblico con algunas porciones breves en Arameo.",
+            "Arameo antiguo y Siríaco.",
+            "Hebreo rabínico y Árabe preislámico."
+          ],
+          "tipo": "opcion_multiple"
+        },
+        {
+          "puntos": 10,
+          "id": "mu65uxy6s8gbb",
+          "enunciado": "¿Cuál es la traducción griega más antigua e influyente del Antiguo Testamento, realizada en Alejandría alrededor del siglo III a.C.?",
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "La Vulgata.",
+            "La Septuaginta (LXX).",
+            "La Peshitta.",
+            "El Targum de Onquelos."
+          ]
+        },
+        {
+          "enunciado": "De acuerdo con el orden canónico protestante, ¿cuáles son las cuatro grandes categorías en que se clasifican los 39 libros del A.T.?",
+          "opciones": [
+            "Evangelios, Hechos, Epístolas y Revelación.",
+            "Pentateuco (Ley), Libros Históricos, Libros Poéticos/Sapienciales y Profetas (Mayores y Menores).",
+            "Narrativas, Salmos, Proverbios y Crónicas.",
+            "Pacto Sinaítico, Monarquía, Exilio y Pos-exilio."
+          ],
+          "puntos": 10,
+          "id": "mu65ve6r8x4x8",
+          "correcta": 1,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "tipo": "opcion_multiple",
+          "id": "mu65vvp8s0784",
+          "correcta": 1,
+          "opciones": [
+            "La mayor importancia doctrinal y espiritual de su mensaje.",
+            "La extensión y volumen literario de sus escritos, no su autoridad divina.",
+            "La época histórica: los Mayores profetizaron antes del Exilio y los Menores después.",
+            "El cargo jerárquico que ocupaban dentro del templo de Jerusalén."
+          ],
+          "enunciado": "¿Qué criterio fundamental distingue a los llamados «Profetas Mayores» de los «Profetas Menores»?",
+          "puntos": 10
+        },
+        {
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es el propósito teológico central del Antiguo Testamento según la revelación bíblica progresiva?",
+          "opciones": [
+            "Exponer exclusivamente la historia política y militar del reino de Judá.",
+            "Revelar el carácter santo de Dios, su pacto de redención y preparar el camino para la venida del Mesías.",
+            "Proveer un código moral inalcanzable para juzgar a las naciones paganas.",
+            "Documentar mitologías antiguas semejantes a los pueblos cananeos."
+          ],
+          "id": "mu65wbrt3o3vd",
+          "puntos": 10
+        },
+        {
+          "puntos": 10,
+          "correcta": 1,
+          "enunciado": "¿Qué descubrimiento arqueológico en 1947 confirmó de manera asombrosa la fidelidad y preservación del texto hebreo del A.T. transmitido por los masoretas?",
+          "id": "mu65ws9078h5d",
+          "opciones": [
+            "La Piedra de Rosetta.",
+            "Los Manuscritos del Mar Muerto (Qumrán).",
+            "El Código de Hammurabi.",
+            "Las Cartas de Amarna."
+          ],
+          "tipo": "opcion_multiple"
+        },
+        {
+          "enunciado": "¿Quién es tradicionalmente reconocido tanto por el testimonio bíblico como por la tradición judía y cristiana como el autor humano principal del Pentateuco?",
+          "opciones": [
+            "Abraham.",
+            "Moisés.",
+            "Esdras.",
+            "Josué."
+          ],
+          "puntos": 10,
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "id": "mu65x99d217q0"
+        }
       ]
+    },
+    {
+      "id": "mu66hfs0t2qwb",
+      "descripcion": "EVALUACION I",
+      "creado": "2026-09-17T23:46:08.556Z",
+      "preguntas": [
+        {
+          "opciones": [
+            "Destrucción mundial o catástrofe cósmica.",
+            "Revelación, desvelar o quitar el velo.",
+            "Enigma oculto para tiempos postreros.",
+            "Sentencia de condenación judicial."
+          ],
+          "puntos": 10,
+          "id": "mu66ijcvy7q58",
+          "enunciado": "¿Cuál es el significado literal de la palabra griega «Apokalypsis» (Apocalipsis)?",
+          "correcta": 1,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "enunciado": "¿Quién es el autor humano del libro de Apocalipsis y en qué lugar se encontraba desterrado cuando recibió la visión?",
+          "puntos": 10,
+          "correcta": 2,
+          "id": "mu66j5c4u739y",
+          "opciones": [
+            "El apóstol Pablo en Roma.",
+            "El apóstol Pedro en Babilonia.",
+            "El apóstol Juan en la isla de Patmos.",
+            "Juan el Bautista en el desierto de Judea."
+          ],
+          "tipo": "opcion_multiple"
+        },
+        {
+          "id": "mu66jm5w5b0o9",
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "puntos": 10,
+          "opciones": [
+            "12 iglesias.",
+            "7 iglesias.",
+            "10 iglesias.",
+            "3 iglesias."
+          ],
+          "enunciado": "¿A cuántas iglesias históricas de la provincia romana de Asia Menor va dirigida inicialmente la carta profética?"
+        },
+        {
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "«El principio, el medio y el fin».",
+            "«Las cosas que has visto, las que son, y las que han de ser después de estas».",
+            "«El juicio de Israel, el juicio de Roma y el juicio del diablo».",
+            "«Los sellos, las trompetas y las copas de ira»."
+          ],
+          "id": "mu66k9j51b72e",
+          "enunciado": "¿Cuál es la clave o bosquejo divino de división del libro provisto en Apocalipsis 1:19?",
+          "puntos": 10,
+          "correcta": 1
+        },
+        {
+          "puntos": 10,
+          "id": "mu66kpt013v1n",
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "En medio de nubes de trueno, con una espada de dos filos en su mano.",
+            "En medio de siete candeleros de oro, sosteniendo siete estrellas.",
+            "Sobre un caballo blanco, sosteniendo una corona triunfal.",
+            "Junto al arca del pacto, sosteniendo un libro sellado."
+          ],
+          "enunciado": "En la visión de apertura (cap. 1), ¿en medio de qué se encuentra el Cristo glorificado y qué sostiene en su mano derecha?"
+        },
+        {
+          "id": "mu66l96ovvj5k",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Haber tolerado la doctrina de Balaam.",
+            "Haber dejado su primer amor.",
+            "Ser una iglesia tibia y confiada en sus riquezas.",
+            "Haber permitido la hechicería de Jezabel."
+          ],
+          "enunciado": "¿Qué reproche central le hace el Señor a la iglesia de Éfeso en Apocalipsis 2:4 a pesar de sus arduas obras y sana doctrina?",
+          "correcta": 1,
+          "puntos": 10
+        },
+        {
+          "opciones": [
+            "Sardis.",
+            "Laodicea.",
+            "Esmirna.",
+            "Pérgamo."
+          ],
+          "enunciado": "¿A cuál de las siete iglesias no se le hace ningún reproche o reprensión, sino que se le exhorta a ser fiel hasta la muerte para recibir la corona de la vida?",
+          "puntos": 10,
+          "id": "mu66m8a6y0a22",
+          "correcta": 2,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "correcta": 2,
+          "tipo": "opcion_multiple",
+          "id": "mu66mt1qphm8z",
+          "opciones": [
+            "Escuela Preterista.",
+            "Escuela Historicista.",
+            "Escuela Futurista.",
+            "Escuela Idealista o Simbólica."
+          ],
+          "puntos": 10,
+          "enunciado": "¿Cuál de las siguientes escuelas de interpretación sostiene que la mayor parte del Apocalipsis describe acontecimientos todavía futuros vinculados al fin de los tiempos y el regreso de Cristo?"
+        },
+        {
+          "id": "mu66nde40114t",
+          "opciones": [
+            "Tiatira.",
+            "Filadelfia.",
+            "Laodicea.",
+            "Éfeso."
+          ],
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué iglesia es descrita severamente como «tibia, que no es fría ni caliente», a la cual el Señor advierte que vomitará de su boca si no se arrepiente?",
+          "correcta": 2,
+          "puntos": 10
+        },
+        {
+          "enunciado": "¿Cuál es la bienaventuranza especial prometida en Apocalipsis 1:3 para quien interactúa con esta profecía?",
+          "opciones": [
+            "«Bienaventurado el que descifra todas las fechas y misterios numéricos».",
+            "«Bienaventurado el que lee, y los que oyen las palabras de esta profecía, y guardan las cosas en ella escritas».",
+            "«Bienaventurado el que no teme al dragón ni a sus espíritus inmundos».",
+            "«Bienaventurados los que se aíslan del mundo para esperar el fin»."
+          ],
+          "tipo": "opcion_multiple",
+          "id": "mu66nt2u0o10d",
+          "correcta": 1,
+          "puntos": 10
+        }
+      ],
+      "mostrarNota": true,
+      "parcialId": "mu5vr3lmt1n2w",
+      "materia": "1a07ed96600_e4b34393",
+      "docenteId": "mu646uivlewlf",
+      "semestre": "mu5sp76a2k6j5",
+      "tiempo": 30,
+      "titulo": "APOCALIPSIS I",
+      "intentos": 2,
+      "aprobacion": 70,
+      "aleatorio": true,
+      "estado": "activo"
+    },
+    {
+      "id": "mu66pff0s3f2e",
+      "preguntas": [
+        {
+          "tipo": "opcion_multiple",
+          "puntos": 10,
+          "correcta": 1,
+          "enunciado": "¿Cuáles son los cuatro libros proféticos clasificados tradicionalmente como los «Profetas Mayores» en el canon bíblico protestante (además de Lamentaciones)?",
+          "id": "mu66qebh7t770",
+          "opciones": [
+            "Oseas, Joel, Amós y Abdías.",
+            "Isaías, Jeremías, Ezequiel y Daniel.",
+            "Elías, Eliseo, Samuel y Natán.",
+            "Miqueas, Nahúm, Habacuc y Sofonías."
+          ]
+        },
+        {
+          "correcta": 1,
+          "id": "mu66r1l4r1k5w",
+          "tipo": "opcion_multiple",
+          "puntos": 10,
+          "opciones": [
+            "Porque escribió uno de los cuatro Evangelios del Nuevo Testamento.",
+            "Por la abundancia, claridad y profundidad de sus profecías mesiánicas sobre la gracia y el Siervo sufriente.",
+            "Porque predicó a los gentiles en Grecia y Roma.",
+            "Porque pertenecía a la tribu sacerdotal de Leví."
+          ],
+          "enunciado": "¿Por qué al profeta Isaías se le conoce con frecuencia en la teología bíblica como «el profeta evangélico»?"
+        },
+        {
+          "enunciado": "¿En qué año y en el contexto de qué trágico suceso nacional tuvo Isaías su majestuosa visión del Señor en el trono (Isaías 6)?",
+          "opciones": [
+            "En el año de la caída de Nínive.",
+            "En el año en que murió el rey Uzías.",
+            "Durante la invasión babilónica de Nabucodonosor.",
+            "En el año de la reconstrucción del templo con Zorobabel."
+          ],
+          "id": "mu66ri7jov6j8",
+          "puntos": 10,
+          "correcta": 1,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "opciones": [
+            "«Pero tú, Belén Efrata... de ti me saldrá el que será Señor en Israel».",
+            "«He aquí que la virgen concebirá, y dará a luz un hijo, y llamará su nombre Emanuel».",
+            "«El cetro no será quitado de Judá hasta que venga Siloh».",
+            "«Yo suscitaré a David un Renuevo justo que reinará con sabiduría»."
+          ],
+          "tipo": "opcion_multiple",
+          "correcta": 1,
+          "enunciado": "¿Qué célebre profecía mesiánica dada por Isaías al rey Acaz anuncia el nacimiento sobrenatural del Mesías (Isaías 7:14)?",
+          "puntos": 10,
+          "id": "mu66s051q5u7m"
+        },
+        {
+          "puntos": 10,
+          "tipo": "opcion_multiple",
+          "correcta": 1,
+          "enunciado": "¿En qué capítulo de Isaías encontramos el conmovedor cántico del «Siervo Sufriente» que describe minuciosamente la expiación vicaria de Cristo («Él herido fue por nuestras rebeliones...»)?",
+          "id": "mu66sk5079y6l",
+          "opciones": [
+            "Isaías 40.",
+            "Isaías 53.",
+            "Isaías 61.",
+            "Isaías 11."
+          ]
+        },
+        {
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Por qué calificativo es conocido comúnmente el profeta Jeremías debido a su profundo dolor por el pecado y la ruina de su pueblo?",
+          "opciones": [
+            "El profeta del fuego.",
+            "El profeta llorón.",
+            "El vidente de visiones cósmicas.",
+            "El profeta de la justicia social."
+          ],
+          "id": "mu66t22y8v8d2",
+          "puntos": 10
+        },
+        {
+          "puntos": 10,
+          "correcta": 1,
+          "enunciado": "¿Qué gloriosa promesa profética anuncia Jeremías en el capítulo 31:31-34, clave para el Nuevo Testamento?",
+          "opciones": [
+            "La reedificación de los muros de Jerusalén por Nehemías.",
+            "El establecimiento de un Nuevo Pacto escrito no en tablas de piedra, sino en sus corazones.",
+            "La destrucción definitiva del imperio Persa.",
+            "El reinado de setenta años de Saúl, David y Salomón."
+          ],
+          "tipo": "opcion_multiple",
+          "id": "mu66ton2p2q4a"
+        },
+        {
+          "opciones": [
+            "En el palacio real de Samaria.",
+            "Entre los cautivos judíos en Babilonia, junto al río Quebar.",
+            "En el desierto de Sinaí con los beduinos.",
+            "En las sinagogas de Alejandría de Egipto."
+          ],
+          "puntos": 10,
+          "correcta": 1,
+          "id": "mu66u2p628a5n",
+          "enunciado": "¿Dónde ministró el profeta Ezequiel la mayor parte de sus visiones y mensajes proféticos?",
+          "tipo": "opcion_multiple"
+        },
+        {
+          "opciones": [
+            "La victoria militar de Babilonia sobre las naciones del Nilo.",
+            "La resurrección nacional, restauración espiritual y retorno a la vida de la casa de Israel por el Espíritu de Dios.",
+            "El juicio del infierno sobre los falsos profetas de Judá.",
+            "La caída del rey Nabucodonosor por causa de su soberbia."
+          ],
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Qué representa la impactante visión de los «Huesos Secos» en Ezequiel 37?",
+          "correcta": 1,
+          "id": "mu66unecsmx6b",
+          "puntos": 10
+        },
+        {
+          "puntos": 10,
+          "correcta": 1,
+          "enunciado": "¿Bajo qué grandes imperios mundiales sirvió el profeta Daniel como alto estadista mientras interpretaba sueños y visiones del soberano reino de Dios?",
+          "id": "mu66v6v99j24e",
+          "opciones": [
+            "Egipto y Asiria.",
+            "Imperio Babilónico e Imperio Medo-Persa.",
+            "Imperio Griego e Imperio Romano.",
+            "Hititas y Filisteos."
+          ],
+          "tipo": "opcion_multiple"
+        }
+      ],
+      "creado": "2026-09-17T23:52:20.173Z",
+      "intentos": 2,
+      "aprobacion": 70,
+      "descripcion": "EVALUACION I",
+      "parcialId": "mu5vvone8m16o",
+      "mostrarNota": true,
+      "semestre": "mu5sqf5uuaacj",
+      "materia": "1a07edb096f_a6d48429",
+      "tiempo": 30,
+      "titulo": "PROFETAS MAYORES I",
+      "aleatorio": true,
+      "estado": "activo",
+      "docenteId": "mu646uivlewlf"
+    },
+    {
+      "id": "mu66vx2h14r4h",
+      "mostrarNota": true,
+      "aleatorio": true,
+      "intentos": 2,
+      "docenteId": "admin-fallback-id",
+      "creado": "2026-09-17T23:57:24.089Z",
+      "descripcion": "EVALUACION I",
+      "semestre": "mu5smr56ua268",
+      "aprobacion": 70,
+      "parcialId": "mu5t4ckxk2fpw",
+      "materia": "1a07f7e04bd_8cea04b1",
+      "preguntas": [
+        {
+          "puntos": 10,
+          "id": "mu66wmlf2j5p0",
+          "correcta": 1,
+          "enunciado": "¿Cuáles son los tres continentes cuyas tierras e intersecciones geográficas forman el escenario geográfico de la historia bíblica?",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Europa, América y Asia.",
+            "Asia, África y Europa.",
+            "África, Oceanía y Europa.",
+            "Asia, África y la península Escandinava."
+          ]
+        },
+        {
+          "puntos": 10,
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "El Mar Caspio.",
+            "El Mar Rojo.",
+            "El Mar Mediterráneo.",
+            "El Golfo Pérsico."
+          ],
+          "enunciado": "¿Qué masa de agua central constituía la principal arteria marítima del mundo bíblico, llamada en las Escrituras «el Mar Grande»?",
+          "correcta": 2,
+          "id": "mu66x5752x27k"
+        },
+        {
+          "correcta": 1,
+          "enunciado": "¿Qué ríos delimitan y definen la emblemática región histórica de Mesopotamia («tierra entre dos ríos»)?",
+          "id": "mu66xlyc08r8k",
+          "puntos": 10,
+          "opciones": [
+            "Nilo y Jordán.",
+            "Tigris y Éufrates.",
+            "Danubio y Éufrates.",
+            "Jordán y Jaboc."
+          ],
+          "tipo": "opcion_multiple"
+        },
+        {
+          "enunciado": "¿De qué antiquísima y próspera metrópoli mesopotámica salió Abraham por fe tras el llamamiento divino (Génesis 11:31)?",
+          "correcta": 1,
+          "puntos": 10,
+          "opciones": [
+            "Nínive.",
+            "Ur de los Caldeos.",
+            "Babilonia.",
+            "Damasco."
+          ],
+          "id": "mu66y5nltf12a",
+          "tipo": "opcion_multiple"
+        },
+        {
+          "correcta": 1,
+          "id": "mu66yp6j3h239",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "El Desierto de Arabia.",
+            "La Media Luna Fértil.",
+            "La Gran Depresión del Jordán.",
+            "La Estepa de Anatolia."
+          ],
+          "puntos": 10,
+          "enunciado": "¿Cómo se denominaba a la fértil y estratégica faja en forma de arco regada por ríos que conectaba el Golfo Pérsico con Egipto?"
+        },
+        {
+          "puntos": 10,
+          "enunciado": "¿Cuál río era el motor vital indiscutible y fuente de fecundidad agrícola para la civilización del Antiguo Egipto?",
+          "opciones": [
+            "El río Éufrates.",
+            "El río Nilo.",
+            "El río Tigris.",
+            "El río Jordán."
+          ],
+          "tipo": "opcion_multiple",
+          "id": "mu66z8b4h4245",
+          "correcta": 1
+        },
+        {
+          "enunciado": "¿En qué fértil región pastoral del delta del Nilo se establecieron Jacob y sus hijos durante la estancia israelita en Egipto?",
+          "id": "mu66zr4i6z34a",
+          "opciones": [
+            "Tebas.",
+            "Tierra de Gosén.",
+            "Alejandría.",
+            "Memfis."
+          ],
+          "tipo": "opcion_multiple",
+          "correcta": 1,
+          "puntos": 10
+        },
+        {
+          "opciones": [
+            "Por poseer grandes yacimientos de hierro y carbón mineral.",
+            "Porque actuaba como el puente territorial obligado que interconectaba los imperios de Asia, África y Europa.",
+            "Porque era una península inaccesible protegida por altos volcanes.",
+            "Porque carecía de vecinos hostiles en todas sus fronteras."
+          ],
+          "puntos": 10,
+          "enunciado": "¿Por qué Canaán (Palestina) ocupaba una posición geopolítica y comercial absolutamente singular y estratégica en la antigüedad?",
+          "id": "mu670ck03g37q",
+          "correcta": 1,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "id": "mu670ux58x62c",
+          "opciones": [
+            "La Vía Apia y la Ruta de la Seda.",
+            "La Vía Maris (Camino del Mar) y el Camino Real de los Reyes.",
+            "La Vía Augusta y el Camino del Éufrates.",
+            "La Calzada Romana y la Ruta de Fenicia."
+          ],
+          "enunciado": "¿Cuáles eran las dos grandes vías comerciales internacionales que atravesaban la tierra de Canaán?",
+          "correcta": 1,
+          "puntos": 10,
+          "tipo": "opcion_multiple"
+        },
+        {
+          "opciones": [
+            "El río Nilo.",
+            "El río Jordán.",
+            "El río Cisón.",
+            "El río Arnón."
+          ],
+          "puntos": 10,
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál es la principal arteria fluvial de Palestina que nace en el monte Hermón y desemboca en el Mar Muerto?",
+          "correcta": 1,
+          "id": "mu671c6v1b644"
+        }
+      ],
+      "tiempo": 60,
+      "titulo": "GEOGRAFIA BIBLICA",
+      "estado": "activo"
+    },
+    {
+      "id": "mu671ve3364f9",
+      "parcialId": "mu5t4k29fgpc5",
+      "descripcion": "EVALUACION II",
+      "semestre": "1a07f7bbeff_1c4eba4c",
+      "preguntas": [
+        {
+          "correcta": 1,
+          "puntos": 10,
+          "enunciado": "¿Cuál es la masa de agua continental con la mayor salinidad y la cota topográfica más baja del planeta Tierra?",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "El Mar de Galilea.",
+            "El Mar Muerto (Mar Salado).",
+            "El Lago de Merom.",
+            "El Mar Rojo."
+          ],
+          "id": "mu672n178z64t"
+        },
+        {
+          "enunciado": "¿En qué región septentrional de Palestina desarrolló Jesús la mayor parte de su ministerio terrenal y sus milagros?",
+          "tipo": "opcion_multiple",
+          "id": "mu67396a5g8f4",
+          "opciones": [
+            "Judea.",
+            "Galilea.",
+            "Samaria.",
+            "Idumea."
+          ],
+          "puntos": 10,
+          "correcta": 1
+        },
+        {
+          "enunciado": "¿Qué monte sagrado albergó el templo de Salomón y es el corazón espiritual e histórico de la ciudad de Jerusalén?",
+          "puntos": 10,
+          "opciones": [
+            "Monte Carmelo.",
+            "Monte Moriah (Monte del Templo / Monte Sion).",
+            "Monte Tabor.",
+            "Monte Sinaí."
+          ],
+          "id": "mu673rk27r4t2",
+          "tipo": "opcion_multiple",
+          "correcta": 1
+        },
+        {
+          "tipo": "opcion_multiple",
+          "enunciado": "¿Cuál monte fue escenario de la resonante confrontación entre el profeta Elías y los profetas de Baal (1 Reyes 18)?",
+          "opciones": [
+            "Monte Nebo.",
+            "Monte Carmelo.",
+            "Monte Gilboa.",
+            "Monte Gerizim."
+          ],
+          "id": "mu674a2p4z9l2",
+          "correcta": 1,
+          "puntos": 10
+        },
+        {
+          "correcta": 1,
+          "enunciado": "¿Desde qué monte al este del Jordán contempló Moisés la Tierra Prometida antes de fallecer?",
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Monte Sion.",
+            "Monte Nebo (cumbre del Pisga).",
+            "Monte Hermón.",
+            "Monte de los Olivos."
+          ],
+          "id": "mu674t875f1g2",
+          "puntos": 10
+        },
+        {
+          "opciones": [
+            "Llanura del Sarón.",
+            "Llanura de Esdraelón (Jezreel).",
+            "Llanura de Filistea.",
+            "Desierto de Judá."
+          ],
+          "id": "mu675ctp6889t",
+          "tipo": "opcion_multiple",
+          "correcta": 1,
+          "enunciado": "¿Qué estrecha y fértil llanura en Palestina ha sido llamada tradicionalmente «el campo de batalla de las naciones» y se asocia con el valle de Meguido?",
+          "puntos": 10
+        },
+        {
+          "enunciado": "¿Cuál es la cumbre montañosa más elevada del norte de Palestina, frecuentemente coronada de nieve, cuyas aguas alimentan las fuentes del Jordán?",
+          "opciones": [
+            "Monte Hermón.",
+            "Monte Gerizim.",
+            "Monte Ebal.",
+            "Monte Tabor."
+          ],
+          "id": "mu675we4871l9",
+          "tipo": "opcion_multiple",
+          "puntos": 10,
+          "correcta": 0
+        },
+        {
+          "id": "mu676dtc3d182",
+          "correcta": 1,
+          "enunciado": "¿Qué región central, situada geográficamente entre Galilea al norte y Judea al sur, fue habitada por un pueblo de culto mezclado que los judíos evitaban cruzar?",
+          "puntos": 10,
+          "tipo": "opcion_multiple",
+          "opciones": [
+            "Perea.",
+            "Samaria.",
+            "Decápolis.",
+            "Fenicia."
+          ]
+        },
+        {
+          "correcta": 1,
+          "tipo": "opcion_multiple",
+          "id": "mu676wa59x37p",
+          "opciones": [
+            "Monte Tabor.",
+            "Monte de los Olivos.",
+            "Monte Ebal.",
+            "Monte Gilboa."
+          ],
+          "enunciado": "¿En cuál monte, ubicado al oriente de Jerusalén y separado por el valle del Cedrón, ascendió el Señor Jesús al cielo y prometió volver?",
+          "puntos": 10
+        },
+        {
+          "puntos": 10,
+          "correcta": 1,
+          "enunciado": "¿Qué desierto árido y agreste se extiende al sur de Beerseba y constituye la frontera meridional de la Tierra Prometida?",
+          "id": "mu677e4m0h1e2",
+          "opciones": [
+            "Desierto de Damasco.",
+            "El Neguev.",
+            "Desierto de Shur.",
+            "Desierto de Moab."
+          ],
+          "tipo": "opcion_multiple"
+        }
+      ],
+      "intentos": 2,
+      "titulo": "GEOGRAFIA BIBLICA",
+      "tiempo": 60,
+      "mostrarNota": true,
+      "estado": "activo",
+      "aleatorio": true,
+      "creado": "2026-09-18T00:01:58.347Z",
+      "aprobacion": 70,
+      "docenteId": "admin-fallback-id",
+      "materia": "1a07f7e04bd_8cea04b1"
+    },
+    {
+      "id": "mu8u1rhmslpfs",
+      "aleatorio": false,
+      "aprobacion": 50,
+      "actualizado": "2026-09-20T06:00:47.786Z",
+      "docenteId": "admin-fallback-id",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "subtitulo": "“TODA LA ESCRITURA ESTÁ INSPIRADA POR DIOS Y ES PROVECHOSA PARA ENSEÑAR,\nPARA REPRENDER, PARA CORREGIR, PARA ENTRENAR EN JUSTICIA\" 2 TIM 3:16.",
+      "creado": "2026-09-19T20:21:20.362Z",
+      "descripcion": "",
+      "parcialId": "1a07edfc2bc_55efa6b6",
+      "preguntas": [
+        {
+          "tipo": "multiple",
+          "id": "mu96iuacsyoiv",
+          "correctas": [],
+          "texto": "1. LA DEFINICIÓN DE TEOLOGÍA COMO CIENCIA ES:",
+          "puntos": 10,
+          "opcionIds": [
+            "opt_mu96iuacsyoiv_0_mu96iuac9hvwc",
+            "opt_mu96iuacsyoiv_1_mu96iuac4hsid",
+            "opt_mu96iuacsyoiv_2_mu97gu0j9q796",
+            "opt_mu96iuacsyoiv_3_mu97gverru4xl",
+            "opt_mu96iuacsyoiv_4_mu9c9sust4w2w"
+          ],
+          "opciones": [
+            "A. LA RAZÓN O DISCURSO SOBRE LA DIVINIDAD.",
+            "B. DISCURSO SOBRE DIOS, HACIA DIOS, ANTE DIOS, DESDE DIOS O DE DIOS",
+            "C. LA REFLEXIÓN SOBRE EL MENSAJE DE LA REVELACIÓN DE DIOS, EMPLEANDO\nMÉTODOS RELACIONADOS CON LAS CIENCIAS MODERNAS, BUSCANDO LA\nACTUALIZACIÓN DE LA ESENCIA DE LA FE EN EL TIEMPO PRESENTE",
+            "D. LA CIENCIA QUE TRATA DE DIOS Y DE LAS RELACIONES ENTRE DIOS Y EL UNIVERSO.",
+            ""
+          ]
+        },
+        {
+          "texto": "2. LOS FUNDAMENTOS DE LA TEOLOGÍA CRISTIANA DESCRITOS EN EL MATERIAL SON:",
+          "correctas": [],
+          "puntos": 10,
+          "id": "mu9bkp685bzs2",
+          "opcionIds": [
+            "opt_mu9bkp685bzs2_0_mu9bkp6825kso",
+            "opt_mu9bkp685bzs2_1_mu9bkp68sgmim",
+            "opt_mu9bkp685bzs2_2_mu9boyxby9coi"
+          ],
+          "tipo": "multiple",
+          "opciones": [
+            "A. LA CIENCIA, EL RAZONAMIENTO HUMANO, LA FILOSOFÍA, LA APOLOGÉTICA. ",
+            "C. REVELACIÓN, LA FE PERSONAL, LACOMUNIDAD CRISTIANA DE FE, Y LA DOGMÁTICA.",
+            "D. LA CONFESIÓN DE FE, LA IGLESIA, EL BAUTISMO Y EL MATRIMONIO."
+          ]
+        },
+        {
+          "tipo": "multiple",
+          "correctas": [],
+          "puntos": 10,
+          "opciones": [
+            "A. EL DESARROLLO DEL CARÁCTER CRISTIANO.",
+            "B. EL CONOCIMIENTO DE DIOS.",
+            "C. EL RESULTADO DE LA REFORMA PROTESTANTE",
+            "D. LO QUE LA BIBLIA NOS ENSEÑA EN CUANTO A UN TEMA EN PARTICULAR."
+          ],
+          "id": "mu9bwnurzveh1",
+          "opcionIds": [
+            "opt_mu9bwnurzveh1_0_mu9bwnurrukpt",
+            "opt_mu9bwnurzveh1_1_mu9bwnurx3djn",
+            "opt_mu9bwnurzveh1_2_mu9by32qcq858",
+            "opt_mu9bwnurzveh1_3_mu9by4sacjj7p"
+          ],
+          "texto": "3. DOCTRINA ES:"
+        },
+        {
+          "correctas": [],
+          "enunciadoIds": [
+            "enun_mu9c0gp5wiq0q_0_mu9c1c7foi8on",
+            "enun_mu9c0gp5wiq0q_1_mu9c435bcss4a",
+            "enun_mu9c0gp5wiq0q_2_mu9c4mlr19mhj",
+            "enun_mu9c0gp5wiq0q_3_mu9eq0pldinhw"
+          ],
+          "id": "mu9c0gp5wiq0q",
+          "puntos": 10,
+          "texto": "4. SEÑALE SI LAS SIGUIENTES AFIRMACIONES SON FALSAS O VERDADERAS:",
+          "enunciados": [
+            "A. LA SANA INTENCIÓN DEL CORAZÓN AL ACERCARNOS MÁS AL CONOCIMIENTO DE DIOS, ES LA DE PODER COMPARTIR CON OTROS LAS BUENAS NUEVAS DE SALVACIÓN. ",
+            "B. PARTE IMPORTANTE DEL ESTUDIO DE LA TEOLOGÍA ES LA ORACIÓN.",
+            "C. EL ESTUDIO DE LA TEOLOGÍA NOS HACE MEJORES QUE LOS DEMÁS CREYENTES.",
+            "D.  DE ACUERDO CON EL MATERIAL, UNA DE LAS ESPECIALIZACIONES DE LA TEOLÓGICAS ES LA TEOLOGÍA APOLOGÉTICA."
+          ],
+          "opciones": [
+            "Verdadero",
+            "Falso"
+          ],
+          "tipo": "matching",
+          "opcionIds": [
+            "opt_mu9c0gp5wiq0q_0_mu9c1dw0k1ytp",
+            "opt_mu9c0gp5wiq0q_1_mu9c1dw08ozko"
+          ],
+          "matchCorrectos": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "materia": "TEOLOGÍA",
+      "intentos": 1,
+      "estado": "borrador",
+      "mostrarNota": false,
+      "tiempo": 60,
+      "titulo": "EVALUACIÓN I - TEOLOGÍA\n (UNIDADES 1 Y 2)\nINSTITUTO BÍBLICO PATRICIO SYMES"
+    },
+    {
+      "id": "mu8u51tzl5i9l",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "admin-fallback-id",
+      "titulo": "EVALUACIÓN II -  \n (UNIDADES 3 Y 4)- TEOLOGÍA",
+      "tiempo": 60,
+      "subtitulo": "",
+      "mostrarNota": false,
+      "estado": "borrador",
+      "aleatorio": false,
+      "descripcion": "",
+      "materia": "TEOLOGÍA",
+      "creado": "2026-09-19T20:23:53.735Z",
+      "intentos": 1,
+      "actualizado": "2026-09-19T23:34:04.139Z",
+      "aprobacion": 50,
+      "parcialId": "1a07ee112ca_a31b6f13",
+      "preguntas": []
+    },
+    {
+      "id": "mu94hxazxn8kf",
+      "creado": "2026-09-20T01:13:50.555Z",
+      "parcialId": "1a07eeeb300_be417f68",
+      "aprobacion": 50,
+      "mostrarNota": false,
+      "intentos": 1,
+      "preguntas": [],
+      "materia": "ÉTICA E INTEGRIDAD",
+      "descripcion": "",
+      "aleatorio": false,
+      "tiempo": 60,
+      "titulo": "EVALUACIÓN I - ÉTICA E INTEGRIDAD\n(UNIDADES I- II)\nINSTITUTO BÍBLICO PATRICIO SYMES",
+      "estado": "borrador",
+      "actualizado": "2026-09-20T01:15:57.274Z",
+      "docenteId": "admin-fallback-id",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "subtitulo": ""
+    },
+    {
+      "id": "mu94phtqdxtso",
+      "descripcion": "",
+      "intentos": 1,
+      "estado": "borrador",
+      "parcialId": "1a07eef2a68_87c428e5",
+      "titulo": "EVALUACIÓN II  - ÉTICA E INTEGRIDAD -  \n(UNIDADES III- IV)\nINSTITUTO BÍBLICO PATRICIO SYMES",
+      "tiempo": 60,
+      "mostrarNota": false,
+      "preguntas": [],
+      "materia": "ÉTICA E INTEGRIDAD",
+      "bannerUrl": "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80",
+      "docenteId": "admin-fallback-id",
+      "subtitulo": "",
+      "actualizado": "2026-09-20T01:21:21.773Z",
+      "aleatorio": false,
+      "aprobacion": 50,
+      "creado": "2026-09-20T01:19:43.743Z"
     }
   ]
 }

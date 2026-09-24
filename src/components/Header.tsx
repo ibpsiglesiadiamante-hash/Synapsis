@@ -114,24 +114,24 @@ export default function Header({
             type="button"
             onClick={onOpenShareModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer shadow-xs"
-            title="Ver enlace oficial synapsis-edu.web.app y código QR"
+            title="Ver enlace oficial synapsis-ec.web.app y código QR"
           >
             <QrCode className="w-4 h-4 text-indigo-600" />
             <span className="hidden sm:inline">Enlace & QR</span>
           </button>
         )}
 
-        {/* Firebase Synchronization Status & Trigger */}
+        {/* Firebase & Supabase Cloud Synchronization */}
         {onSyncFirebase && (
           <button
             type="button"
             onClick={onSyncFirebase}
             disabled={isSyncing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60"
-            title="Sincronizar datos con Firebase (ai-studio-applet-webapp)"
+            title="Sincronizar datos con Cloud Firestore y Supabase PostgreSQL"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Firebase'}</span>
+            <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Nube (Firebase & Supabase)'}</span>
           </button>
         )}
 

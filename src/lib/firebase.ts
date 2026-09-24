@@ -5,7 +5,9 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+export const db = (!firebaseConfig.firestoreDatabaseId || firebaseConfig.firestoreDatabaseId === '(default)')
+  ? getFirestore(app)
+  : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 
 // Test connection on boot as instructed in SKILL.md
@@ -69,12 +71,13 @@ export function getIsFirestoreAvailable(): boolean {
 }
 
 export function getFirebaseAppInfo() {
+  const pId = firebaseConfig.projectId || 'synapsis-ec';
   return {
-    projectId: firebaseConfig.projectId || 'synapsis-edu',
+    projectId: pId,
     appId: firebaseConfig.appId,
-    appName: 'ai-studio-applet-webapp',
+    appName: pId,
     databaseId: firebaseConfig.firestoreDatabaseId || '(default)',
-    officialUrl: 'https://synapsis-edu.web.app'
+    officialUrl: `https://${pId}.web.app`
   };
 }
 
@@ -136,7 +139,12 @@ export function sanitizeForFirestore(obj: any): any {
   return clean;
 }
 
+import { saveDocToSupabase, deleteDocFromSupabase } from './supabase';
+
 export async function saveDocToFirestore<T extends { id: string }>(collName: string, item: T): Promise<void> {
+  // Mirror writes to Supabase asynchronously
+  saveDocToSupabase(collName, item).catch(() => {});
+
   if (!isFirestoreAvailable) {
     return;
   }
@@ -153,6 +161,9 @@ export async function deleteDocFromFirestore(collName: string, docId: string): P
   if (!docId) return;
   markAsDeleted(docId);
   itemSyncCache.delete(`${collName}/${docId}`);
+  // Mirror deletions to Supabase asynchronously
+  deleteDocFromSupabase(collName, docId).catch(() => {});
+
   if (!isFirestoreAvailable) {
     return;
   }
@@ -164,7 +175,7 @@ export async function deleteDocFromFirestore(collName: string, docId: string): P
 }
 
 import { User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission } from '../types';
-import { mergeStates, saveState, getDeletedIds, markAsDeleted } from './db';
+import { mergeStates, saveState, getDeletedIds, markAsDeleted, PROTECTED_IDS } from './db';
 
 export interface AppState {
   users: User[];
@@ -186,6 +197,7 @@ export interface AppState {
 export async function syncDeletedIdsWithFirestore(): Promise<Set<string>> {
   const localDeleted = getDeletedIds();
   if (!isFirestoreAvailable) {
+    PROTECTED_IDS.forEach(pid => localDeleted.delete(pid));
     return localDeleted;
   }
   try {
@@ -195,10 +207,11 @@ export async function syncDeletedIdsWithFirestore(): Promise<Set<string>> {
       const data = snap.data();
       if (Array.isArray(data?.ids)) {
         data.ids.forEach((id: string) => {
-          if (id) localDeleted.add(id);
+          if (id && !PROTECTED_IDS.has(id)) localDeleted.add(id);
         });
       }
     }
+    PROTECTED_IDS.forEach(pid => localDeleted.delete(pid));
     // Update local storage
     try {
       localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(localDeleted)));
@@ -209,6 +222,7 @@ export async function syncDeletedIdsWithFirestore(): Promise<Set<string>> {
   } catch (e) {
     console.warn('Could not synchronize deleted records with cloud, continuing with local set.', e);
   }
+  PROTECTED_IDS.forEach(pid => localDeleted.delete(pid));
   return localDeleted;
 }
 
@@ -216,7 +230,7 @@ export async function syncDeletedIdsWithFirestore(): Promise<Set<string>> {
  * Permanently registers an ID as deleted both locally and in Cloud Firestore.
  */
 export async function registerDeletedId(id: string, collName?: string): Promise<void> {
-  if (!id) return;
+  if (!id || PROTECTED_IDS.has(id)) return;
   markAsDeleted(id);
   if (collName) {
     deleteDocFromFirestore(collName, id).catch(() => {});
@@ -277,6 +291,9 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
       const filterAliveAndClean = <T extends { id: string }>(coll: string, list: T[]): T[] => {
         return (list || []).filter(item => {
           if (item && item.id && deletedIds.has(item.id)) {
+            if (coll === 'subjects' || coll === 'semesters' || coll === 'users') {
+              return true;
+            }
             deleteDocFromFirestore(coll, item.id).catch(() => {});
             return false;
           }

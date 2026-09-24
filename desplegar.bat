@@ -47,7 +47,7 @@ if %errorlevel% neq 0 (
 
 :: 5. Desplegar en Firebase Hosting
 echo.
-echo [4/4] Subiendo archivos a Firebase Hosting (synapsis-edu.web.app)...
+echo [4/4] Subiendo archivos a Firebase Hosting (synapsis-ec.web.app)...
 call npx -y firebase-tools deploy --only hosting
 
 if %errorlevel% equ 0 (
@@ -55,7 +55,7 @@ if %errorlevel% equ 0 (
     echo.
     echo =========================================================
     echo   EXITO! Tu aplicacion esta desplegada en:
-    echo   https://synapsis-edu.web.app/
+    echo   https://synapsis-ec.web.app/
     echo =========================================================
 ) else (
     echo.

@@ -7,16 +7,18 @@ import React, { useState } from 'react';
 import { 
   BookOpen, CheckSquare, Users, Award, 
   HelpCircle, XCircle, TrendingUp, Sparkles, FileSpreadsheet,
-  Compass, Leaf, Star
+  Compass, Leaf, Star, GraduationCap, CheckCircle
 } from 'lucide-react';
-import { User, Exam, Submission } from '../types';
-import { avatarColor, avatarLetter, fmtDate } from '../lib/db';
+import { User, Exam, Submission, Subject, Semester } from '../types';
+import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester } from '../lib/db';
 
 interface DashboardProps {
   currentUser: User;
   users: User[];
   exams: Exam[];
   submissions: Submission[];
+  subjects?: Subject[];
+  semesters?: Semester[];
   onNavigate: (pageId: string) => void;
   onTakeExam?: (examId: string) => void;
   theme?: string;
@@ -35,7 +37,7 @@ const natureQuotes = [
   { quote: "Admira la constelación lejana y aprende su lección: iluminar la inmensa noche con humilde silencio activo.", author: "Sabiduría del Cosmos" }
 ];
 
-export default function Dashboard({ currentUser, users, exams, submissions, onNavigate, onTakeExam, theme }: DashboardProps) {
+export default function Dashboard({ currentUser, users, exams, submissions, subjects = [], semesters = [], onNavigate, onTakeExam, theme }: DashboardProps) {
   const rol = currentUser.rol;
   const allMyUserIds = users 
     ? users.filter(u => u.nombre === currentUser.nombre || u.email.toLowerCase() === currentUser.email.toLowerCase()).map(u => u.id)
@@ -56,7 +58,15 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
     sortedSubs = [...(submissions || [])].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     sortedExams = [...(exams || [])];
   } else if (rol === 'docente') {
-    const docExams = (exams || []).filter(e => e.docenteId && allMyUserIds.includes(e.docenteId));
+    const userAsignaturas = currentUser.asignaturas || [];
+    const docExams = (exams || []).filter(e => {
+      if (e.docenteId && allMyUserIds.includes(e.docenteId)) return true;
+      if (e.docenteId === currentUser.id) return true;
+      const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      if (subj && (userAsignaturas.includes(subj.id) || (subj.docenteId && allMyUserIds.includes(subj.docenteId)))) return true;
+      if (e.materia && userAsignaturas.includes(e.materia)) return true;
+      return false;
+    });
     const examIds = docExams.map(e => e.id);
     const mySubsList = (submissions || []).filter(s => examIds.includes(s.examenId));
     sortedSubs = [...mySubsList].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
@@ -65,7 +75,22 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
     const studentSubs = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
     sortedSubs = [...studentSubs].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     
-    const availableExams = (exams || []).filter(e => e.estado === 'activo');
+    const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
+    const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
+    const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
+
+    const availableExams = (exams || []).filter(e => {
+      if (e.estado !== 'activo') return false;
+      if (myAssignedSubjects.length > 0) {
+        if (e.materia && assignedIds.has(e.materia)) return true;
+        const eMat = (e.materia || '').toLowerCase().trim();
+        if (assignedNames.has(eMat)) return true;
+        const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
+        if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
+        return false;
+      }
+      return true;
+    });
     sortedExams = availableExams.filter(e => {
       if (e.intentos === 0) return true;
       const myCount = studentSubs.filter(s => s.examenId === e.id).length;
@@ -130,16 +155,46 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
                     {recentSubs.map((sub) => {
                       const student = users.find(u => u.id === sub.estudianteId);
                       const exam = exams.find(e => e.id === sub.examenId);
+                      const subjectObj = (subjects || []).find(s => s.id === exam?.materia || s.nombre.toLowerCase().trim() === (exam?.materia || '').toLowerCase().trim());
+                      const subjectName = subjectObj?.nombre || exam?.materia || '';
+                      const gradeNum = typeof sub.puntaje === 'number' ? (sub.puntaje <= 5 ? sub.puntaje : sub.puntaje / 20) : 0;
+                      const isPassing = gradeNum >= 3.0;
+
                       return (
-                        <tr key={sub.id} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-3 font-medium text-slate-800">{student?.nombre || sub.estudianteNombre}</td>
-                          <td className="py-2.5 px-3 text-slate-500 max-w-[150px] truncate">{exam?.titulo || '—'}</td>
+                        <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                            {student?.nombre || sub.estudianteNombre}
+                          </td>
+                          <td className="py-2.5 px-3 min-w-[200px]">
+                            <div 
+                              onClick={() => onNavigate('resultados')}
+                              className="font-bold text-xs text-indigo-950 hover:text-indigo-600 cursor-pointer transition-colors max-w-[240px] truncate" 
+                              title={exam?.titulo || 'Evaluación'}
+                            >
+                              {cleanExamTitle(exam?.titulo)}
+                            </div>
+                            {subjectName && (
+                              <div className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1 mt-0.5 truncate max-w-[240px]">
+                                <BookOpen className="w-3 h-3 text-emerald-600 inline shrink-0" />
+                                <span>{subjectName}</span>
+                              </div>
+                            )}
+                          </td>
                           <td className="py-2.5 px-3">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${sub.aprobado ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
-                              {sub.puntaje}%
+                            <span 
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                                isPassing 
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                                  : 'bg-rose-50 text-rose-700 border border-rose-100'
+                              }`}
+                              title={`Puntaje: ${sub.puntaje}%`}
+                            >
+                              {formatGrade5(sub.puntaje)}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-xs text-slate-400">{fmtDate(sub.fecha)}</td>
+                          <td className="py-2.5 px-3 text-xs text-slate-400 whitespace-nowrap">
+                            {fmtDate(sub.fecha)}
+                          </td>
                         </tr>
                       );
                     })}
@@ -187,17 +242,27 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
               <div className="py-8 text-center text-sm text-slate-400">No hay exámenes registrados</div>
             ) : (
               <div className="flex flex-col gap-3">
-                {recentExams.map((exam) => (
-                  <div key={exam.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-none">
-                    <div>
-                      <div className="font-semibold text-sm text-slate-800">{exam.titulo}</div>
-                      <div className="text-xs text-slate-400">{exam.materia} · {exam.preguntas.length} preguntas</div>
+                {recentExams.map((exam) => {
+                  const subjectObj = (subjects || []).find(s => s.id === exam.materia || s.nombre.toLowerCase().trim() === (exam.materia || '').toLowerCase().trim());
+                  const subjectName = subjectObj?.nombre || exam.materia;
+                  return (
+                    <div key={exam.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-none">
+                      <div className="max-w-[70%]">
+                        <div 
+                          onClick={() => onNavigate('misExamenes')}
+                          className="font-semibold text-sm text-slate-800 hover:text-indigo-600 cursor-pointer truncate" 
+                          title={exam.titulo}
+                        >
+                          {cleanExamTitle(exam.titulo)}
+                        </div>
+                        <div className="text-xs text-slate-400 truncate">{subjectName} · {exam.preguntas.length} preguntas</div>
+                      </div>
+                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${exam.estado === 'activo' ? 'bg-emerald-50 text-emerald-700' : exam.estado === 'borrador' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {exam.estado}
+                      </span>
                     </div>
-                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${exam.estado === 'activo' ? 'bg-emerald-50 text-emerald-700' : exam.estado === 'borrador' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                      {exam.estado}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -392,8 +457,96 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
 
     const myRecentSubs = paginatedSubs;
 
+    // Student enrolled subjects
+    const studentSemesterObj = resolveStudentSemester(currentUser.semestre, semesters);
+    const studentSemesterName = studentSemesterObj?.nombre || currentUser.semestre;
+    const studentEnrolledSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
+
+    const studentSubjectsCard = (
+      <div className="card bg-white p-5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border">
+        <div className="card-header border-b border-slate-100 pb-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="card-title text-base font-bold text-slate-800 flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-indigo-600" />
+              Mis Asignaturas Matriculadas
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {studentSemesterName ? `Inscrito en ${studentSemesterName}` : 'Materias vinculadas a tu perfil académico'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {studentSemesterName && (
+              <span className="text-xs font-bold px-3 py-1 bg-violet-50 text-violet-700 border border-violet-200 rounded-full">
+                {studentSemesterName}
+              </span>
+            )}
+            <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+              {studentEnrolledSubjects.length} {studentEnrolledSubjects.length === 1 ? 'materia asignada' : 'materias asignadas'}
+            </span>
+          </div>
+        </div>
+
+        {studentEnrolledSubjects.length === 0 ? (
+          <div className="p-6 bg-slate-50 rounded-xl text-center text-sm text-slate-500">
+            <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+            <p className="font-bold text-slate-700">No tienes materias asignadas actualmente</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+              Comunícate con la administración académica para la asignación de tus materias y ciclo correspondiente.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {studentEnrolledSubjects.map(sub => {
+              const docenteObj = users.find(u => u.id === sub.docenteId);
+              const subExams = exams.filter(e => {
+                if (e.estado !== 'activo') return false;
+                return e.materia === sub.id || (e.materia || '').toLowerCase().trim() === sub.nombre.toLowerCase().trim();
+              });
+
+              return (
+                <div key={sub.id} className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/50 hover:border-indigo-300 hover:shadow-sm transition-all flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded">
+                        {sub.codigo || 'MAT'}
+                      </span>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Matriculada
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-slate-900 text-sm mb-1 leading-snug line-clamp-2">
+                      {sub.nombre}
+                    </h4>
+                    {docenteObj && (
+                      <p className="text-xs text-slate-500 font-medium mb-3">
+                        Docente: {docenteObj.nombre}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-3">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {subExams.length} {subExams.length === 1 ? 'evaluación activa' : 'evaluaciones activas'}
+                    </span>
+                    <button
+                      onClick={() => onNavigate('misExamenesTake')}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      Ver exámenes →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+
     mainCards = (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        {studentSubjectsCard}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Mis últimas calificaciones */}
         <div className="card bg-white p-5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border flex flex-col justify-between min-h-[340px]">
           <div>
@@ -420,16 +573,26 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
                   <tbody className="divide-y divide-slate-100">
                     {myRecentSubs.map((sub) => {
                       const exam = exams.find(e => e.id === sub.examenId);
+                      const subjectObj = (subjects || []).find(s => s.id === exam?.materia || s.nombre.toLowerCase().trim() === (exam?.materia || '').toLowerCase().trim());
+                      const subjectName = subjectObj?.nombre || exam?.materia;
                       return (
                         <tr key={sub.id} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-3 font-semibold text-slate-800 truncate max-w-[170px]">{exam?.titulo || '—'}</td>
-                          <td className="py-2.5 px-3 font-bold text-indigo-700">{sub.puntaje}%</td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-800 max-w-[220px]">
+                            <div className="truncate" title={exam?.titulo || '—'}>{cleanExamTitle(exam?.titulo)}</div>
+                            {subjectName && (
+                              <div className="text-[10px] font-medium text-emerald-700 truncate">{subjectName}</div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-indigo-700 whitespace-nowrap">
+                            <span>{formatGrade5(sub.puntaje)}</span>
+                            <span className="text-[10px] text-slate-400 font-medium ml-1">({sub.puntaje}%)</span>
+                          </td>
                           <td className="py-2.5 px-3">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${sub.aprobado ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
                               {sub.aprobado ? 'Aprobado' : 'Reprobado'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-xs text-slate-400">{fmtDate(sub.fecha)}</td>
+                          <td className="py-2.5 px-3 text-xs text-slate-400 whitespace-nowrap">{fmtDate(sub.fecha)}</td>
                         </tr>
                       );
                     })}
@@ -477,22 +640,28 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
               <div className="py-8 text-center text-sm text-slate-400">No hay nuevos exámenes para presentar</div>
             ) : (
               <div className="flex flex-col gap-3">
-                {paginatedExams.map((exam) => (
-                  <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-150 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <div className="font-semibold text-sm text-slate-800">{exam.titulo}</div>
-                      <div className="text-xs text-slate-400">{exam.materia} · {exam.tiempo ? `${exam.tiempo} Minutos` : 'Sin límite'}</div>
+                {paginatedExams.map((exam) => {
+                  const subjectObj = (subjects || []).find(s => s.id === exam.materia || s.nombre.toLowerCase().trim() === (exam.materia || '').toLowerCase().trim());
+                  const subjectName = subjectObj?.nombre || exam.materia;
+                  return (
+                    <div key={exam.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-150 hover:bg-slate-50 transition-colors">
+                      <div className="max-w-[70%]">
+                        <div className="font-semibold text-sm text-slate-800 truncate" title={exam.titulo}>
+                          {cleanExamTitle(exam.titulo)}
+                        </div>
+                        <div className="text-xs text-slate-400 truncate">{subjectName} · {exam.tiempo ? `${exam.tiempo} Minutos` : 'Sin límite'}</div>
+                      </div>
+                      {onTakeExam && (
+                        <button 
+                          onClick={() => onTakeExam(exam.id)}
+                          className="btn btn-primary px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition shrink-0"
+                        >
+                          Presentar
+                        </button>
+                      )}
                     </div>
-                    {onTakeExam && (
-                      <button 
-                        onClick={() => onTakeExam(exam.id)}
-                        className="btn btn-primary px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-                      >
-                        Presentar
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -520,6 +689,7 @@ export default function Dashboard({ currentUser, users, exams, submissions, onNa
             </div>
           )}
         </div>
+      </div>
       </div>
     );
   }

@@ -1,0 +1,169 @@
+{
+  "submissions": [
+    {
+      "id": "sub_francisco_betancourt_apoc",
+      "examenId": "1a09c2ef035_86cfd5db",
+      "estudianteId": "mu46mqhoemydv",
+      "estudianteNombre": "FRANCISCO JAVIER BETANCOURT",
+      "puntaje": 68,
+      "autoPuntaje": 68,
+      "aprobado": true,
+      "correctas": 12,
+      "incorrectas": 5,
+      "tiempoUsado": "42m 10s",
+      "fecha": "2026-09-21T14:20:00.000Z",
+      "estado": "calificado",
+      "respuestas": {},
+      "manualScores": {},
+      "manualComments": {}
+    },
+    {
+      "id": "mu68ba9eo7zso",
+      "estudianteId": "mu46l0o0k8vjs",
+      "manualComments": {},
+      "examenId": "1a098fb7c34_c4313ab2",
+      "incorrectas": 2,
+      "manualScores": {},
+      "fecha": "2026-09-18T00:37:20.692Z",
+      "respuestas": {
+        "1a099273302_7bf4f9b3": {
+          "0": 1,
+          "1": 3,
+          "2": 0,
+          "3": 5,
+          "4": 2,
+          "5": 6,
+          "6": 8,
+          "7": 9,
+          "8": 7
+        },
+        "1a0994449ad_452fefd5": {
+          "0": 0,
+          "1": 3,
+          "2": 1,
+          "3": 0,
+          "4": 1,
+          "5": 2,
+          "6": 3,
+          "7": 2
+        },
+        "1a09938ea05_91dc1ac1": [
+          3
+        ],
+        "1a09c1bc4da_b05a4718": 2,
+        "1a09902f666_6286e081": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 1,
+          "6": 0,
+          "7": 0,
+          "8": 1,
+          "9": 0
+        }
+      },
+      "aprobado": true,
+      "estudianteNombre": "ADRIANA MARGARITA DIAZ CEBALLOS",
+      "correctas": 3,
+      "autoPuntaje": 92,
+      "tiempoUsado": "64m 54s",
+      "puntaje": 92,
+      "estado": "calificado"
+    },
+    {
+      "id": "mu7fwpziv5rfz",
+      "fecha": "2026-09-18T20:57:44.334Z",
+      "examenId": "1a098fb7c34_c4313ab2",
+      "respuestas": {
+        "1a09c1bc4da_b05a4718": 2,
+        "1a09902f666_6286e081": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 1,
+          "5": 1,
+          "6": 0,
+          "7": 0,
+          "8": 1,
+          "9": 1
+        },
+        "1a09938ea05_91dc1ac1": [
+          3
+        ],
+        "1a0994449ad_452fefd5": {
+          "0": 0,
+          "1": 3,
+          "2": 1,
+          "3": 0,
+          "4": 1,
+          "5": 2,
+          "6": 3,
+          "7": 2
+        },
+        "1a099273302_7bf4f9b3": {
+          "0": 1,
+          "1": 3,
+          "2": 0,
+          "3": 5,
+          "4": 2,
+          "5": 6,
+          "6": 8,
+          "7": 9,
+          "8": 7
+        }
+      },
+      "correctas": 4,
+      "autoPuntaje": 96,
+      "manualScores": {},
+      "estado": "calificado",
+      "aprobado": true,
+      "estudianteId": "mu45afwmf8yry",
+      "manualComments": {},
+      "tiempoUsado": "40m 28s",
+      "estudianteNombre": "NERLYN PATRICIA FLOREZ MONDRAGÓN",
+      "incorrectas": 1,
+      "puntaje": 96
+    }
+  ],
+  "gradeRecords": [
+    {
+      "id": "grade_francisco_betancourt_apoc",
+      "estudianteId": "mu46mqhoemydv",
+      "asignaturaId": "1a07ed96600_e4b34393",
+      "parcialId": "1a07eeeb300_be417f68",
+      "nota": 3.4,
+      "notaEV1": 3.4,
+      "aprobado": true,
+      "comentario": "Examen: EVALUACIÓN I - APOCALIPSIS I capítulos 1 – 6 (68% - 3.4)",
+      "creado": "2026-09-21T14:20:00.000Z",
+      "actualizado": "2026-09-21T14:20:00.000Z"
+    },
+    {
+      "id": "grade_mu68ba9eo7zso",
+      "comentario": "Examen: EVALUACIÓN I - GEOGRAFIA BIBLICA (UNIDAD I-IV / Páginas 8 – 51) (92% - 4.6)",
+      "asignaturaId": "1a07f7e04bd_8cea04b1",
+      "parcialId": "1a07ee1b882_6eabc7da",
+      "nota": 4.6,
+      "notaEV1": 4.6,
+      "actualizado": "2026-09-18T00:37:20.720Z",
+      "estudianteId": "mu46l0o0k8vjs",
+      "creado": "2026-09-18T00:37:20.720Z",
+      "aprobado": true
+    },
+    {
+      "id": "grade_mu7fwpziv5rfz",
+      "estudianteId": "mu45afwmf8yry",
+      "asignaturaId": "1a07f7e04bd_8cea04b1",
+      "parcialId": "1a07ee1b882_6eabc7da",
+      "nota": 4.8,
+      "notaEV1": 4.8,
+      "aprobado": true,
+      "comentario": "Examen: EVALUACIÓN I - GEOGRAFIA BIBLICA (UNIDAD I-IV / Páginas 8 – 51) (96% - 4.8)",
+      "creado": "2026-09-18T20:57:44.334Z",
+      "actualizado": "2026-09-18T20:57:44.334Z"
+    }
+  ]
+}

@@ -6,22 +6,24 @@
 import React, { useState } from 'react';
 import { 
   BarChart3, Users, Award, Percent, Calendar, 
-  ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search
+  ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
+  Download, Copy, FileText
 } from 'lucide-react';
-import { User, Exam, Submission } from '../types';
-import { avatarColor, avatarLetter, fmtDate, fmtTime, now } from '../lib/db';
+import { User, Exam, Submission, Subject } from '../types';
+import { avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5 } from '../lib/db';
 
 interface ResultadosProps {
   currentUser: User;
   users: User[];
   exams: Exam[];
   submissions: Submission[];
+  subjects?: Subject[];
   onUpdateSubmissions: (updated: Submission[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
 export default function Resultados({ 
-  currentUser, users, exams, submissions, onUpdateSubmissions, toast 
+  currentUser, users, exams, submissions, subjects = [], onUpdateSubmissions, toast 
 }: ResultadosProps) {
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
@@ -33,12 +35,22 @@ export default function Resultados({
   const [manualScores, setManualScores] = useState<Record<string, number>>({});
   const [manualComments, setManualComments] = useState<Record<string, string>>({});
 
+  const userAsignaturas = currentUser.asignaturas || [];
   const myExams = exams
-    .filter(e => e.docenteId === currentUser.id || currentUser.rol === 'admin')
+    .filter(e => {
+      if (currentUser.rol === 'admin') return true;
+      if (e.docenteId === currentUser.id) return true;
+      const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      if (subj && (userAsignaturas.includes(subj.id) || subj.docenteId === currentUser.id)) return true;
+      if (e.materia && userAsignaturas.includes(e.materia)) return true;
+      return false;
+    })
     .filter(e => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
-      const matchesExam = e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q);
+      const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      const subjName = subj ? subj.nombre.toLowerCase() : '';
+      const matchesExam = e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
       if (matchesExam) return true;
       
       // Check if student name matches
@@ -217,6 +229,38 @@ export default function Resultados({
   const activeExam = exams.find(e => e.id === activeSub?.examenId);
   const grName = activeSub ? (users.find(u => u.id === activeSub.estudianteId)?.nombre || activeSub.estudianteNombre) : '';
 
+  const handleExportSubmissionsJson = () => {
+    if (submissions.length === 0) {
+      toast('No hay evaluaciones realizadas para exportar', 'warning');
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ submissions }, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `evaluaciones_realizadas_backup_${now().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast('Copia de evaluaciones realizadas descargada con éxito', 'success');
+  };
+
+  const handleCopySubmissionsSummary = () => {
+    if (submissions.length === 0) {
+      toast('No hay evaluaciones realizadas para copiar', 'warning');
+      return;
+    }
+    const summaryLines = submissions.map((sub, i) => {
+      const ex = exams.find(e => e.id === sub.examenId);
+      const student = users.find(u => u.id === sub.estudianteId);
+      const studentName = student ? student.nombre : (sub.estudianteNombre || 'Estudiante');
+      const examTitle = ex ? ex.titulo.replace(/\n/g, ' ') : 'Examen';
+      return `${i + 1}. ${studentName} | ${examTitle} | Puntaje: ${sub.puntaje}/100 | ${sub.aprobado ? 'APROBADO' : 'REPROBADO'} | Fecha: ${fmtDate(sub.fecha)}`;
+    });
+    const textToCopy = `=== REGISTRO DE EXÁMENES REALIZADOS ===\nTotal Evaluaciones Presentadas: ${submissions.length}\n\n` + summaryLines.join('\n');
+    navigator.clipboard.writeText(textToCopy);
+    toast('Resumen de exámenes realizados copiado al portapapeles', 'success');
+  };
+
   return (
     <div className="page-resultados animate-fade-in pb-12">
       <div className="page-header mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -228,24 +272,48 @@ export default function Resultados({
             Revisa estadísticas, entregas de estudiantes y califica manualmente respuestas abiertas
           </div>
         </div>
-        {currentUser.rol === 'admin' && (
-          <button
-            onClick={() => {
-              setShowDangerZone(!showDangerZone);
-              if (!showDangerZone) {
-                toast('Botones de eliminación de historial habilitados temporalmente.', 'warning');
-              }
-            }}
-            className={`px-3 py-1.5 border text-xs font-extrabold rounded-xl transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shrink-0 select-none ${
-              showDangerZone 
-                ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-450' 
-                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>{showDangerZone ? '🔒 Desactivar Limpieza' : '🛠️ Modo Limpieza'}</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {submissions.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={handleCopySubmissionsSummary}
+                className="px-3 py-1.5 border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs select-none"
+                title="Copiar lista resumida de todos los exámenes realizados al portapapeles"
+              >
+                <Copy className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Copiar Resumen</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportSubmissionsJson}
+                className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs select-none"
+                title="Descargar archivo JSON con todas las entregas y respuestas de los exámenes realizados"
+              >
+                <Download className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Descargar Copia ({submissions.length})</span>
+              </button>
+            </>
+          )}
+          {currentUser.rol === 'admin' && (
+            <button
+              onClick={() => {
+                setShowDangerZone(!showDangerZone);
+                if (!showDangerZone) {
+                  toast('Botones de eliminación de historial habilitados temporalmente.', 'warning');
+                }
+              }}
+              className={`px-3 py-1.5 border text-xs font-extrabold rounded-xl transition duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shrink-0 select-none ${
+                showDangerZone 
+                  ? 'bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100 hover:border-rose-450' 
+                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-350'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>{showDangerZone ? '🔒 Desactivar Limpieza' : '🛠️ Modo Limpieza'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Caja de Búsqueda de Evaluaciones/Estudiantes */}
@@ -320,14 +388,18 @@ export default function Resultados({
             const totalScore = examSubs.reduce((acc, current) => acc + current.puntaje, 0);
             const avgScore = examSubs.length ? Math.round(totalScore / examSubs.length) : 0;
             const passCount = examSubs.filter(s => s.aprobado).length;
+            const subjectObj = (subjects || []).find(s => s.id === exam.materia || s.nombre.toLowerCase().trim() === exam.materia.toLowerCase().trim());
+            const subjectName = subjectObj?.nombre || exam.materia;
 
             return (
               <div key={exam.id} className="card bg-white p-5 rounded-2xl border border-slate-200 shadow-sm theme-bg-surface theme-border">
                 <div className="flex justify-between items-start gap-4 mb-4 border-b border-slate-100 pb-3">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-800" style={{ color: 'var(--gray-900)' }}>{exam.titulo}</h3>
+                    <h3 className="text-lg font-bold text-slate-800" style={{ color: 'var(--gray-900)' }} title={exam.titulo}>
+                      {cleanExamTitle(exam.titulo)}
+                    </h3>
                     <div className="text-xs font-semibold text-slate-400 mt-1 uppercase tracking-wider select-none">
-                      {exam.materia} · {exam.preguntas.length} preguntas · {examSubs.length} entregas
+                      {subjectName} · {exam.preguntas.length} preguntas · {examSubs.length} entregas
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -409,12 +481,13 @@ export default function Resultados({
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <span className={`inline-flex px-2 py-0.5 text-xs font-bold border rounded-full ${
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold border rounded-full ${
                                   s.aprobado 
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
                                     : 'bg-rose-50 text-rose-700 border-rose-105'
                                 }`}>
-                                  {s.puntaje}%
+                                  <span>{formatGrade5(s.puntaje)}</span>
+                                  <span className="text-[10px] font-medium opacity-70">({s.puntaje}%)</span>
                                 </span>
                               </td>
                               <td className="py-3 px-4">

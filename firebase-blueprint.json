@@ -15,7 +15,11 @@
         "celular": { "type": "string" },
         "asignaturas": { "type": "array" },
         "semestre": { "type": "string" },
-        "codigo": { "type": "string" }
+        "codigo": { "type": "string" },
+        "telefono": { "type": "string" },
+        "actualizado": { "type": "string" },
+        "foto": { "type": "string" },
+        "avatarUrl": { "type": "string" }
       },
       "required": ["id", "nombre", "email", "pass", "rol", "creado"]
     },

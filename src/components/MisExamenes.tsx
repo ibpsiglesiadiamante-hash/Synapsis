@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Plus, BookOpen, Trash2, Edit2, Play, Power, HelpCircle, Search } from 'lucide-react';
+import { Plus, BookOpen, Trash2, Edit2, Play, Power, HelpCircle, Search, Copy, Download } from 'lucide-react';
 import { User, Exam, Parcial, Subject, Semester } from '../types';
-import { fmtDate, uid, now } from '../lib/db';
+import { fmtDate, uid, now, cleanExamTitle } from '../lib/db';
 import { SearchableSelect, SelectOption } from './SearchableSelect';
 
 interface MisExamenesProps {
@@ -60,13 +60,24 @@ export default function MisExamenes({
   const [mostrarNota, setMostrarNota] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const userAsignaturas = currentUser.asignaturas || [];
   const filteredExams = exams
-    .filter(e => (e.docenteId && allMyUserIds.includes(e.docenteId)) || currentUser.id === e.docenteId || currentUser.rol === 'admin')
+    .filter(e => {
+      if (currentUser.rol === 'admin') return true;
+      if (e.docenteId && allMyUserIds.includes(e.docenteId)) return true;
+      if (currentUser.id === e.docenteId) return true;
+      const subj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      if (subj && (userAsignaturas.includes(subj.id) || (subj.docenteId && allMyUserIds.includes(subj.docenteId)))) return true;
+      if (e.materia && userAsignaturas.includes(e.materia)) return true;
+      return false;
+    })
     .filter(e => filter === 'all' ? true : e.estado === filter)
     .filter(e => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
-      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q);
+      const subj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      const subjName = subj ? subj.nombre.toLowerCase() : '';
+      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
     });
 
   const examsPerPage = 8;
@@ -140,6 +151,31 @@ export default function MisExamenes({
     toast('Examen eliminado correctamente', 'success');
   };
 
+  const handleDuplicateExam = (sourceExam: Exam) => {
+    const newId = uid();
+    const clonedExam: Exam = {
+      ...JSON.parse(JSON.stringify(sourceExam)),
+      id: newId,
+      titulo: `${sourceExam.titulo} (Copia)`,
+      estado: 'borrador',
+      creado: now(),
+      actualizado: now()
+    };
+    onUpdateExams([clonedExam, ...exams]);
+    toast(`Examen copiado con éxito: "${clonedExam.titulo}"`, 'success');
+  };
+
+  const handleExportAllExamsJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ exams }, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `examenes_backup_${now().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast('Copia de seguridad de los exámenes descargada correctamente', 'success');
+  };
+
   return (
     <div className="page-misExamenes animate-fade-in">
       <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -148,17 +184,28 @@ export default function MisExamenes({
             Mis exámenes
           </h2>
           <div className="page-sub text-sm font-medium mt-1 text-slate-500">
-            Crea y gestiona tus evaluaciones y cuestionarios interactivos
+            Crea, duplica y gestiona tus evaluaciones y cuestionarios interactivos
           </div>
         </div>
-        <button 
-          onClick={handleOpenModal}
-          className="btn btn-primary self-start sm:self-center flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
-          style={{ backgroundColor: 'var(--primary)' }}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nuevo examen</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <button 
+            type="button"
+            onClick={handleExportAllExamsJson}
+            className="btn btn-secondary flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 bg-white border border-slate-200 text-xs font-semibold shadow-xs hover:bg-slate-50 transition cursor-pointer"
+            title="Descargar copia de seguridad de todos los exámenes en formato JSON"
+          >
+            <Download className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Copiar / Exportar Backup ({exams.length})</span>
+          </button>
+          <button 
+            onClick={handleOpenModal}
+            className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nuevo examen</span>
+          </button>
+        </div>
       </div>
 
       {/* Chip Tabs Filters & Search Bar */}
@@ -234,6 +281,8 @@ export default function MisExamenes({
                 {paginatedExams.map((e) => {
                   const numSubs = submissions.filter(s => s.examenId === e.id).length;
                   const statusBg = e.estado === 'activo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : e.estado === 'borrador' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200';
+                  const subjectObj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+                  const subjectName = subjectObj?.nombre || e.materia || 'General';
                   
                   return (
                     <tr key={e.id} className="hover:bg-slate-50/50">
@@ -246,16 +295,18 @@ export default function MisExamenes({
                             referrerPolicy="no-referrer"
                           />
                           <div className="min-w-0">
-                            <span className="block font-extrabold truncate max-w-xs">{e.titulo}</span>
+                            <span className="block font-extrabold truncate max-w-sm" title={e.titulo}>
+                              {cleanExamTitle(e.titulo)}
+                            </span>
                             {e.subtitulo && (
-                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-xs">{e.subtitulo}</span>
+                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-sm">{e.subtitulo}</span>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="badge inline-flex px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">
-                          {e.materia}
+                          {subjectName}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-500">{e.preguntas?.length || 0}</td>
@@ -275,6 +326,14 @@ export default function MisExamenes({
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                             <span>Contenido</span>
+                          </button>
+                          <button 
+                            onClick={() => handleDuplicateExam(e)}
+                            className="btn btn-secondary text-xs px-2.5 py-1 flex items-center gap-1 rounded hover:bg-slate-100 border border-slate-200 text-slate-700 cursor-pointer"
+                            title="Hacer una copia o duplicado de este examen con todas sus preguntas"
+                          >
+                            <Copy className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Copiar</span>
                           </button>
                           <button 
                             onClick={() => toggleExamStatus(e.id)}

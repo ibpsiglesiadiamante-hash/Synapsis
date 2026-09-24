@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Award, BookOpen, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
 import { User, Exam, Submission } from '../types';
-import { fmtDate, fmtTime } from '../lib/db';
+import { fmtDate, fmtTime, cleanExamTitle, formatGrade5 } from '../lib/db';
 
 interface MiHistorialProps {
   currentUser: User;
@@ -113,8 +113,8 @@ export default function MiHistorial({ currentUser, exams, submissions }: MiHisto
 
                   return (
                     <tr key={s.id} className="hover:bg-slate-50/50">
-                      <td className="py-3.5 px-4 font-bold text-slate-900" style={{ color: 'var(--gray-900)' }}>
-                        {exam?.titulo || 'Examen eliminado'}
+                      <td className="py-3.5 px-4 font-bold text-slate-900" style={{ color: 'var(--gray-900)' }} title={exam?.titulo}>
+                        {exam ? cleanExamTitle(exam.titulo) : 'Examen eliminado'}
                       </td>
                       <td className="py-3.5 px-4">
                         <span className="badge inline-flex px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -123,8 +123,9 @@ export default function MiHistorial({ currentUser, exams, submissions }: MiHisto
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className="text-lg font-extrabold text-slate-805" style={{ color: s.aprobado ? 'var(--success)' : 'var(--danger)' }}>
-                          {s.puntaje}%
+                          {formatGrade5(s.puntaje)}
                         </span>
+                        <div className="text-[10px] text-slate-400 font-medium">({s.puntaje}%)</div>
                       </td>
                       <td className="py-3.5 px-4">
                         {isPending ? (

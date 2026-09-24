@@ -19,4 +19,4 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SYNAPSIS_EDU }}
           channelId: live
-          projectId: synapsis-edu
+          projectId: synapsis-ec
