@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Exam, Question, Submission, Institution, Parcial, Subject, Semester } from '../types';
 import { uid, now } from '../lib/db';
+import { normalizeQuestion, normalizeExamQuestions } from '../lib/questionAdapter';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 
 interface ExamTakeScreenProps {
@@ -41,13 +42,13 @@ export default function ExamTakeScreen({
       try {
         const qList = JSON.parse(savedQuestions);
         if (Array.isArray(qList) && qList.length > 0) {
-          return qList;
+          return qList.map((q: any, idx: number) => normalizeQuestion(q, idx));
         }
       } catch (e) {
         // Fallback below
       }
     }
-    const qList = [...(exam.preguntas || [])];
+    const qList = normalizeExamQuestions(exam);
     if (exam.aleatorio) {
       qList.sort(() => Math.random() - 0.5);
     }
@@ -205,9 +206,12 @@ export default function ExamTakeScreen({
 
       if (q.tipo === 'abierta' || q.tipo === 'escala') {
         pendingGrading = true;
-      } else if (q.tipo === 'multiple' || q.tipo === 'tf' || q.tipo === 'dropdown') {
+      } else if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'tf' || q.tipo === 'dropdown') {
         const selected = Number(ans);
-        if (q.correctas.includes(selected)) {
+        const correctList = Array.isArray(q.correctas) && q.correctas.length > 0
+          ? q.correctas
+          : ((q as any).correcta !== undefined ? [Number((q as any).correcta)] : []);
+        if (correctList.includes(selected)) {
           autoEarnedSum += q.puntos;
           correctCount++;
         } else {
@@ -606,7 +610,7 @@ export default function ExamTakeScreen({
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div className="flex items-start">
                     <span className="text-[#202124] text-[14px] sm:text-[14.5px] font-normal leading-relaxed whitespace-pre-wrap">
-                      <span className="font-semibold mr-1">{idx + 1}.</span> {qItem.texto}
+                      <span className="font-semibold mr-1">{idx + 1}.</span> {qItem.texto || (qItem as any).enunciado || 'Pregunta sin texto'}
                     </span>
                     <span className="text-rose-600 font-bold ml-1" title="Pregunta obligatoria">*</span>
                   </div>
@@ -619,7 +623,7 @@ export default function ExamTakeScreen({
                 <div className="space-y-2 mt-1">
                   
                   {/* Radio Multiple Choice & True/False */}
-                  {(qItem.tipo === 'multiple' || qItem.tipo === 'tf') && (
+                  {(qItem.tipo === 'multiple' || (qItem.tipo as string) === 'opcion_multiple' || qItem.tipo === 'tf') && (
                     (qItem.tipo === 'tf' ? ['Verdadero', 'Falso'] : qItem.opciones).map((opt, oIdx) => {
                       const isChecked = answers[qItem.id] === oIdx;
                       return (

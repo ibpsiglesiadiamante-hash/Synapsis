@@ -88,24 +88,35 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
 
     const opcionIds: string[] = Array.isArray(q?.opcionIds) && q.opcionIds.length === opciones.length
       ? [...q.opcionIds]
-      : opciones.map((_, i) => `opt_${id}_${i}_${uid()}`);
+      : opciones.map((_, i) => `opt_${id}_${i}`);
 
     let enunciadoIds: string[] | undefined = undefined;
     if (tipo === 'matching' && enunciados) {
       enunciadoIds = Array.isArray(q?.enunciadoIds) && q.enunciadoIds.length === enunciados.length
         ? [...q.enunciadoIds]
-        : enunciados.map((_, i) => `enun_${id}_${i}_${uid()}`);
+        : enunciados.map((_, i) => `enun_${id}_${i}`);
+    }
+
+    const resolvedTexto = typeof q?.texto === 'string' && q.texto.trim()
+      ? q.texto
+      : (typeof q?.enunciado === 'string' && q.enunciado.trim() ? q.enunciado : (q?.texto || ''));
+
+    let resolvedCorrectas: number[] = [];
+    if (Array.isArray(q?.correctas) && q.correctas.length > 0) {
+      resolvedCorrectas = [...q.correctas];
+    } else if (q?.correcta !== undefined && q?.correcta !== null && !isNaN(Number(q.correcta))) {
+      resolvedCorrectas = [Number(q.correcta)];
     }
 
     return {
       ...q,
       id,
       tipo,
-      texto: typeof q?.texto === 'string' ? q.texto : '',
+      texto: resolvedTexto,
       puntos: typeof q?.puntos === 'number' && !isNaN(q.puntos) ? q.puntos : 10,
       opciones,
       opcionIds,
-      correctas: Array.isArray(q?.correctas) ? [...q.correctas] : [],
+      correctas: resolvedCorrectas,
       enunciados,
       enunciadoIds,
       matchCorrectos,
@@ -151,6 +162,68 @@ export default function ExamBuilder({
   const isDirtyRef = useRef(false);
   const lastExamIdRef = useRef(examId);
   const examsRef = useRef(exams);
+
+  // Helper para generar una huella canónica de los campos editables del examen.
+  // Permite verificar si existió una edición real del docente y previene autoguardados
+  // accidentales o modificaciones de 'actualizado' al solo abrir, inspeccionar o cerrar el editor.
+  const computeExamContentFingerprint = (data: {
+    title: string;
+    subtitulo: string;
+    materia: string;
+    parcialId: string;
+    description: string;
+    tiempo: number;
+    intentos: number;
+    aprobacion: number;
+    aleatorio: boolean;
+    mostrarNota: boolean;
+    bannerUrl: string;
+    questions: Question[];
+  }) => {
+    return JSON.stringify({
+      t: (data.title || '').trim(),
+      s: (data.subtitulo || '').trim(),
+      m: (data.materia || '').trim(),
+      p: data.parcialId || '',
+      d: (data.description || '').trim(),
+      ti: data.tiempo,
+      i: data.intentos,
+      a: data.aprobacion,
+      al: data.aleatorio,
+      mn: data.mostrarNota,
+      b: data.bannerUrl,
+      q: (data.questions || []).map(q => ({
+        id: q.id,
+        tipo: q.tipo,
+        texto: (q.texto || '').trim(),
+        puntos: q.puntos,
+        opciones: (q.opciones || []).map(o => o.trim()),
+        correctas: [...(q.correctas || [])].sort((a, b) => a - b),
+        enunciados: (q.enunciados || []).map(e => e.trim()),
+        matchCorrectos: q.matchCorrectos || [],
+        tableColumns: q.tableColumns || [],
+        tableOptions: q.tableOptions || [],
+        tableRows: q.tableRows || [],
+      }))
+    });
+  };
+
+  const initialContentHashRef = useRef<string>(
+    computeExamContentFingerprint({
+      title: exam.titulo,
+      subtitulo: exam.subtitulo || '',
+      materia: exam.materia,
+      parcialId: exam.parcialId || '',
+      description: exam.descripcion || '',
+      tiempo: exam.tiempo,
+      intentos: exam.intentos,
+      aprobacion: exam.aprobacion,
+      aleatorio: exam.aleatorio,
+      mostrarNota: exam.mostrarNota,
+      bannerUrl: exam.bannerUrl || PRESET_BANNERS[0].url,
+      questions: ensureValidQuestions(exam.preguntas || [])
+    })
+  );
 
   // Synchronous ref to current exam form state to avoid stale closures in effects and handlers
   const latestDataRef = useRef({
@@ -218,8 +291,23 @@ export default function ExamBuilder({
         setAprobacion(currentExam.aprobacion);
         setAleatorio(currentExam.aleatorio);
         setMostrarNota(currentExam.mostrarNota);
-        setQuestions(ensureValidQuestions(currentExam.preguntas || []));
+        const normQs = ensureValidQuestions(currentExam.preguntas || []);
+        setQuestions(normQs);
         setBannerUrl(currentExam.bannerUrl || PRESET_BANNERS[0].url);
+        initialContentHashRef.current = computeExamContentFingerprint({
+          title: currentExam.titulo,
+          subtitulo: currentExam.subtitulo || '',
+          materia: currentExam.materia,
+          parcialId: currentExam.parcialId || '',
+          description: currentExam.descripcion || '',
+          tiempo: currentExam.tiempo,
+          intentos: currentExam.intentos,
+          aprobacion: currentExam.aprobacion,
+          aleatorio: currentExam.aleatorio,
+          mostrarNota: currentExam.mostrarNota,
+          bannerUrl: currentExam.bannerUrl || PRESET_BANNERS[0].url,
+          questions: normQs
+        });
       }
     }
   }, [examId]);
@@ -288,6 +376,28 @@ export default function ExamBuilder({
       return;
     }
 
+    const currentHash = computeExamContentFingerprint({
+      title,
+      subtitulo,
+      materia,
+      parcialId,
+      description,
+      tiempo,
+      intentos,
+      aprobacion,
+      aleatorio,
+      mostrarNota,
+      bannerUrl,
+      questions
+    });
+
+    if (currentHash === initialContentHashRef.current) {
+      // Ningún campo ha sido modificado respecto al estado cargado:
+      // no marcar sucio y no persistir para evitar falsos incrementos de 'actualizado'
+      isDirtyRef.current = false;
+      return;
+    }
+
     isDirtyRef.current = true;
     setSaveStatus('saving');
 
@@ -295,6 +405,7 @@ export default function ExamBuilder({
       try {
         await saveCurrentExamImmediate();
         setSaveStatus('saved');
+        initialContentHashRef.current = currentHash;
       } catch (err) {
         console.error('Auto-save error:', err);
       }
@@ -620,7 +731,7 @@ export default function ExamBuilder({
     setQuestions(prev => prev.map(q => {
       if (q.id === qid) {
         let nextCorrect: number[] = [];
-        if (q.tipo === 'multiple' || q.tipo === 'dropdown' || q.tipo === 'tf') {
+        if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'dropdown' || q.tipo === 'tf') {
           nextCorrect = [oIdx];
         } else {
           // Checkbox allowing multiple correct selectors
@@ -1049,7 +1160,7 @@ export default function ExamBuilder({
                 const isScale = q.tipo === 'escala';
                 const isMatching = q.tipo === 'matching';
                 const isTable = q.tipo === 'table';
-                const showOpts = q.tipo === 'multiple' || q.tipo === 'checkbox' || q.tipo === 'dropdown' || q.tipo === 'tf';
+                const showOpts = q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'checkbox' || q.tipo === 'dropdown' || q.tipo === 'tf';
 
                 return (
                   <div 
@@ -1061,7 +1172,7 @@ export default function ExamBuilder({
                     </div>
 
                     <AutoExpandingTextarea 
-                      value={q.texto}
+                      value={q.texto || (q as any).enunciado || ''}
                       onChange={e => handleUpdateQText(q.id, e.target.value)}
                       placeholder="Escribe el enunciado de la pregunta aquí..."
                       className="w-full text-xs sm:text-[13.5px] leading-relaxed font-semibold text-slate-800 border-b border-slate-200 py-1.5 focus:border-indigo-500 outline-none placeholder-slate-400 mb-3 bg-transparent whitespace-pre-wrap font-sans block"
@@ -1114,7 +1225,7 @@ export default function ExamBuilder({
                           </div>
                         ) : (
                           q.opciones.map((opt, oIdx) => {
-                            const isCorrect = q.correctas.includes(oIdx);
+                            const isCorrect = q.correctas.includes(oIdx) || (q as any).correcta === oIdx;
                             const optKey = q.opcionIds?.[oIdx] || `${q.id}-opt-${oIdx}`;
                             return (
                               <div key={optKey} className="flex items-center gap-2">
@@ -1857,12 +1968,12 @@ export default function ExamBuilder({
                     {questions.map((q, i) => (
                       <div key={q.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-700">
                         <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">P{i+1} · {q.puntos} Pts</div>
-                        <p className="font-semibold text-slate-800 mb-2 whitespace-pre-wrap">{q.texto || 'Pregunta sin texto definitorio'}</p>
+                        <p className="font-semibold text-slate-800 mb-2 whitespace-pre-wrap">{q.texto || (q as any).enunciado || 'Pregunta sin texto definitorio'}</p>
 
-                        {(q.tipo === 'multiple' || q.tipo === 'checkbox' || q.tipo === 'dropdown' || q.tipo === 'tf') && (
+                        {(q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'checkbox' || q.tipo === 'dropdown' || q.tipo === 'tf') && (
                           <div className="flex flex-col gap-1.5">
                             {q.opciones.map((opt, oIdx) => {
-                              const isSol = q.correctas.includes(oIdx);
+                              const isSol = q.correctas.includes(oIdx) || (q as any).correcta === oIdx;
                               const typeChar = q.tipo === 'checkbox' ? '☐' : '◯';
                               return (
                                 <div key={oIdx} className="flex items-center gap-1.5 p-1.5 bg-white rounded border border-slate-150">

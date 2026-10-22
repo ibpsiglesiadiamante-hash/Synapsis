@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { User, Exam, Submission, Subject } from '../types';
 import { avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5 } from '../lib/db';
+import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions } from '../lib/questionAdapter';
 
 interface ResultadosProps {
   currentUser: User;
@@ -67,6 +68,12 @@ export default function Resultados({
   const currentActivePage = Math.min(currentPage, totalPages);
   const paginatedExams = myExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
   
+  const activeSub = submissions.find(s => s.id === activeSubId);
+  const activeExam = exams.find(e => e.id === activeSub?.examenId);
+  const activeOrphanStatus = detectOrphanAnswers(activeSub, activeExam);
+  const activeNormalizedQuestions = normalizeExamQuestions(activeExam);
+  const grName = activeSub ? (users.find(u => u.id === activeSub.estudianteId)?.nombre || activeSub.estudianteNombre) : '';
+
   const handleOpenGradingModal = (subId: string) => {
     const sub = submissions.find(s => s.id === subId);
     if (!sub) return;
@@ -76,11 +83,13 @@ export default function Resultados({
   };
 
   const handleManualScoreChange = (qid: string, val: number, max: number) => {
+    if (activeOrphanStatus.isBlocked) return;
     const clamped = Math.max(0, Math.min(max, val));
     setManualScores(prev => ({ ...prev, [qid]: clamped }));
   };
 
   const handleManualCommentChange = (qid: string, val: string) => {
+    if (activeOrphanStatus.isBlocked) return;
     setManualComments(prev => ({ ...prev, [qid]: val }));
   };
 
@@ -90,13 +99,23 @@ export default function Resultados({
     const exam = exams.find(e => e.id === sub?.examenId);
     if (!sub || !exam) return;
 
+    // Validación de protección de integridad académica:
+    // Impide el recálculo destructivo si el examen está incompleto, si existen respuestas huérfanas
+    // o si contiene respuestas con opciones eliminadas / fuera de rango
+    const orphanStatus = detectOrphanAnswers(sub, exam);
+    if (orphanStatus.isBlocked) {
+      toast(orphanStatus.reason || 'Guardado bloqueado por protección de integridad académica.', 'warning');
+      return;
+    }
+
+    const normQuestions = normalizeExamQuestions(exam);
     let manualSum = 0;
     let autoSum = 0;
     let totalMax = 0;
     let correctCount = 0;
     let incorrectCount = 0;
 
-    exam.preguntas.forEach(q => {
+    normQuestions.forEach(q => {
       totalMax += q.puntos;
       const ans = sub.respuestas[q.id];
 
@@ -199,7 +218,7 @@ export default function Resultados({
       }
     });
 
-    const finalScore = totalMax > 0 ? Math.round(((autoSum + manualSum) / totalMax) * 100) : 0;
+    const finalScore = totalMax > 0 ? Math.round(((autoSum + manualSum) / totalMax) * 100) : sub.puntaje;
     const isApproved = finalScore >= (exam.aprobacion || 60);
 
     const updatedSubs = submissions.map(s => {
@@ -224,10 +243,6 @@ export default function Resultados({
     setActiveSubId(null);
     toast('Calificaciones actualizadas con éxito', 'success');
   };
-
-  const activeSub = submissions.find(s => s.id === activeSubId);
-  const activeExam = exams.find(e => e.id === activeSub?.examenId);
-  const grName = activeSub ? (users.find(u => u.id === activeSub.estudianteId)?.nombre || activeSub.estudianteNombre) : '';
 
   const handleExportSubmissionsJson = () => {
     if (submissions.length === 0) {
@@ -399,7 +414,13 @@ export default function Resultados({
                       {cleanExamTitle(exam.titulo)}
                     </h3>
                     <div className="text-xs font-semibold text-slate-400 mt-1 uppercase tracking-wider select-none">
-                      {subjectName} · {exam.preguntas.length} preguntas · {examSubs.length} entregas
+                      {(() => {
+                        const comp = countCompoundQuestions(exam);
+                        const qText = comp.totalEvaluableItems > comp.totalQuestions 
+                          ? `${comp.totalQuestions} preguntas (${comp.totalEvaluableItems} ítems evaluables)`
+                          : `${comp.totalQuestions} preguntas`;
+                        return `${subjectName} · ${qText} · ${examSubs.length} entregas`;
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -617,6 +638,34 @@ export default function Resultados({
                     <span className="text-[9px] uppercase font-bold text-slate-400">Tiempo</span>
                   </div>
                 </div>
+
+                {/* Academic Integrity & Historical Grade Protection Banner */}
+                {activeOrphanStatus.isBlocked && (
+                  <div className="mt-4 w-full bg-amber-50/90 border border-amber-200 text-amber-900 p-3.5 rounded-xl text-left flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-bold text-amber-950 mb-0.5">Protección de Integridad Académica Activada</p>
+                      <p className="text-amber-800 leading-relaxed">{activeOrphanStatus.reason}</p>
+                      <p className="mt-1 font-semibold text-[11px] text-amber-700">
+                        La nota histórica de esta entrega ({activeSub.puntaje}%) se encuentra protegida. El recálculo y guardado automático están deshabilitados para evitar pérdida de datos.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Version warning banner (Soft Warning: allows grading, alerts teacher) */}
+                {!activeOrphanStatus.isBlocked && activeOrphanStatus.isWarning && (
+                  <div className="mt-4 w-full bg-blue-50/90 border border-blue-200 text-blue-900 p-3.5 rounded-xl text-left flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <p className="font-bold text-blue-950 mb-0.5">Aviso de Modificación Posterior del Examen</p>
+                      <p className="text-blue-800 leading-relaxed">{activeOrphanStatus.warningReason}</p>
+                      <p className="mt-1 font-semibold text-[11px] text-blue-700">
+                        La estructura de preguntas es compatible. Puede calificar preguntas abiertas y guardar la evaluación normalmente.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <hr className="border-slate-100" />
@@ -624,7 +673,7 @@ export default function Resultados({
               {/* Questions Renderers for verification */}
               <div className="space-y-4">
                 <h5 className="font-bold text-sm text-slate-800 mb-3">Respuestas enviadas:</h5>
-                {activeExam.preguntas.map((q, index) => {
+                {activeNormalizedQuestions.map((q, index) => {
                   const studentAns = activeSub.respuestas[q.id];
                   let isCorrect: boolean | null = null;
                   let readableAnsText = '';
@@ -907,7 +956,7 @@ export default function Resultados({
                       )}
 
                       {/* Manual grading form for open text answers */}
-                      {isTextGraded && canGrade && (
+                      {isTextGraded && canGrade && !activeOrphanStatus.isBlocked && (
                         <div className="mt-3 p-3 bg-white rounded-lg border border-slate-220 flex flex-col sm:flex-row gap-3 items-center">
                           <label className="text-[11px] font-bold text-slate-600 select-none block shrink-0">Calificar puntos:</label>
                           <input 
@@ -931,6 +980,65 @@ export default function Resultados({
                     </div>
                   );
                 })}
+
+                {/* Preserved orphan answers section */}
+                {activeOrphanStatus.orphanKeys.length > 0 && (
+                  <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 text-slate-700 text-xs mt-4">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-amber-900 dark:text-amber-200">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Respuestas históricas conservadas (Preguntas ausentes en el examen actual):</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mb-3">
+                      Estas respuestas forman parte de la entrega original del estudiante, pero sus IDs no corresponden a preguntas del examen actual. Han sido protegidas sin alteración:
+                    </p>
+                    <div className="space-y-2">
+                      {activeOrphanStatus.orphanKeys.map((orphanId) => (
+                        <div key={orphanId} className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px]">
+                          <span className="font-mono text-slate-500 font-semibold">{orphanId}</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            Respuesta registrada: {typeof activeSub.respuestas[orphanId] === 'object' ? JSON.stringify(activeSub.respuestas[orphanId]) : String(activeSub.respuestas[orphanId])}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Out of range answers section */}
+                {activeOrphanStatus.hasOutOfRangeAnswers && (
+                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 text-slate-700 text-xs mt-4">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-rose-900 dark:text-rose-200">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Respuestas con opciones eliminadas o fuera de rango:</span>
+                    </div>
+                    <p className="text-[11px] text-rose-700 dark:text-rose-400 mb-2">
+                      La entrega contiene respuestas a opciones que ya no existen en la definición actual del examen. Se bloquea el guardado para evitar recalcular con datos truncados:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-rose-800 dark:text-rose-300 text-[11px]">
+                      {activeOrphanStatus.outOfRangeDetails.map((detail, dIdx) => (
+                        <li key={dIdx}>{detail}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Explicit Administrative Audit Box for Protected Submissions */}
+                {activeOrphanStatus.isBlocked && (
+                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/60 text-slate-700 text-xs mt-4">
+                    <div className="flex items-center gap-2 mb-2 font-bold text-slate-900 dark:text-slate-100">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                      <span>Registro de Auditoría y Consulta Histórica</span>
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 leading-relaxed">
+                      <p>• Calificación original preservada: <strong className="text-slate-900 dark:text-slate-200">{activeSub.puntaje}%</strong> ({activeSub.aprobado ? 'Aprobado' : 'Reprobado'})</p>
+                      <p>• Fecha de entrega: <strong className="text-slate-900 dark:text-slate-200">{activeSub.fecha || 'No especificada'}</strong> | Tiempo: <strong className="text-slate-900 dark:text-slate-200">{activeSub.tiempoUsado || '—'}</strong></p>
+                      <p>• Respuestas registradas en el envío: <strong className="text-slate-900 dark:text-slate-200">{Object.keys(activeSub.respuestas || {}).length}</strong></p>
+                      <p className="mt-2 text-slate-500 italic">
+                        Esta entrega se conserva íntegra y consultable. No se permite el recálculo automático destructivo. Si la institución requiere rectificar la nota oficial por vía administrativa, debe asentarse en el Libro Oficial de Actas sin atribuir respuestas ficticias al estudiante.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -945,11 +1053,17 @@ export default function Resultados({
               {(currentUser.rol === 'admin' || activeExam.docenteId === currentUser.id) && (
                 <button 
                   onClick={handleSaveGrading}
-                  className="btn btn-primary px-4.5 py-2 text-white font-semibold rounded-xl flex items-center gap-1.5"
-                  style={{ backgroundColor: 'var(--primary)' }}
+                  disabled={activeOrphanStatus.isBlocked}
+                  title={activeOrphanStatus.isBlocked ? (activeOrphanStatus.reason || 'Guardado bloqueado por protección de notas') : 'Guardar evaluación'}
+                  className={`btn px-4.5 py-2 font-semibold rounded-xl flex items-center gap-1.5 transition ${
+                    activeOrphanStatus.isBlocked 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300' 
+                      : 'text-white cursor-pointer shadow-sm'
+                  }`}
+                  style={activeOrphanStatus.isBlocked ? {} : { backgroundColor: 'var(--primary)' }}
                 >
                   <Check className="w-4 h-4" />
-                  <span>Guardar evaluación</span>
+                  <span>{activeOrphanStatus.isBlocked ? 'Guardado protegido' : 'Guardar evaluación'}</span>
                 </button>
               )}
             </div>

@@ -139,11 +139,13 @@ export interface Institution {
 export interface Question {
   id: string;
   texto: string;
-  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table' | 'table_matching';
+  enunciado?: string; // Campo histórico compatible
+  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table' | 'table_matching' | 'opcion_multiple';
   puntos: number;
   opciones: string[]; // Options / Caja de palabras (list of terms to match)
   opcionIds?: string[]; // Stable internal IDs for options to prevent UI collision on deletion
   correctas: number[]; // Index of correct option(s) for multiple, tf, dropdown, checkbox
+  correcta?: number; // Campo histórico compatible
   maxRespuestas?: number; // Límite de respuestas seleccionables (ej. hasta 3 respuestas) para preguntas de casillas/múltiple
   enunciados?: string[]; // Array of statements/definitions for matching type
   enunciadoIds?: string[]; // Stable internal IDs for enunciados to prevent UI collision on deletion
