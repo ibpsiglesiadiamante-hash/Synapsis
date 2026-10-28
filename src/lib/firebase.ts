@@ -141,9 +141,19 @@ export function sanitizeForFirestore(obj: any): any {
 
 import { saveDocToSupabase, deleteDocFromSupabase } from './supabase';
 
-export async function saveDocToFirestore<T extends { id: string }>(collName: string, item: T): Promise<void> {
-  // Mirror writes to Supabase asynchronously
-  saveDocToSupabase(collName, item).catch(() => {});
+export async function saveDocToFirestore<T extends { id: string }>(collName: string, item: T, mirrorToSupabase: boolean = true): Promise<void> {
+  // Mirror writes to Supabase asynchronously with diagnostic notification ONLY when mirrorToSupabase is true
+  if (mirrorToSupabase) {
+    saveDocToSupabase(collName, item)
+      .then(res => {
+        if (!res.success) {
+          console.warn(`[Supabase Mirror Warning] Guardado espejo incompleto en "${collName}/${item.id}":`, res.error);
+        }
+      })
+      .catch(err => {
+        console.warn(`[Supabase Mirror Error] Excepción en guardado espejo "${collName}/${item.id}":`, err?.message || err);
+      });
+  }
 
   if (!isFirestoreAvailable) {
     return;
@@ -161,8 +171,16 @@ export async function deleteDocFromFirestore(collName: string, docId: string): P
   if (!docId) return;
   markAsDeleted(docId);
   itemSyncCache.delete(`${collName}/${docId}`);
-  // Mirror deletions to Supabase asynchronously
-  deleteDocFromSupabase(collName, docId).catch(() => {});
+  // Mirror deletions to Supabase asynchronously with diagnostic notification
+  deleteDocFromSupabase(collName, docId)
+    .then(res => {
+      if (!res.success) {
+        console.warn(`[Supabase Mirror Warning] Borrado espejo incompleto en "${collName}/${docId}":`, res.error);
+      }
+    })
+    .catch(err => {
+      console.warn(`[Supabase Mirror Error] Excepción en borrado espejo "${collName}/${docId}":`, err?.message || err);
+    });
 
   if (!isFirestoreAvailable) {
     return;
@@ -436,7 +454,8 @@ export async function syncToFirestore(newState: AppState): Promise<void> {
         const cachedString = itemSyncCache.get(itemKey);
 
         if (cachedString !== itemString) {
-          const savePromise = saveDocToFirestore(key, item).then(() => {
+          const mirrorToSupabase = key !== 'submissions';
+          const savePromise = saveDocToFirestore(key, item, mirrorToSupabase).then(() => {
             itemSyncCache.set(itemKey, itemString);
           });
           promises.push(savePromise);

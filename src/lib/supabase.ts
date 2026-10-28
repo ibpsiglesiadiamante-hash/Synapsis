@@ -72,34 +72,94 @@ export async function testSupabaseConnection(): Promise<{ ok: boolean; message: 
   }
 }
 
+export interface RemoteWriteResult {
+  success: boolean;
+  error?: string;
+  table: string;
+  id: string;
+}
+
 /**
- * Generic upsert to Supabase
+ * Generic upsert to Supabase with verifiable outcome propagation
  */
-export async function saveDocToSupabase(table: string, item: any): Promise<void> {
-  if (!item || !item.id || !KNOWN_SUPABASE_TABLES.has(table)) return;
+export async function saveDocToSupabase(table: string, item: any): Promise<RemoteWriteResult> {
+  if (!item || !item.id || !KNOWN_SUPABASE_TABLES.has(table)) {
+    const errorMsg = `Tabla no autorizada o documento sin id válido (tabla: ${table})`;
+    console.warn(`[Supabase Write Rejected] ${errorMsg}`);
+    return {
+      success: false,
+      error: errorMsg,
+      table,
+      id: item?.id || 'unknown'
+    };
+  }
   try {
     const cleanItem = sanitizeForSupabase(item);
     const { error } = await supabase.from(table).upsert(cleanItem);
     if (error) {
       console.warn(`Supabase upsert warning on table "${table}":`, error.message);
+      return {
+        success: false,
+        error: error.message,
+        table,
+        id: item.id
+      };
     }
-  } catch (err) {
-    console.warn(`Error saving document ${item.id} to Supabase table "${table}":`, err);
+    return {
+      success: true,
+      table,
+      id: item.id
+    };
+  } catch (err: any) {
+    const msg = err?.message || 'Error de conexión a Supabase';
+    console.warn(`Error saving document ${item.id} to Supabase table "${table}":`, msg);
+    return {
+      success: false,
+      error: msg,
+      table,
+      id: item.id
+    };
   }
 }
 
 /**
- * Delete document from Supabase
+ * Delete document from Supabase with verifiable outcome propagation
  */
-export async function deleteDocFromSupabase(table: string, id: string): Promise<void> {
-  if (!id || PROTECTED_IDS.has(id) || !KNOWN_SUPABASE_TABLES.has(table)) return;
+export async function deleteDocFromSupabase(table: string, id: string): Promise<RemoteWriteResult> {
+  if (!id || PROTECTED_IDS.has(id) || !KNOWN_SUPABASE_TABLES.has(table)) {
+    const errorMsg = `ID protegido o tabla no válida (${table}/${id})`;
+    return {
+      success: false,
+      error: errorMsg,
+      table,
+      id
+    };
+  }
   try {
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) {
       console.warn(`Supabase delete warning on table "${table}":`, error.message);
+      return {
+        success: false,
+        error: error.message,
+        table,
+        id
+      };
     }
-  } catch (err) {
-    console.warn(`Error deleting document ${id} from Supabase table "${table}":`, err);
+    return {
+      success: true,
+      table,
+      id
+    };
+  } catch (err: any) {
+    const msg = err?.message || 'Error de conexión a Supabase';
+    console.warn(`Error deleting document ${id} from Supabase table "${table}":`, msg);
+    return {
+      success: false,
+      error: msg,
+      table,
+      id
+    };
   }
 }
 

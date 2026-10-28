@@ -197,6 +197,7 @@ export interface Submission {
   autoPuntaje?: number;
   gradedBy?: string;
   gradedAt?: string;
+  actualizado?: string;
 }
 
 export interface AppState {

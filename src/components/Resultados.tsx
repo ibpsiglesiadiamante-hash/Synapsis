@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, Award, Percent, Calendar, 
   ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
@@ -19,8 +19,17 @@ interface ResultadosProps {
   exams: Exam[];
   submissions: Submission[];
   subjects?: Subject[];
-  onUpdateSubmissions: (updated: Submission[]) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  onUpdateSubmissions: (
+    updated: Submission[], 
+    forceIds?: string[]
+  ) => Promise<{ 
+    success: boolean; 
+    remoteSynced: boolean; 
+    error?: string;
+    successfulIds?: string[];
+    failedIds?: string[];
+  }> | void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export default function Resultados({ 
@@ -35,6 +44,22 @@ export default function Resultados({
   // Local grading scores & comment forms
   const [manualScores, setManualScores] = useState<Record<string, number>>({});
   const [manualComments, setManualComments] = useState<Record<string, string>>({});
+  const [isSavingGrading, setIsSavingGrading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [failedSubmissionIds, setFailedSubmissionIds] = useState<string[]>([]);
+
+  // Warn if user attempts to close window while grading persistence is in progress
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isSavingGrading) {
+        e.preventDefault();
+        e.returnValue = 'Hay calificaciones guardándose en el servidor. Si sales ahora, la persistencia remota podría interrumpirse.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isSavingGrading]);
 
   const userAsignaturas = currentUser.asignaturas || [];
   const myExams = exams
@@ -80,6 +105,8 @@ export default function Resultados({
     setActiveSubId(subId);
     setManualScores(sub.manualScores || {});
     setManualComments(sub.manualComments || {});
+    setSaveError(null);
+    setFailedSubmissionIds([]);
   };
 
   const handleManualScoreChange = (qid: string, val: number, max: number) => {
@@ -93,8 +120,8 @@ export default function Resultados({
     setManualComments(prev => ({ ...prev, [qid]: val }));
   };
 
-  const handleSaveGrading = () => {
-    if (!activeSubId) return;
+  const handleSaveGrading = async (isRetry = false) => {
+    if (!activeSubId || isSavingGrading) return;
     const sub = submissions.find(s => s.id === activeSubId);
     const exam = exams.find(e => e.id === sub?.examenId);
     if (!sub || !exam) return;
@@ -107,6 +134,10 @@ export default function Resultados({
       toast(orphanStatus.reason || 'Guardado bloqueado por protección de integridad académica.', 'warning');
       return;
     }
+
+    setIsSavingGrading(true);
+    setSaveError(null);
+    toast(isRetry ? 'Reintentando sincronización con el servidor…' : 'Guardando calificaciones en el servidor…', 'info');
 
     const normQuestions = normalizeExamQuestions(exam);
     let manualSum = 0;
@@ -220,6 +251,7 @@ export default function Resultados({
 
     const finalScore = totalMax > 0 ? Math.round(((autoSum + manualSum) / totalMax) * 100) : sub.puntaje;
     const isApproved = finalScore >= (exam.aprobacion || 60);
+    const timeNow = now();
 
     const updatedSubs = submissions.map(s => {
       if (s.id === activeSubId) {
@@ -233,15 +265,44 @@ export default function Resultados({
           manualComments,
           estado: 'calificado' as const,
           gradedBy: currentUser.id,
-          gradedAt: now(),
+          gradedAt: timeNow,
+          actualizado: timeNow,
         };
       }
       return s;
     });
 
-    onUpdateSubmissions(updatedSubs);
-    setActiveSubId(null);
-    toast('Calificaciones actualizadas con éxito', 'success');
+    const forceIdsToSync = (isRetry || failedSubmissionIds.length > 0)
+      ? (failedSubmissionIds.length > 0 ? failedSubmissionIds : (activeSubId ? [activeSubId] : undefined))
+      : undefined;
+
+    try {
+      const result = await onUpdateSubmissions(updatedSubs, forceIdsToSync);
+      if (result && result.success === true && result.remoteSynced === true) {
+        setSaveError(null);
+        setFailedSubmissionIds([]);
+        setActiveSubId(null);
+        toast('Calificaciones actualizadas y sincronizadas con éxito en el servidor', 'success');
+      } else {
+        const errMsg = (result && 'error' in result && result.error) || 'No se recibió confirmación verificable de persistencia remota';
+        setSaveError(errMsg);
+        if (result && 'failedIds' in result && result.failedIds && result.failedIds.length > 0) {
+          setFailedSubmissionIds(result.failedIds);
+        } else if (activeSubId) {
+          setFailedSubmissionIds([activeSubId]);
+        }
+        toast(`Atención: Calificación guardada localmente, pero falló la sincronización con el servidor: ${errMsg}. Puede reintentar.`, 'warning');
+      }
+    } catch (err: any) {
+      const errMsg = err?.message || 'Error de red o conexión al contactar el servidor';
+      setSaveError(errMsg);
+      if (activeSubId) {
+        setFailedSubmissionIds([activeSubId]);
+      }
+      toast(`Error de guardado en el servidor: ${errMsg}. Los datos se conservan localmente.`, 'error');
+    } finally {
+      setIsSavingGrading(false);
+    }
   };
 
   const handleExportSubmissionsJson = () => {
@@ -1043,27 +1104,63 @@ export default function Resultados({
 
             </div>
 
+            {saveError && (
+              <div className="mx-4 mb-2 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-200 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span><strong>Sincronización remota pendiente:</strong> {saveError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSaveGrading(true)}
+                  disabled={isSavingGrading}
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  Reintentar sincronización
+                </button>
+              </div>
+            )}
+
             <div className="modal-footer border-t border-slate-100 p-4 shrink-0 flex justify-end gap-2.5 bg-slate-50 rounded-b-2xl">
               <button 
-                onClick={() => setActiveSubId(null)}
-                className="btn btn-secondary px-4 py-2 border rounded-xl hover:bg-slate-100 cursor-pointer text-slate-700 bg-white"
+                type="button"
+                onClick={() => {
+                  if (isSavingGrading) {
+                    if (!window.confirm('Hay un guardado en curso hacia el servidor. ¿Deseas salir igualmente?')) return;
+                  }
+                  setActiveSubId(null);
+                  setSaveError(null);
+                  setFailedSubmissionIds([]);
+                }}
+                disabled={isSavingGrading}
+                className="btn btn-secondary px-4 py-2 border rounded-xl hover:bg-slate-100 cursor-pointer text-slate-700 bg-white disabled:opacity-50"
               >
                 Cerrar
               </button>
               {(currentUser.rol === 'admin' || activeExam.docenteId === currentUser.id) && (
                 <button 
-                  onClick={handleSaveGrading}
-                  disabled={activeOrphanStatus.isBlocked}
+                  type="button"
+                  onClick={() => handleSaveGrading(false)}
+                  disabled={activeOrphanStatus.isBlocked || isSavingGrading}
                   title={activeOrphanStatus.isBlocked ? (activeOrphanStatus.reason || 'Guardado bloqueado por protección de notas') : 'Guardar evaluación'}
                   className={`btn px-4.5 py-2 font-semibold rounded-xl flex items-center gap-1.5 transition ${
-                    activeOrphanStatus.isBlocked 
+                    activeOrphanStatus.isBlocked || isSavingGrading
                       ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300' 
                       : 'text-white cursor-pointer shadow-sm'
                   }`}
-                  style={activeOrphanStatus.isBlocked ? {} : { backgroundColor: 'var(--primary)' }}
+                  style={activeOrphanStatus.isBlocked || isSavingGrading ? {} : { backgroundColor: 'var(--primary)' }}
                 >
-                  <Check className="w-4 h-4" />
-                  <span>{activeOrphanStatus.isBlocked ? 'Guardado protegido' : 'Guardar evaluación'}</span>
+                  {isSavingGrading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Guardando en el servidor…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>{activeOrphanStatus.isBlocked ? 'Guardado protegido' : 'Guardar evaluación'}</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>

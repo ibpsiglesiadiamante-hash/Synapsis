@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   GraduationCap, 
   HelpCircle, 
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 
 import { 
+  AppState,
   User, 
   Exam, 
   Submission, 
@@ -71,7 +72,8 @@ import {
 import {
   fetchFullStateFromSupabase,
   pushAllStateToSupabase,
-  testSupabaseConnection
+  testSupabaseConnection,
+  saveDocToSupabase
 } from './lib/supabase';
 
 import Header from './components/Header';
@@ -105,7 +107,12 @@ import ShareAppModal from './components/ShareAppModal';
 export default function App() {
   // Database States
   const [db, setDb] = useState(() => getInitialState());
+  const currentDbRef = useRef<AppState>(db);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(false);
+
+  useEffect(() => {
+    currentDbRef.current = db;
+  }, [db]);
 
   // Download entire Synapsis Portal database on mount in background (Firestore & Supabase)
   useEffect(() => {
@@ -132,6 +139,7 @@ export default function App() {
           mergedDb = mergeStates(mergedDb, remoteSupabase as any);
         }
 
+        currentDbRef.current = mergedDb;
         setDb(mergedDb);
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
@@ -565,66 +573,109 @@ export default function App() {
     });
   };
 
-  const updateUsers = (next: User[]) => setDb(prev => {
-    syncDeletions('users', prev.users, next);
-    const updated = { ...prev, users: next };
+  const updateStateField = <K extends keyof AppState>(field: K, nextList: AppState[K], collName?: string): AppState => {
+    const prevFieldList = (currentDbRef.current[field] as any[]) || [];
+    if (collName) {
+      syncDeletions(collName, prevFieldList, (nextList as any[]) || []);
+    }
+    const updated: AppState = { ...currentDbRef.current, [field]: nextList };
+    currentDbRef.current = updated;
     saveState(updated);
+    setDb(updated);
     return updated;
-  });
-  const updateInstitutions = (next: Institution[]) => setDb(prev => {
-    syncDeletions('institutions', prev.institutions, next);
-    const updated = { ...prev, institutions: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateSubjects = (next: Subject[]) => setDb(prev => {
-    syncDeletions('subjects', prev.subjects, next);
-    const updated = { ...prev, subjects: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateSemesters = (next: Semester[]) => setDb(prev => {
-    syncDeletions('semesters', prev.semesters, next);
-    const updated = { ...prev, semesters: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateParciales = (next: Parcial[]) => setDb(prev => {
-    syncDeletions('parciales', prev.parciales, next);
-    const updated = { ...prev, parciales: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateExams = (next: Exam[]) => setDb(prev => {
-    syncDeletions('exams', prev.exams, next);
-    const updated = { ...prev, exams: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateSubmissions = (next: Submission[]) => setDb(prev => {
-    syncDeletions('submissions', prev.submissions, next);
-    const updated = { ...prev, submissions: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateGradeRecords = (next: GradeRecord[]) => setDb(prev => {
-    syncDeletions('gradeRecords', prev.gradeRecords, next);
-    const updated = { ...prev, gradeRecords: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateAssignments = (next: Assignment[]) => setDb(prev => {
-    syncDeletions('assignments', prev.assignments, next);
-    const updated = { ...prev, assignments: next };
-    saveState(updated);
-    return updated;
-  });
-  const updateAssignmentSubmissions = (next: AssignmentSubmission[]) => setDb(prev => {
-    syncDeletions('assignmentSubmissions', prev.assignmentSubmissions, next);
-    const updated = { ...prev, assignmentSubmissions: next };
-    saveState(updated);
-    return updated;
-  });
+  };
+
+  const updateUsers = (next: User[]) => updateStateField('users', next, 'users');
+  const updateInstitutions = (next: Institution[]) => updateStateField('institutions', next, 'institutions');
+  const updateSubjects = (next: Subject[]) => updateStateField('subjects', next, 'subjects');
+  const updateSemesters = (next: Semester[]) => updateStateField('semesters', next, 'semesters');
+  const updateParciales = (next: Parcial[]) => updateStateField('parciales', next, 'parciales');
+  const updateExams = (next: Exam[]) => updateStateField('exams', next, 'exams');
+  const updateGradeRecords = (next: GradeRecord[]) => updateStateField('gradeRecords', next, 'gradeRecords');
+  const updateAssignments = (next: Assignment[]) => updateStateField('assignments', next, 'assignments');
+  const updateAssignmentSubmissions = (next: AssignmentSubmission[]) => updateStateField('assignmentSubmissions', next, 'assignmentSubmissions');
+
+  const updateSubmissions = async (next: Submission[], forceIds?: string[]): Promise<{
+    success: boolean;
+    remoteSynced: boolean;
+    error?: string;
+    successfulIds?: string[];
+    failedIds?: string[];
+  }> => {
+    // 1. Obtener sincrónicamente las entregas previas desde la referencia viva más reciente
+    const currentSubs = currentDbRef.current.submissions || [];
+    const forceSet = new Set(forceIds || []);
+
+    // 2. Actualizar estado local inmediatamente para no perder datos en memoria ni localStorage
+    updateStateField('submissions', next, 'submissions');
+
+    // 3. Detectar entregas modificadas de forma canónica O forzadas explícitamente para reintento remoto
+    const changed = next.filter(item => {
+      if (forceSet.has(item.id)) return true;
+      const prev = currentSubs.find(p => p.id === item.id);
+      if (!prev) return true;
+      if (prev.puntaje !== item.puntaje) return true;
+      if (prev.estado !== item.estado) return true;
+      if (prev.aprobado !== item.aprobado) return true;
+      if (prev.actualizado !== item.actualizado) return true;
+      if (prev.gradedAt !== item.gradedAt) return true;
+      if (JSON.stringify(prev.manualScores || {}) !== JSON.stringify(item.manualScores || {})) return true;
+      if (JSON.stringify(prev.manualComments || {}) !== JSON.stringify(item.manualComments || {})) return true;
+      if (JSON.stringify(prev.respuestas || {}) !== JSON.stringify(item.respuestas || {})) return true;
+      return false;
+    });
+
+    if (changed.length === 0) {
+      if (forceIds && forceIds.length > 0) {
+        return {
+          success: false,
+          remoteSynced: false,
+          error: `No se encontraron entregas correspondientes a los IDs indicados para reintento (${forceIds.join(', ')}).`,
+          successfulIds: [],
+          failedIds: forceIds
+        };
+      }
+      // Sin cambios y sin IDs forzados: no hay escrituras remotas ejecutadas ni confirmadas
+      return {
+        success: true,
+        remoteSynced: false,
+        error: 'No se detectaron cambios pendientes para sincronizar con el servidor.',
+        successfulIds: [],
+        failedIds: []
+      };
+    }
+
+    const successfulIds: string[] = [];
+    const failedIds: string[] = [];
+    let lastError: string | undefined;
+
+    // 4. Persistir directamente a Supabase de forma secuencial y verificable
+    for (const sub of changed) {
+      const res = await saveDocToSupabase('submissions', sub);
+      if (res.success) {
+        successfulIds.push(sub.id);
+      } else {
+        failedIds.push(sub.id);
+        lastError = res.error;
+      }
+    }
+
+    // 5. Replicar a Firestore en background sin disparar una segunda escritura redundante a Supabase (mirrorToSupabase = false)
+    for (const sub of changed) {
+      saveDocToFirestore('submissions', sub, false).catch(() => {});
+    }
+
+    const allSucceeded = failedIds.length === 0;
+    return {
+      success: allSucceeded,
+      remoteSynced: allSucceeded,
+      error: allSucceeded 
+        ? undefined 
+        : (failedIds.length > 1 ? `Falló persistencia en ${failedIds.length} entregas (${failedIds.join(', ')}): ${lastError}` : lastError),
+      successfulIds,
+      failedIds
+    };
+  };
 
   // Dynamic panel mapper
   const renderActivePanel = () => {

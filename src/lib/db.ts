@@ -602,6 +602,61 @@ export function saveState(state: AppState) {
   }
 }
 
+/**
+ * Parses timestamps safely across multiple formats (ISO, epoch, regional DD/MM/YYYY)
+ * to avoid lexical string comparison errors and regional date ambiguities.
+ */
+export function parseSafeTimestamp(val?: string | number | null): number {
+  if (!val) return 0;
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  const str = String(val).trim();
+  if (!str) return 0;
+  if (/^\d+$/.test(str)) {
+    const num = Number(str);
+    return isNaN(num) ? 0 : num;
+  }
+
+  // 1. Prioritize regional DD/MM/YYYY (or DD-MM-YYYY) before Date.parse to avoid V8 MM/DD/YYYY misinterpretation
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    const hour = Number(dmyMatch[4] || 0);
+    const minute = Number(dmyMatch[5] || 0);
+    const second = Number(dmyMatch[6] || 0);
+
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59 || second > 59) {
+      return 0;
+    }
+    const d = new Date(year, month - 1, day, hour, minute, second);
+    // Reject impossible calendar dates (e.g. 31/02/2026 rolls over to March)
+    if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) {
+      return 0;
+    }
+    return d.getTime();
+  }
+
+  // 2. Standard ISO 8601 or other standard formats
+  const parsed = Date.parse(str);
+  if (!isNaN(parsed)) return parsed;
+
+  return 0;
+}
+
+/**
+ * Counts non-empty answers to prevent empty draft payloads from overwriting real student responses
+ */
+export function countMeaningfulAnswers(resObj: Record<string, any> = {}): number {
+  if (!resObj || typeof resObj !== 'object') return 0;
+  return Object.values(resObj).filter(v => {
+    if (v === undefined || v === null || v === '') return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+    return true;
+  }).length;
+}
+
 export function mergeStates(local: AppState, remote: AppState): AppState {
   const defaults = buildDefaultSeedData();
   const deletedIds = getDeletedIds();
@@ -625,7 +680,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     let remoteList = ((remote[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
 
     // Fall back to seed defaults only if both are empty and not initialized
-    const isInit = localStorage.getItem('ep_initialized') === 'true';
+    const isInit = typeof localStorage !== 'undefined' && localStorage.getItem('ep_initialized') === 'true';
     if (!isInit && localList.length === 0 && remoteList.length === 0 && defaults[key] && defaults[key].length > 0) {
       localList = (defaults[key] as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
     }
@@ -639,7 +694,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       }
     });
 
-    // 2. Local items: add new ones, or overwrite remote if local has newer timestamp
+    // 2. Local items: add new ones, or merge with remote with conflict and integrity protection
     localList.forEach((localItem: any) => {
       if (!localItem || !localItem.id || deletedIds.has(localItem.id)) return;
 
@@ -647,10 +702,103 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       if (!remoteItem) {
         itemMap.set(localItem.id, localItem);
       } else {
-        const localTime = localItem.actualizado || localItem.creado || '';
-        const remoteTime = remoteItem.actualizado || remoteItem.creado || '';
-        if (localTime > remoteTime) {
-          itemMap.set(localItem.id, localItem);
+        if (key === 'submissions') {
+          // Dedicated safe merge for exam submissions
+          const localGraded = localItem.estado === 'calificado' || (localItem.manualScores && Object.keys(localItem.manualScores).length > 0);
+          const remoteGraded = remoteItem.estado === 'calificado' || (remoteItem.manualScores && Object.keys(remoteItem.manualScores).length > 0);
+
+          if (localGraded && !remoteGraded) {
+            // Local tiene calificación del docente; remoto sigue pendiente -> preservar local
+            itemMap.set(localItem.id, localItem);
+          } else if (!localGraded && remoteGraded) {
+            // Remoto tiene calificación; local sigue pendiente -> preservar remoto
+            itemMap.set(localItem.id, remoteItem);
+          } else {
+            // Ambos calificados o ambos pendientes: comparar prioridad temporal numérica exacta
+            const localMs = parseSafeTimestamp(localItem.actualizado || localItem.gradedAt || localItem.fecha || localItem.creado);
+            const remoteMs = parseSafeTimestamp(remoteItem.actualizado || remoteItem.gradedAt || remoteItem.fecha || remoteItem.creado);
+
+            if (localMs > remoteMs) {
+              itemMap.set(localItem.id, localItem);
+            } else if (remoteMs > localMs) {
+              itemMap.set(localItem.id, remoteItem);
+            } else {
+              // Timestamps idénticos o no especificados:
+              if (localItem.puntaje !== remoteItem.puntaje) {
+                console.warn(`[Sync Conflict] Calificaciones divergentes en entrega ${localItem.id}: local=${localItem.puntaje}% vs remoto=${remoteItem.puntaje}%. Se preserva versión activa local.`);
+              }
+
+              // Contar únicamente respuestas con contenido real (evitando borradores vacíos)
+              const localMeaningful = countMeaningfulAnswers(localItem.respuestas);
+              const remoteMeaningful = countMeaningfulAnswers(remoteItem.respuestas);
+
+              // Si uno de los dos tiene respuestas significativas y el otro no (o menos), priorizar el significativo
+              let baseItem: any;
+              if (localMeaningful > remoteMeaningful) {
+                baseItem = localItem;
+              } else if (remoteMeaningful > localMeaningful) {
+                baseItem = remoteItem;
+              } else {
+                baseItem = localItem;
+              }
+
+              // Protección contra versiones incompatibles de exámenes:
+              // Comprobar si las preguntas respondidas en local y remoto pertenecen a versiones incompatibles
+              const localRespKeys = Object.keys(localItem.respuestas || {});
+              const remoteRespKeys = Object.keys(remoteItem.respuestas || {});
+              const hasBothResp = localRespKeys.length > 0 && remoteRespKeys.length > 0;
+              const sharedKeys = hasBothResp ? localRespKeys.filter(k => remoteRespKeys.includes(k)) : [];
+              const isDifferentExam = localItem.examenId && remoteItem.examenId && localItem.examenId !== remoteItem.examenId;
+              const incompatibleVersions = isDifferentExam || (hasBothResp && sharedKeys.length === 0);
+
+              let finalScores: Record<string, number> = {};
+              let finalComments: Record<string, string> = {};
+
+              if (incompatibleVersions) {
+                console.warn(`[Sync Conflict] Incompatibilidad de versión de examen detectada en entrega ${localItem.id}. Se preserva versión base sin mezclar preguntas ni notas ajenas.`);
+                finalScores = baseItem.manualScores || {};
+                finalComments = baseItem.manualComments || {};
+              } else {
+                // Versiones compatibles: fusionar notas y comentarios manuales respetando únicamente preguntas válidas
+                const mergedComments = { ...(remoteItem.manualComments || {}), ...(localItem.manualComments || {}) };
+                const mergedScores = { ...(remoteItem.manualScores || {}), ...(localItem.manualScores || {}) };
+
+                const allowedQuestions = new Set(Object.keys(baseItem.respuestas || {}));
+                if (allowedQuestions.size > 0) {
+                  Object.entries(mergedScores).forEach(([qId, val]) => {
+                    if (allowedQuestions.has(qId)) finalScores[qId] = val as number;
+                  });
+                  Object.entries(mergedComments).forEach(([qId, val]) => {
+                    if (allowedQuestions.has(qId)) finalComments[qId] = val as string;
+                  });
+                } else {
+                  finalScores = mergedScores;
+                  finalComments = mergedComments;
+                }
+              }
+
+              itemMap.set(localItem.id, {
+                ...baseItem,
+                manualScores: Object.keys(finalScores).length > 0 ? finalScores : baseItem.manualScores,
+                manualComments: Object.keys(finalComments).length > 0 ? finalComments : baseItem.manualComments,
+              });
+            }
+          }
+        } else {
+          // Comparación robusta para las demás entidades usando milisegundos numéricos
+          const localMs = parseSafeTimestamp(localItem.actualizado || localItem.creado || localItem.fecha);
+          const remoteMs = parseSafeTimestamp(remoteItem.actualizado || remoteItem.creado || remoteItem.fecha);
+          if (localMs > remoteMs) {
+            itemMap.set(localItem.id, localItem);
+          } else if (remoteMs > localMs) {
+            itemMap.set(localItem.id, remoteItem);
+          } else if (localMs === 0 && remoteMs === 0) {
+            const localKeys = Object.keys(localItem).length;
+            const remoteKeys = Object.keys(remoteItem).length;
+            if (localKeys >= remoteKeys) {
+              itemMap.set(localItem.id, localItem);
+            }
+          }
         }
       }
     });
