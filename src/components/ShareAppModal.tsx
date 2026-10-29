@@ -31,10 +31,11 @@ interface ShareAppModalProps {
   };
 }
 
-// Official working portal link on Firebase Hosting (Project ID: synapsis-ec)
-export const OFFICIAL_PORTAL_URL = 'https://synapsis-ec.web.app';
+// Official working portal link on Render
+export const OFFICIAL_PORTAL_URL = 'https://synapsis-erp.onrender.com';
+export const RENDER_URL = 'https://synapsis-erp.onrender.com';
 export const SHORT_URL = 'https://tinyurl.com/2ad5gh2c';
-export const FULL_URL = 'https://ais-pre-4wzwuwhx24ttdai2gesabg-794631310365.us-east1.run.app/';
+export const FULL_URL = 'https://synapsis-erp.onrender.com';
 export const FIREBASE_HOSTING_URL = 'https://synapsis-ec.web.app';
 
 export default function ShareAppModal({ 
@@ -191,7 +192,7 @@ export default function ShareAppModal({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Acceso al Portal Académico Synapsis</title>
+          <title>Acceso a Synapsis ERP</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -252,17 +253,17 @@ export default function ShareAppModal({
         </head>
         <body>
           <div class="container">
-            <h1>Synapsis Portal</h1>
-            <p class="sub">Plataforma Oficial de Evaluaciones y Control Académico</p>
-            <img class="qr-img" src="${qrDataUrl}" alt="Código QR Synapsis" />
+            <h1>Synapsis ERP</h1>
+            <p class="sub">Plataforma Oficial de Gestión Institucional y Académica</p>
+            <img class="qr-img" src="${qrDataUrl}" alt="Código QR Synapsis ERP" />
             <div class="url-box">
               <div>Dirección web oficial de acceso:</div>
               <div class="url-text">${OFFICIAL_PORTAL_URL}</div>
             </div>
             <div class="instrucciones">
-              <strong>Instrucciones para estudiantes y docentes:</strong><br />
+              <strong>Instrucciones para estudiantes, docentes y personal:</strong><br />
               1. Abre la cámara de tu celular o escáner QR.<br />
-              2. Apunta hacia el código QR para entrar al portal.<br />
+              2. Apunta hacia el código QR para ingresar al sistema.<br />
               3. O ingresa directamente desde cualquier navegador a: ${OFFICIAL_PORTAL_URL}
             </div>
           </div>
@@ -279,8 +280,8 @@ export default function ShareAppModal({
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `🏛️ *Portal Académico Synapsis*\n` +
-      `Acceso oficial para evaluaciones, notas, parciales y tareas académicas.\n\n` +
+      `🏛️ *Synapsis ERP — Sistema de Gestión Institucional*\n` +
+      `Acceso oficial a la plataforma integral de control académico, notas y gestión institucional.\n\n` +
       `🔗 *Enlace directo:* ${OFFICIAL_PORTAL_URL}\n\n` +
       `¡Ingresa con tu correo o código registrado!`
     );
@@ -301,10 +302,10 @@ export default function ShareAppModal({
             </div>
             <div>
               <h3 className="font-extrabold text-base tracking-tight text-white">
-                Enlace Oficial & Acceso al Portal
+                Enlace Oficial de Synapsis ERP
               </h3>
               <p className="text-[11px] text-emerald-300 font-medium font-mono">
-                synapsis-ec.web.app
+                synapsis-erp.onrender.com
               </p>
             </div>
           </div>

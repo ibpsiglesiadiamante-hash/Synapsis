@@ -1,9 +1,9 @@
 # Render Infrastructure-as-Code Blueprint
-# Synapsis — Plataforma de Gestión Académica y Evaluaciones
+# Synapsis ERP — Sistema de Gestión Integral Institucional y Académica
 
 services:
   - type: web
-    name: synapsis-evaluaciones
+    name: synapsis-erp
     runtime: static
     buildCommand: npm run build
     staticPublishPath: ./dist

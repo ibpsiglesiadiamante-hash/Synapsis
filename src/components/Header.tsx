@@ -70,11 +70,11 @@ export default function Header({
           S
         </div>
         <div>
-          <div className="logo-text text-[17px] font-bold tracking-tight" style={{ color: 'var(--gray-900)' }}>
-            Synapsis
+          <div className="logo-text text-[17px] font-bold tracking-tight flex items-center gap-1.5" style={{ color: 'var(--gray-900)' }}>
+            Synapsis <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-indigo-600 text-white tracking-wider">ERP</span>
           </div>
           <div className="logo-sub text-[11px] font-medium" style={{ color: 'var(--gray-400)' }}>
-            Evaluación & Control
+            Gestión Institucional
           </div>
         </div>
       </div>

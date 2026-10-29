@@ -1097,20 +1097,20 @@ export default function App() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h1 className="text-2xl font-black text-white tracking-tight leading-none">
-                        Synapsis
+                        Synapsis <span className="text-indigo-400">ERP</span>
                       </h1>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 uppercase tracking-wider">
-                        OFICIAL
+                        INSTITUCIONAL
                       </span>
                     </div>
                     <p className="text-[11px] font-extrabold text-indigo-400 tracking-wider uppercase mt-1 font-sans">
-                      CAMPUS VIRTUAL UNIVERSITARIO
+                      SISTEMA ERP INSTITUCIONAL Y ACADÉMICO
                     </p>
                   </div>
                 </div>
 
                 <p className="text-xs text-slate-400 font-normal leading-relaxed mb-6">
-                  Plataforma integral para evaluaciones digitales, registro de calificaciones, asistencia y seguimiento académico.
+                  Plataforma integral de gestión institucional: control académico, finanzas, asistencia, asignaturas y administración escolar.
                 </p>
 
                 {/* 3 Feature items */}
@@ -1582,7 +1582,7 @@ export default function App() {
 
           {/* Institutional copyright note */}
           <p className="mt-6 text-[11px] text-slate-500 font-medium text-center">
-            Synapsis Educational OS · Conexión Segura SSL · Firebase Firestore
+            Synapsis ERP · Sistema Integral Cloud · Conexión Segura SSL
           </p>
         </div>
       ) : (
