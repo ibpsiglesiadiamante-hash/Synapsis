@@ -9,8 +9,9 @@ import {
   Search, Sparkles, RefreshCw, Layers, LayoutGrid, Table as TableIcon, BookmarkCheck, ArrowRight
 } from 'lucide-react';
 import { Subject, User, Semester } from '../types';
-import { uid, now, fmtDate, generateSubjectCode, backupAppState } from '../lib/db';
-import { uploadTheologicalSubjectsToFirestore, saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
+import { uid, now, fmtDate, generateSubjectCode, backupAppState, normalizeSubjectCanonicalKey, markAsDeleted } from '../lib/db';
+import { uploadTheologicalSubjectsToFirestore, saveDocToFirestore, deleteDocFromFirestore, registerDeletedId } from '../lib/firebase';
+import { deleteDocFromSupabase } from '../lib/supabase';
 
 interface AsignaturasProps {
   subjects: Subject[];
@@ -18,6 +19,7 @@ interface AsignaturasProps {
   semesters?: Semester[];
   onUpdateSubjects: (updated: Subject[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  onDeduplicateSubjects?: () => void;
 }
 
 export const NIVEL_PASTORAL = 'NIVEL I : Biblioteología Pastoral';
@@ -35,9 +37,31 @@ export const SEMESTRES_LIST = [
   'Semestre IX'
 ];
 
-export default function Asignaturas({ subjects, users, semesters = [], onUpdateSubjects, toast }: AsignaturasProps) {
+export default function Asignaturas({ 
+  subjects, users, semesters = [], onUpdateSubjects, toast, onDeduplicateSubjects 
+}: AsignaturasProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const detectedDuplicatesCount = useMemo(() => {
+    const names = new Map<string, number>();
+    const codeMap = new Map<string, string>();
+    subjects.forEach(s => {
+      let k = normalizeSubjectCanonicalKey(s.nombre, s.codigo);
+      const code = (s.codigo || '').trim().toUpperCase();
+      if (code && codeMap.has(code)) {
+        k = codeMap.get(code)!;
+      } else if (code && k) {
+        codeMap.set(code, k);
+      }
+      if (k) names.set(k, (names.get(k) || 0) + 1);
+    });
+    let dups = 0;
+    names.forEach(cnt => {
+      if (cnt > 1) dups += (cnt - 1);
+    });
+    return dups;
+  }, [subjects]);
 
   // Form states
   const [nombre, setNombre] = useState('');
@@ -214,10 +238,15 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
   const handleDelete = (id: string) => {
     const nextSubs = subjects.filter(s => s && s.id !== id);
     onUpdateSubjects(nextSubs);
+    markAsDeleted(id);
+    registerDeletedId(id, 'subjects').catch(() => {});
     deleteDocFromFirestore('subjects', id).catch(err => {
       console.warn('Error deleting subject from Firestore:', err);
     });
-    toast('Asignatura eliminada del catálogo correctamente', 'success');
+    deleteDocFromSupabase('subjects', id).catch(err => {
+      console.warn('Error deleting subject from Supabase:', err);
+    });
+    toast('Asignatura eliminada del catálogo correctamente y registrada para no reaparecer', 'success');
   };
 
   // Filter subjects
@@ -320,6 +349,19 @@ export default function Asignaturas({ subjects, users, semesters = [], onUpdateS
             <Sparkles className={`w-3.5 h-3.5 text-emerald-600 ${isSyncingTheological ? 'animate-spin' : ''}`} />
             <span>{isSyncingTheological ? 'Sincronizando...' : 'Cargar 36 Materias'}</span>
           </button>
+
+          {/* Button to clean and deduplicate subjects */}
+          {detectedDuplicatesCount > 0 && onDeduplicateSubjects && (
+            <button
+              type="button"
+              onClick={onDeduplicateSubjects}
+              className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 font-semibold text-xs shadow-xs cursor-pointer transition-all"
+              title="Eliminar materias duplicadas y reasociar exámenes y asignaciones de alumnos"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+              <span>Depurar Duplicadas ({detectedDuplicatesCount})</span>
+            </button>
+          )}
 
           {/* View Mode Switcher */}
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">

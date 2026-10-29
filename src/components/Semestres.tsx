@@ -3,24 +3,39 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CalendarDays, Plus, Trash2, Edit2, CheckCircle2, XSquare, ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Semester } from '../types';
-import { uid, now, fmtDate, generateSemesterCode } from '../lib/db';
-import { saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
+import { uid, now, fmtDate, generateSemesterCode, normalizeSemesterCanonicalKey, markAsDeleted } from '../lib/db';
+import { saveDocToFirestore, deleteDocFromFirestore, registerDeletedId } from '../lib/firebase';
+import { deleteDocFromSupabase } from '../lib/supabase';
 
 interface SemestresProps {
   semesters: Semester[];
   onUpdateSemesters: (updated: Semester[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  onDeduplicateSemesters?: () => void;
 }
 
 export const NIVEL_PASTORAL = 'NIVEL I : Biblioteología Pastoral';
 export const NIVEL_MINISTERIAL = 'NIVEL II : Biblioteología Ministerial';
 
-export default function Semestres({ semesters, onUpdateSemesters, toast }: SemestresProps) {
+export default function Semestres({ semesters, onUpdateSemesters, toast, onDeduplicateSemesters }: SemestresProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const duplicateSemestersCount = useMemo(() => {
+    const keys = new Map<string, number>();
+    semesters.forEach(s => {
+      const k = normalizeSemesterCanonicalKey(s.nombre || s.codigo);
+      if (k) keys.set(k, (keys.get(k) || 0) + 1);
+    });
+    let dups = 0;
+    keys.forEach(cnt => {
+      if (cnt > 1) dups += (cnt - 1);
+    });
+    return dups;
+  }, [semesters]);
 
   // Form states
   const [nombre, setNombre] = useState('');
@@ -145,24 +160,49 @@ export default function Semestres({ semesters, onUpdateSemesters, toast }: Semes
   const handleDelete = (id: string) => {
     const nextSems = semesters.filter(s => s && s.id !== id);
     onUpdateSemesters(nextSems);
+    markAsDeleted(id);
+    registerDeletedId(id, 'semesters').catch(() => {});
     deleteDocFromFirestore('semesters', id).catch(err => {
       console.warn('Error deleting semester from Firestore:', err);
     });
-    toast('Semestre eliminado correctamente', 'success');
+    deleteDocFromSupabase('semesters', id).catch(err => {
+      console.warn('Error deleting semester from Supabase:', err);
+    });
+    toast('Semestre eliminado correctamente y registrado para no reaparecer', 'success');
   };
 
   return (
     <div className="page-semestres animate-fade-in pb-12">
       <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
-            Semestres académicos
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
+              Semestres académicos
+            </h2>
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              semesters.length === 9 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}>
+              {semesters.length} {semesters.length === 9 ? 'semestres oficiales' : `semestres (${semesters.length > 9 ? 'hay duplicados' : 'registrados'})`}
+            </span>
+          </div>
           <div className="page-sub text-sm font-medium mt-1 text-slate-500 font-sans">
-            Abre y cierra periodos de matrículas, cortes y cronogramas de exámenes en el instituto
+            Abre y cierra periodos de matrículas, cortes y cronogramas de exámenes en el instituto (Pensum oficial: 9 semestres)
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {duplicateSemestersCount > 0 && onDeduplicateSemesters && (
+            <button
+              type="button"
+              onClick={onDeduplicateSemesters}
+              className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 font-semibold text-xs shadow-xs cursor-pointer transition-all"
+              title="Eliminar semestres duplicados y unificar materias a los 9 periodos canónicos oficiales"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+              <span>Depurar Duplicados ({duplicateSemestersCount})</span>
+            </button>
+          )}
           <select
             value={filterNivel}
             onChange={(e) => {

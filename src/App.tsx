@@ -53,7 +53,10 @@ import {
   validateAndParseBackup,
   uid,
   now,
-  generateStudentCode
+  generateStudentCode,
+  deduplicateSemesters,
+  deduplicateSubjects,
+  deduplicateParciales
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -67,13 +70,15 @@ import {
   uploadAllStudentsToFirestore,
   uploadAllExamsToFirestore,
   uploadAllParcialesToFirestore,
-  saveDocToFirestore
+  saveDocToFirestore,
+  deleteDocFromFirestore
 } from './lib/firebase';
 import {
   fetchFullStateFromSupabase,
   pushAllStateToSupabase,
   testSupabaseConnection,
-  saveDocToSupabase
+  saveDocToSupabase,
+  deleteDocFromSupabase
 } from './lib/supabase';
 
 import Header from './components/Header';
@@ -139,18 +144,37 @@ export default function App() {
           mergedDb = mergeStates(mergedDb, remoteSupabase as any);
         }
 
+        // Ejecutar depuración automática de semestres, materias y parciales duplicados
+        const { state: dedupSemDb, duplicateIds: dupSemIds } = deduplicateSemesters(mergedDb);
+        const { state: dedupSubDb, duplicateIds: dupSubIds } = deduplicateSubjects(dedupSemDb);
+        const { state: cleanFinalDb, duplicateIds: dupParcIds } = deduplicateParciales(dedupSubDb);
+        mergedDb = cleanFinalDb;
+
+        // Limpiar en segundo plano los IDs duplicados en Firestore y Supabase y registrar persistencia
+        dupSemIds.forEach(id => {
+          registerDeletedId(id, 'semesters');
+          deleteDocFromFirestore('semesters', id).catch(() => {});
+          deleteDocFromSupabase('semesters', id).catch(() => {});
+        });
+        dupSubIds.forEach(id => {
+          registerDeletedId(id, 'subjects');
+          deleteDocFromFirestore('subjects', id).catch(() => {});
+          deleteDocFromSupabase('subjects', id).catch(() => {});
+        });
+        dupParcIds.forEach(id => {
+          registerDeletedId(id, 'parciales');
+          deleteDocFromFirestore('parciales', id).catch(() => {});
+          deleteDocFromSupabase('parciales', id).catch(() => {});
+        });
+
         currentDbRef.current = mergedDb;
         setDb(mergedDb);
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
 
-        // Keep both Cloud Firestore and Supabase synchronized
+        // Mantener Cloud Firestore y Supabase sincronizados sin forzar resiembra repetitiva
         syncToFirestore(mergedDb).catch(e => console.warn('Background Firestore sync:', e));
         pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
-        uploadTheologicalSubjectsToFirestore(mergedDb.subjects).catch(() => {});
-        uploadAllStudentsToFirestore(mergedDb.users).catch(() => {});
-        uploadAllExamsToFirestore(mergedDb.exams).catch(() => {});
-        uploadAllParcialesToFirestore(mergedDb.parciales).catch(() => {});
       } catch (err) {
         console.error('Error synchronizing database, running standalone.', err);
       } finally {
@@ -569,6 +593,8 @@ export default function App() {
     previousList.forEach(item => {
       if (item && item.id && !newIds.has(item.id)) {
         registerDeletedId(item.id, collName);
+        deleteDocFromFirestore(collName, item.id).catch(() => {});
+        deleteDocFromSupabase(collName, item.id).catch(() => {});
       }
     });
   };
@@ -675,6 +701,57 @@ export default function App() {
       successfulIds,
       failedIds
     };
+  };
+
+  const handleDeduplicateSemesters = () => {
+    const { state: updatedDb, duplicateIds, report } = deduplicateSemesters(currentDbRef.current);
+    if (duplicateIds.length === 0) {
+      showToast('No se detectaron semestres duplicados. Hay exactamente 9 semestres.', 'info');
+      return;
+    }
+    currentDbRef.current = updatedDb;
+    saveState(updatedDb);
+    setDb(updatedDb);
+    duplicateIds.forEach(id => {
+      registerDeletedId(id, 'semesters');
+      deleteDocFromFirestore('semesters', id).catch(() => {});
+      deleteDocFromSupabase('semesters', id).catch(() => {});
+    });
+    showToast(`Se depuraron y unificaron ${duplicateIds.length} semestres duplicados con éxito (9 semestres oficiales).`, 'success');
+  };
+
+  const handleDeduplicateSubjects = () => {
+    const { state: updatedDb, duplicateIds, report } = deduplicateSubjects(currentDbRef.current);
+    if (duplicateIds.length === 0) {
+      showToast('No se detectaron materias duplicadas en el catálogo.', 'info');
+      return;
+    }
+    currentDbRef.current = updatedDb;
+    saveState(updatedDb);
+    setDb(updatedDb);
+    duplicateIds.forEach(id => {
+      registerDeletedId(id, 'subjects');
+      deleteDocFromFirestore('subjects', id).catch(() => {});
+      deleteDocFromSupabase('subjects', id).catch(() => {});
+    });
+    showToast(`Se depuraron y unificaron ${duplicateIds.length} materias duplicadas con éxito.`, 'success');
+  };
+
+  const handleDeduplicateParciales = () => {
+    const { state: updatedDb, duplicateIds, report } = deduplicateParciales(currentDbRef.current);
+    if (duplicateIds.length === 0) {
+      showToast('No se detectaron parciales duplicados en el catálogo.', 'info');
+      return;
+    }
+    currentDbRef.current = updatedDb;
+    saveState(updatedDb);
+    setDb(updatedDb);
+    duplicateIds.forEach(id => {
+      registerDeletedId(id, 'parciales');
+      deleteDocFromFirestore('parciales', id).catch(() => {});
+      deleteDocFromSupabase('parciales', id).catch(() => {});
+    });
+    showToast(`Se depuraron ${duplicateIds.length} parciales duplicados (se conservaron intactos los parciales con evaluaciones de estudiantes).`, 'success');
   };
 
   // Dynamic panel mapper
@@ -807,6 +884,7 @@ export default function App() {
             users={db.users}
             onUpdateSubjects={updateSubjects}
             toast={showToast}
+            onDeduplicateSubjects={handleDeduplicateSubjects}
           />
         );
       case 'semestres':
@@ -815,6 +893,7 @@ export default function App() {
             semesters={db.semesters}
             onUpdateSemesters={updateSemesters}
             toast={showToast}
+            onDeduplicateSemesters={handleDeduplicateSemesters}
           />
         );
       case 'parciales':
@@ -823,10 +902,13 @@ export default function App() {
             parciales={db.parciales}
             semesters={db.semesters}
             subjects={db.subjects}
+            exams={db.exams}
+            submissions={db.submissions}
             onUpdateParciales={updateParciales}
             toast={showToast}
             currentUser={currentUser}
             users={db.users}
+            onDeduplicateParciales={handleDeduplicateParciales}
           />
         );
       case 'registroNotas':

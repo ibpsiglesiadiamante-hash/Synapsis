@@ -319,7 +319,7 @@ export function validateAndParseBackup(jsonString: string): AppState {
   const existingDeleted = getDeletedIds();
   backupIds.forEach(id => existingDeleted.delete(id));
   try {
-    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(existingDeleted)));
+    safeStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(existingDeleted)));
   } catch (e) {
     console.warn('Failed to update ep_deleted_ids:', e);
   }
@@ -330,7 +330,7 @@ export function validateAndParseBackup(jsonString: string): AppState {
 
 export function restoreBackupState(): AppState {
   const backup = buildDefaultSeedData();
-  const backupIds = new Set<string>();
+  const deletedIds = getDeletedIds();
   const keys: (keyof AppState)[] = [
     'users',
     'institutions',
@@ -344,31 +344,51 @@ export function restoreBackupState(): AppState {
     'assignmentSubmissions'
   ];
   keys.forEach(k => {
-    ((backup[k] || []) as any[]).forEach(item => {
-      if (item && item.id) backupIds.add(item.id);
-    });
+    (backup[k] as any) = ((backup[k] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
   });
-
-  const existingDeleted = getDeletedIds();
-  backupIds.forEach(id => existingDeleted.delete(id));
-  try {
-    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(existingDeleted)));
-  } catch (e) {
-    console.warn('Failed to update ep_deleted_ids:', e);
-  }
 
   saveState(backup);
   return backup;
 }
 
-export const PROTECTED_IDS = new Set<string>();
-['users', 'subjects', 'semesters', 'parciales', 'exams', 'institutions'].forEach(k => {
-  const list = (backupAppState as any)[k] || [];
-  list.forEach((item: any) => {
-    if (item && item.id) PROTECTED_IDS.add(item.id);
-  });
-});
-PROTECTED_IDS.add('muecvgv0'); // Explicit protection for DORA INES LOPEZ SANTA
+const memoryStore = new Map<string, string>();
+export const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) return window.localStorage.getItem(key);
+      if (typeof localStorage !== 'undefined') return localStorage.getItem(key);
+    } catch {}
+    return memoryStore.get(key) ?? null;
+  },
+  setItem: (key: string, val: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, val);
+        return;
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, val);
+        return;
+      }
+    } catch {}
+    memoryStore.set(key, val);
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+        return;
+      }
+    } catch {}
+    memoryStore.delete(key);
+  }
+};
+
+export const PROTECTED_IDS = new Set<string>(['u-admin', 'u-1', 'inst-1', 'muecvgv0']);
 
 export function buildDefaultSeedData(): AppState {
   return JSON.parse(JSON.stringify(backupAppState));
@@ -376,7 +396,7 @@ export function buildDefaultSeedData(): AppState {
 
 export function getDeletedIds(): Set<string> {
   try {
-    const raw = localStorage.getItem('ep_deleted_ids');
+    const raw = safeStorage.getItem('ep_deleted_ids');
     const set = new Set<string>(raw ? JSON.parse(raw) : []);
     PROTECTED_IDS.forEach(id => set.delete(id));
     return set;
@@ -390,7 +410,7 @@ export function markAsDeleted(id: string) {
   try {
     const deleted = getDeletedIds();
     deleted.add(id);
-    localStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(deleted)));
+    safeStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(deleted)));
   } catch (e) {
     console.error('Failed to mark entity as deleted', e);
   }
@@ -399,12 +419,12 @@ export function markAsDeleted(id: string) {
 export function getInitialState(): AppState {
   const defaults = buildDefaultSeedData();
   const deletedIds = getDeletedIds();
-  const isInitialized = localStorage.getItem('ep_initialized') === 'true';
+  const isInitialized = safeStorage.getItem('ep_initialized') === 'true';
 
   try {
-    const rawU = localStorage.getItem('ep_users');
+    const rawU = safeStorage.getItem('ep_users');
     const existingU: any[] = rawU ? JSON.parse(rawU) : [];
-    const rawInst = localStorage.getItem('ep_instituciones');
+    const rawInst = safeStorage.getItem('ep_instituciones');
     const existingInst: any[] = rawInst ? JSON.parse(rawInst) : [];
     const hasPatricio = existingInst.some((i: any) => i.nombre && i.nombre.toUpperCase().includes('PATRICIO'));
     if (!isInitialized || existingU.length < 15 || !hasPatricio) {
@@ -416,12 +436,11 @@ export function getInitialState(): AppState {
 
   const loadCollection = (key: string, defaultItems: any[] = []) => {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = safeStorage.getItem(key);
       if (raw !== null) {
         const loaded: any[] = JSON.parse(raw);
-        if (Array.isArray(loaded) && loaded.length > 0) {
-          const alive = loaded.filter(item => item && item.id && !deletedIds.has(item.id));
-          if (alive.length > 0) return alive;
+        if (Array.isArray(loaded)) {
+          return loaded.filter(item => item && item.id && !deletedIds.has(item.id));
         }
       }
       return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
@@ -498,69 +517,59 @@ export function getInitialState(): AppState {
   });
   const users = Array.from(userMap.values());
 
-  // Guarantee that all 36 biblical subjects from curriculum are present
-  const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const subMap = new Map<string, Subject>();
-  defaultSubs.forEach(s => subMap.set(s.id, s));
-  rawSubjects.forEach(s => {
-    if (!s || !s.id || deletedIds.has(s.id)) return;
-    const matchingDefault = defaultSubs.find(ds => (ds.nombre || '').toLowerCase().trim() === (s.nombre || '').toLowerCase().trim());
-    if (matchingDefault) {
-      subMap.set(matchingDefault.id, {
-        ...matchingDefault,
-        ...s,
-        id: matchingDefault.id,
-        nivel: s.nivel || matchingDefault.nivel,
-        semestre: s.semestre || matchingDefault.semestre,
-        codigo: s.codigo || matchingDefault.codigo,
-      });
-    } else {
-      subMap.set(s.id, s);
-    }
-  });
-  const subjects = Array.from(subMap.values());
+  const subjects: Subject[] = isInitialized && rawSubjects.length > 0
+    ? rawSubjects.filter(s => s && s.id && !deletedIds.has(s.id))
+    : (() => {
+        const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
+        const subMap = new Map<string, Subject>();
+        defaultSubs.forEach(s => subMap.set(s.id, s));
+        rawSubjects.forEach(s => {
+          if (!s || !s.id || deletedIds.has(s.id)) return;
+          subMap.set(s.id, s);
+        });
+        return Array.from(subMap.values());
+      })();
 
-  // Guarantee that all 9 academic semesters are present
-  const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const semMap = new Map<string, Semester>();
-  defaultSems.forEach(s => semMap.set(s.id, s));
-  rawSemesters.forEach(s => {
-    if (!s || !s.id || deletedIds.has(s.id)) return;
-    const matchingDefault = defaultSems.find(ds => (ds.nombre || '').toLowerCase().trim() === (s.nombre || '').toLowerCase().trim());
-    if (matchingDefault) {
-      semMap.set(matchingDefault.id, {
-        ...matchingDefault,
-        ...s,
-        id: matchingDefault.id,
-        nivel: s.nivel || matchingDefault.nivel,
-      });
-    } else {
-      semMap.set(s.id, s);
-    }
-  });
-  const semesters = Array.from(semMap.values());
+  const semesters: Semester[] = isInitialized && rawSemesters.length > 0
+    ? rawSemesters.filter(s => s && s.id && !deletedIds.has(s.id))
+    : (() => {
+        const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
+        const semMap = new Map<string, Semester>();
+        defaultSems.forEach(s => semMap.set(s.id, s));
+        rawSemesters.forEach(s => {
+          if (!s || !s.id || deletedIds.has(s.id)) return;
+          semMap.set(s.id, s);
+        });
+        return Array.from(semMap.values());
+      })();
 
-  // Guarantee that all institutional exams from backup curriculum are present
-  const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const examMap = new Map<string, Exam>();
-  defaultExams.forEach(e => examMap.set(e.id, e));
-  rawExams.forEach(e => {
-    if (!e || !e.id || deletedIds.has(e.id)) return;
-    examMap.set(e.id, e);
-  });
-  const exams = Array.from(examMap.values());
+  const exams: Exam[] = isInitialized && rawExams.length > 0
+    ? rawExams.filter(e => e && e.id && !deletedIds.has(e.id))
+    : (() => {
+        const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
+        const examMap = new Map<string, Exam>();
+        defaultExams.forEach(e => examMap.set(e.id, e));
+        rawExams.forEach(e => {
+          if (!e || !e.id || deletedIds.has(e.id)) return;
+          examMap.set(e.id, e);
+        });
+        return Array.from(examMap.values());
+      })();
 
-  // Guarantee that all institutional parciales from backup curriculum are present
-  const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const parcMap = new Map<string, Parcial>();
-  defaultParcs.forEach(p => parcMap.set(p.id, p));
-  rawParciales.forEach(p => {
-    if (!p || !p.id || deletedIds.has(p.id)) return;
-    parcMap.set(p.id, p);
-  });
-  const parciales = Array.from(parcMap.values());
+  const parciales: Parcial[] = isInitialized && rawParciales.length > 0
+    ? rawParciales.filter(p => p && p.id && !deletedIds.has(p.id))
+    : (() => {
+        const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
+        const parcMap = new Map<string, Parcial>();
+        defaultParcs.forEach(p => parcMap.set(p.id, p));
+        rawParciales.forEach(p => {
+          if (!p || !p.id || deletedIds.has(p.id)) return;
+          parcMap.set(p.id, p);
+        });
+        return Array.from(parcMap.values());
+      })();
 
-  const state: AppState = {
+  const rawState: AppState = {
     users: sanitizeUserAsignaturas(users, subjects),
     institutions,
     subjects,
@@ -573,8 +582,428 @@ export function getInitialState(): AppState {
     assignmentSubmissions,
   };
 
-  saveState(state);
-  return state;
+  const { state: cleanSemDb } = deduplicateSemesters(rawState);
+  const { state: cleanSubsDb } = deduplicateSubjects(cleanSemDb);
+  const { state: cleanState } = deduplicateParciales(cleanSubsDb);
+
+  saveState(cleanState);
+  return cleanState;
+}
+
+/**
+ * Normaliza cadenas de texto para comparación segura (sin acentos, minúsculas, espacios colapsados)
+ */
+export function normalizeString(str?: string): string {
+  if (!str) return '';
+  return str
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Clave canónica unificada para materias bíblicas/teológicas.
+ * Resuelve abreviaturas comunes (AT / Antiguo Testamento / Antiguo T, NT / Nuevo Testamento),
+ * errores ortográficos (hitoricos / historicos), numerales romanos y conectores.
+ */
+export function normalizeSubjectCanonicalKey(name?: string, codigo?: string): string {
+  const norm = normalizeString(name);
+  if (!norm && !codigo) return '';
+
+  let key = norm;
+
+  // Unificar abreviaturas bíblicas fundamentales
+  key = key.replace(/\b(a\.?\s*t\.?|antiguo\s+t\b|antiguo\s+testamento)\b/g, 'antiguo_testamento');
+  key = key.replace(/\b(n\.?\s*t\.?|nuevo\s+t\b|nuevo\s+testamento)\b/g, 'nuevo_testamento');
+
+  // Corregir errores ortográficos / variantes comunes
+  key = key.replace(/\bhitoric(o|a)s?\b/g, 'historico');
+  key = key.replace(/\bhistoric(o|a)s?\b/g, 'historico');
+
+  // Numerales romanos o cardinales
+  key = key.replace(/\b(i|primer|primera|1)\b/g, '1');
+  key = key.replace(/\b(ii|segundo|segunda|2)\b/g, '2');
+  key = key.replace(/\b(iii|tercer|tercera|3)\b/g, '3');
+  key = key.replace(/\b(iv|cuarto|cuarta|4)\b/g, '4');
+  key = key.replace(/\b(v|quinto|quinta|5)\b/g, '5');
+
+  // Teología propia vs Teología
+  key = key.replace(/\bteologia\s+propia\b/g, 'teologia');
+
+  // Remover palabras conectoras (de, del, la, el, los, las, y, e, al, en, sobre)
+  key = key.replace(/\b(de|del|la|el|los|las|y|e|al|en|sobre)\b/g, ' ');
+
+  // Limpiar caracteres no alfanuméricos y colapsar espacios
+  key = key.replace(/[^a-z0-9]/g, ' ').trim().replace(/\s+/g, '_');
+
+  return key;
+}
+
+/**
+ * Clave canónica unificada para semestres (Semestre 1 a 9).
+ */
+export function normalizeSemesterCanonicalKey(name?: string): string {
+  const norm = normalizeString(name);
+  if (!norm) return '';
+  if (/\b(1|i|primer|primero|1er)\b/i.test(norm) || norm.endsWith(' 1') || norm.endsWith(' i') || (norm.includes('sem-26a') && !norm.includes('sem-26a1'))) return 'semestre_1';
+  if (/\b(2|ii|segundo|2do)\b/i.test(norm) || norm.endsWith(' 2') || norm.endsWith(' ii') || norm.includes('sem-26b')) return 'semestre_2';
+  if (/\b(3|iii|tercer|tercero|3er)\b/i.test(norm) || norm.endsWith(' 3') || norm.endsWith(' iii') || norm.includes('sem-27b')) return 'semestre_3';
+  if (/\b(4|iv|cuarto|4to)\b/i.test(norm) || norm.endsWith(' 4') || norm.endsWith(' iv') || norm.includes('sem-26e')) return 'semestre_4';
+  if (/\b(5|v|quinto|5to)\b/i.test(norm) || norm.endsWith(' 5') || norm.endsWith(' v') || norm.includes('sem-26c')) return 'semestre_5';
+  if (/\b(6|vi|sexto|6to)\b/i.test(norm) || norm.endsWith(' 6') || norm.endsWith(' vi') || norm.includes('sem-26d')) return 'semestre_6';
+  if (/\b(7|vii|septimo|7mo)\b/i.test(norm) || norm.endsWith(' 7') || norm.endsWith(' vii') || norm.includes('sem-26f')) return 'semestre_7';
+  if (/\b(8|viii|octavo|8vo)\b/i.test(norm) || norm.endsWith(' 8') || norm.endsWith(' viii') || norm.includes('sem-26g')) return 'semestre_8';
+  if (/\b(9|ix|noveno|9no)\b/i.test(norm) || norm.endsWith(' 9') || norm.endsWith(' ix') || norm.includes('sem-26a1')) return 'semestre_9';
+  return norm;
+}
+
+/**
+ * Deduplica semestres redundantes (ej. 18 semestres en lugar de 9),
+ * unificándolos a los 9 periodos canónicos oficiales y reasignando referencias.
+ */
+export function deduplicateSemesters(state: AppState): {
+  state: AppState;
+  duplicateIds: string[];
+  report: string[];
+} {
+  const deletedIds = getDeletedIds();
+  const semesters = (state.semesters || []).filter(s => s && s.id && !deletedIds.has(s.id));
+  const duplicateIds: string[] = [];
+  const report: string[] = [];
+  const remapping = new Map<string, string>(); // duplicateId -> canonicalId
+  const nameRemapping = new Map<string, string>(); // duplicateName -> canonicalName
+
+  const groups = new Map<string, Semester[]>();
+  semesters.forEach(s => {
+    const key = normalizeSemesterCanonicalKey(s.nombre || s.codigo);
+    if (!key) return;
+    const list = groups.get(key) || [];
+    list.push(s);
+    groups.set(key, list);
+  });
+
+  const survivors: Semester[] = [];
+
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      survivors.push(group[0]);
+      return;
+    }
+
+    // Clasificar semestre canónico
+    const ranked = [...group].map(sem => {
+      const subjectsLinked = (state.subjects || []).filter(s => s.semestre === sem.id || s.semestre === sem.nombre).length;
+      const studentsLinked = (state.users || []).filter(u => u.semestre === sem.id || u.semestre === sem.nombre).length;
+      const parcialesLinked = (state.parciales || []).filter(p => p.semestre === sem.id || p.semestre === sem.nombre).length;
+      const isOfficialName = /^Semestre\s+(I|II|III|IV|V|VI|VII|VIII|IX)$/.test(sem.nombre || '');
+      const score = (subjectsLinked * 10) + (studentsLinked * 5) + (parcialesLinked * 5) + (isOfficialName ? 50 : 0);
+      return { sem, score };
+    });
+
+    ranked.sort((a, b) => b.score - a.score);
+    const canonical = ranked[0].sem;
+    survivors.push(canonical);
+
+    for (let i = 1; i < ranked.length; i++) {
+      const dup = ranked[i].sem;
+      duplicateIds.push(dup.id);
+      remapping.set(dup.id, canonical.id);
+      if (dup.nombre && canonical.nombre) {
+        nameRemapping.set(dup.nombre.toLowerCase().trim(), canonical.nombre);
+      }
+      markAsDeleted(dup.id);
+      report.push(`Semestre duplicado unificado: "${dup.nombre}" (${dup.id}) -> "${canonical.nombre}" (${canonical.id})`);
+    }
+  });
+
+  // Reasignar referencias en materias
+  const updatedSubjects = (state.subjects || []).map(s => {
+    if (!s) return s;
+    const targetId = s.semestre ? remapping.get(s.semestre) : undefined;
+    const targetName = s.semestre ? nameRemapping.get(s.semestre.toLowerCase().trim()) : undefined;
+    if (targetId || targetName) {
+      return { ...s, semestre: targetName || targetId || s.semestre };
+    }
+    return s;
+  });
+
+  // Reasignar referencias en estudiantes
+  const updatedUsers = (state.users || []).map(u => {
+    if (!u) return u;
+    const targetId = u.semestre ? remapping.get(u.semestre) : undefined;
+    const targetName = u.semestre ? nameRemapping.get(u.semestre.toLowerCase().trim()) : undefined;
+    if (targetId || targetName) {
+      return { ...u, semestre: targetName || targetId || u.semestre };
+    }
+    return u;
+  });
+
+  // Reasignar referencias en parciales
+  const updatedParciales = (state.parciales || []).map(p => {
+    if (!p) return p;
+    const targetId = p.semestre ? remapping.get(p.semestre) : undefined;
+    if (targetId) {
+      return { ...p, semestre: targetId };
+    }
+    return p;
+  });
+
+  const nextState: AppState = {
+    ...state,
+    semesters: survivors,
+    subjects: updatedSubjects,
+    users: updatedUsers,
+    parciales: updatedParciales
+  };
+
+  return { state: nextState, duplicateIds, report };
+}
+
+/**
+ * Identifica el periodo canónico de un parcial (Parcial 1, 2, 3, 4, Final)
+ */
+export function normalizeParcialPeriod(name?: string): string {
+  const norm = normalizeString(name);
+  if (/\b(1|i|primer|primero|corte\s*1)\b/i.test(norm) || norm.endsWith(' 1') || norm.endsWith(' i')) return 'parcial_1';
+  if (/\b(2|ii|segundo|corte\s*2)\b/i.test(norm) || norm.endsWith(' 2') || norm.endsWith(' ii')) return 'parcial_2';
+  if (/\b(3|iii|tercer|tercero|corte\s*3)\b/i.test(norm) || norm.endsWith(' 3') || norm.endsWith(' iii')) return 'parcial_3';
+  if (/\b(4|iv|cuarto|corte\s*4)\b/i.test(norm) || norm.endsWith(' 4') || norm.endsWith(' iv')) return 'parcial_4';
+  if (norm.includes('final')) return 'parcial_final';
+  return norm;
+}
+
+/**
+ * Detecta y unifica materias o asignaturas duplicadas (por nombre canónico, abreviaturas o código)
+ * conservando la versión canónica más completa y reasignando referencias de exámenes, usuarios y parciales.
+ */
+export function deduplicateSubjects(state: AppState): {
+  state: AppState;
+  duplicateIds: string[];
+  report: string[];
+} {
+  const deletedIds = getDeletedIds();
+  const subjects = (state.subjects || []).filter(s => s && s.id && !deletedIds.has(s.id));
+  const duplicateIds: string[] = [];
+  const report: string[] = [];
+  const remapping = new Map<string, string>(); // duplicateId -> canonicalId
+
+  // Agrupar materias por clave canónica normalizada y por código compartido
+  const groups = new Map<string, Subject[]>();
+  const codeToGroupKey = new Map<string, string>();
+
+  subjects.forEach(s => {
+    let key = normalizeSubjectCanonicalKey(s.nombre, s.codigo);
+    const cleanCode = (s.codigo || '').trim().toUpperCase();
+
+    if (cleanCode && codeToGroupKey.has(cleanCode)) {
+      key = codeToGroupKey.get(cleanCode)!;
+    } else if (cleanCode && key) {
+      codeToGroupKey.set(cleanCode, key);
+    }
+
+    if (!key) return;
+    const list = groups.get(key) || [];
+    list.push(s);
+    groups.set(key, list);
+  });
+
+  const survivors: Subject[] = [];
+
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      survivors.push(group[0]);
+      return;
+    }
+
+    // Clasificar candidatos para elegir la versión canónica
+    const ranked = [...group].map(sub => {
+      const examsCount = (state.exams || []).filter(e => e.materia === sub.id || (e as any).materiaId === sub.id).length;
+      const usersCount = (state.users || []).filter(u => Array.isArray(u.asignaturas) && u.asignaturas.includes(sub.id)).length;
+      const parcialesCount = (state.parciales || []).filter(p => p.asignatura === sub.id).length;
+      const gradeRecordsCount = (state.gradeRecords || []).filter(g => g.asignaturaId === sub.id).length;
+      const hasCode = Boolean(sub.codigo && sub.codigo.trim());
+      const titleBonus = (sub.nombre || '').includes('Testamento') ? 5 : 0;
+      const score = (gradeRecordsCount * 20) + (examsCount * 10) + (usersCount * 5) + (parcialesCount * 2) + (hasCode ? 1 : 0) + titleBonus;
+      return { sub, score };
+    });
+
+    ranked.sort((a, b) => b.score - a.score);
+    const canonical = ranked[0].sub;
+    survivors.push(canonical);
+
+    // Los demás son duplicados
+    for (let i = 1; i < ranked.length; i++) {
+      const dup = ranked[i].sub;
+      duplicateIds.push(dup.id);
+      remapping.set(dup.id, canonical.id);
+      markAsDeleted(dup.id);
+      report.push(`Asignatura duplicada unificada: "${dup.nombre}" (${dup.id}) -> "${canonical.nombre}" (${canonical.id})`);
+    }
+  });
+
+  // Reasignar referencias en exámenes
+  const updatedExams = (state.exams || []).map(e => {
+    const targetMateria = remapping.get(e.materia);
+    const targetMateriaId = (e as any).materiaId ? remapping.get((e as any).materiaId) : undefined;
+    if (targetMateria || targetMateriaId) {
+      return {
+        ...e,
+        materia: targetMateria || targetMateriaId || e.materia,
+        materiaId: targetMateriaId || targetMateria || (e as any).materiaId
+      };
+    }
+    return e;
+  });
+
+  // Reasignar referencias en parciales
+  const updatedParciales = (state.parciales || []).map(p => {
+    const target = remapping.get(p.asignatura);
+    if (target) {
+      return { ...p, asignatura: target };
+    }
+    return p;
+  });
+
+  // Reasignar referencias en asignaturas asignadas a usuarios
+  const updatedUsers = (state.users || []).map(u => {
+    if (!Array.isArray(u.asignaturas)) return u;
+    const remapped = Array.from(new Set(u.asignaturas.map(id => remapping.get(id) || id)));
+    return { ...u, asignaturas: remapped };
+  });
+
+  // Reasignar referencias en registros de notas oficiales
+  const updatedGradeRecords = (state.gradeRecords || []).map(gr => {
+    const target = remapping.get(gr.asignaturaId);
+    if (target) {
+      return { ...gr, asignaturaId: target };
+    }
+    return gr;
+  });
+
+  // Reasignar referencias en trabajos
+  const updatedAssignments = (state.assignments || []).map(a => {
+    const target = a.asignatura ? remapping.get(a.asignatura) : undefined;
+    if (target) {
+      return { ...a, asignatura: target };
+    }
+    return a;
+  });
+
+  const nextState: AppState = {
+    ...state,
+    subjects: survivors,
+    exams: updatedExams,
+    parciales: updatedParciales,
+    users: updatedUsers,
+    gradeRecords: updatedGradeRecords,
+    assignments: updatedAssignments,
+  };
+
+  return { state: nextState, duplicateIds, report };
+}
+
+/**
+ * Detecta y elimina parciales duplicados para la misma asignatura/periodo,
+ * protegiendo prioritariamente aquellos que ya tienen exámenes y entregas presentadas por estudiantes.
+ * Los exámenes vinculados a los parciales duplicados se reasocian automáticamente al parcial canónico.
+ */
+export function deduplicateParciales(state: AppState): {
+  state: AppState;
+  duplicateIds: string[];
+  report: string[];
+} {
+  const deletedIds = getDeletedIds();
+  const parciales = (state.parciales || []).filter(p => p && p.id && !deletedIds.has(p.id));
+  const duplicateIds: string[] = [];
+  const report: string[] = [];
+  const remapping = new Map<string, string>(); // duplicateId -> canonicalId
+
+  // Agrupar por asignatura y periodo normalizado
+  const groups = new Map<string, Parcial[]>();
+  parciales.forEach(p => {
+    const asigKey = p.asignatura || 'sin_asignatura';
+    const periodKey = normalizeParcialPeriod(p.nombre);
+    const key = `${asigKey}__${periodKey}`;
+    const list = groups.get(key) || [];
+    list.push(p);
+    groups.set(key, list);
+  });
+
+  const survivors: Parcial[] = [];
+
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      survivors.push(group[0]);
+      return;
+    }
+
+    // Evaluar cada parcial del grupo para priorizar entregas reales de estudiantes
+    const ranked = group.map(p => {
+      const examsLinked = (state.exams || []).filter(e => e.parcialId === p.id);
+      const studentSubs = (state.submissions || []).filter(s => examsLinked.some(e => e.id === s.examenId));
+      const gradeRecords = (state.gradeRecords || []).filter(g => g.parcialId === p.id);
+      const assignments = (state.assignments || []).filter(a => a.parcialId === p.id);
+
+      // Prioridad máxima: entregas de estudiantes > actas oficiales > exámenes creados > tareas
+      const score = (studentSubs.length * 1000) + (gradeRecords.length * 500) + (examsLinked.length * 10) + (assignments.length * 5);
+      return {
+        p,
+        score,
+        studentSubsCount: studentSubs.length,
+        examsCount: examsLinked.length,
+        gradeRecordsCount: gradeRecords.length
+      };
+    });
+
+    ranked.sort((a, b) => b.score - a.score);
+    const canonical = ranked[0].p;
+    survivors.push(canonical);
+
+    // Los parciales restantes son duplicados (especialmente aquellos con 0 entregas)
+    for (let i = 1; i < ranked.length; i++) {
+      const dup = ranked[i];
+      duplicateIds.push(dup.p.id);
+      remapping.set(dup.p.id, canonical.id);
+      markAsDeleted(dup.p.id);
+      report.push(
+        `Parcial duplicado eliminado: "${dup.p.nombre}" (ID: ${dup.p.id}, ${dup.studentSubsCount} entregas de alumnos) -> Unificado en "${canonical.nombre}" (ID: ${canonical.id}, ${ranked[0].studentSubsCount} entregas)`
+      );
+    }
+  });
+
+  // Reasociar exámenes que apuntaban a parciales duplicados hacia el parcial canónico
+  const updatedExams = (state.exams || []).map(e => {
+    if (e.parcialId && remapping.has(e.parcialId)) {
+      return { ...e, parcialId: remapping.get(e.parcialId)! };
+    }
+    return e;
+  });
+
+  const updatedGradeRecords = (state.gradeRecords || []).map(gr => {
+    if (gr.parcialId && remapping.has(gr.parcialId)) {
+      return { ...gr, parcialId: remapping.get(gr.parcialId)! };
+    }
+    return gr;
+  });
+
+  const updatedAssignments = (state.assignments || []).map(a => {
+    if (a.parcialId && remapping.has(a.parcialId)) {
+      return { ...a, parcialId: remapping.get(a.parcialId)! };
+    }
+    return a;
+  });
+
+  const nextState: AppState = {
+    ...state,
+    parciales: survivors,
+    exams: updatedExams,
+    gradeRecords: updatedGradeRecords,
+    assignments: updatedAssignments,
+  };
+
+  return { state: nextState, duplicateIds, report };
 }
 
 export function saveState(state: AppState) {
@@ -586,17 +1015,17 @@ export function saveState(state: AppState) {
       return list.filter(item => item && item.id && !deletedIds.has(item.id));
     };
 
-    localStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
-    localStorage.setItem('ep_instituciones', JSON.stringify(filterAlive(state.institutions)));
-    localStorage.setItem('ep_subjects', JSON.stringify(filterAlive(state.subjects)));
-    localStorage.setItem('ep_semesters', JSON.stringify(filterAlive(state.semesters)));
-    localStorage.setItem('ep_parciales', JSON.stringify(filterAlive(state.parciales)));
-    localStorage.setItem('ep_exams', JSON.stringify(filterAlive(state.exams)));
-    localStorage.setItem('ep_submissions', JSON.stringify(filterAlive(state.submissions)));
-    localStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
-    localStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
-    localStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
-    localStorage.setItem('ep_initialized', 'true');
+    safeStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
+    safeStorage.setItem('ep_instituciones', JSON.stringify(filterAlive(state.institutions)));
+    safeStorage.setItem('ep_subjects', JSON.stringify(filterAlive(state.subjects)));
+    safeStorage.setItem('ep_semesters', JSON.stringify(filterAlive(state.semesters)));
+    safeStorage.setItem('ep_parciales', JSON.stringify(filterAlive(state.parciales)));
+    safeStorage.setItem('ep_exams', JSON.stringify(filterAlive(state.exams)));
+    safeStorage.setItem('ep_submissions', JSON.stringify(filterAlive(state.submissions)));
+    safeStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
+    safeStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
+    safeStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
+    safeStorage.setItem('ep_initialized', 'true');
   } catch (e) {
     console.warn('Unable to persist full state to localStorage:', e);
   }
@@ -803,113 +1232,11 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
       }
     });
 
-    // 3. Guarantee that official subjects, semesters and students are present
-    if (key === 'users') {
-      const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultUsers.forEach(dUser => {
-        const existing = itemMap.get(dUser.id) || Array.from(itemMap.values()).find((u: any) =>
-          (u.cedula && dUser.cedula && u.cedula.trim() === dUser.cedula.trim()) ||
-          (u.email && dUser.email && u.email.trim().toLowerCase() === dUser.email.trim().toLowerCase()) ||
-          (u.codigo && dUser.codigo && u.codigo.trim().toUpperCase() === dUser.codigo.trim().toUpperCase())
-        );
-
-        if (!existing) {
-          itemMap.set(dUser.id, dUser);
-        } else {
-          // Preserve assigned subjects: never erase subjects if dUser has them and existing has empty
-          const dAsg = Array.isArray(dUser.asignaturas) ? dUser.asignaturas : [];
-          const eAsg = Array.isArray(existing.asignaturas) ? existing.asignaturas : [];
-          const mergedAsignaturas = eAsg.length > 0 ? eAsg : dAsg;
-
-          const mergedUser: User = {
-            ...dUser,
-            ...existing,
-            id: dUser.id,
-            nombre: existing.nombre || dUser.nombre,
-            cedula: existing.cedula || dUser.cedula,
-            celular: existing.celular || dUser.celular,
-            email: existing.email || dUser.email,
-            codigo: existing.codigo || dUser.codigo,
-            semestre: existing.semestre || dUser.semestre,
-            asignaturas: mergedAsignaturas
-          };
-          itemMap.set(dUser.id, mergedUser);
-          if (existing.id && existing.id !== dUser.id) {
-            itemMap.delete(existing.id);
-          }
-        }
-      });
-    }
-
-    if (key === 'subjects') {
-      const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultSubs.forEach(dSub => {
-        const existingByName = Array.from(itemMap.values()).find(
-          (item: any) => (item.nombre || '').toLowerCase().trim() === (dSub.nombre || '').toLowerCase().trim()
-        );
-        if (!existingByName) {
-          itemMap.set(dSub.id, dSub);
-        } else {
-          // Keep the existing subject but ensure nivel, semestre and codigo are set
-          if (!existingByName.nivel || !existingByName.semestre || !existingByName.codigo) {
-            existingByName.nivel = existingByName.nivel || dSub.nivel;
-            existingByName.semestre = existingByName.semestre || dSub.semestre;
-            existingByName.codigo = existingByName.codigo || dSub.codigo;
-          }
-        }
-      });
-    }
-
-    if (key === 'semesters') {
-      const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultSems.forEach(dSem => {
-        const existingByName = Array.from(itemMap.values()).find(
-          (item: any) => (item.nombre || '').toLowerCase().trim() === (dSem.nombre || '').toLowerCase().trim()
-        );
-        if (!existingByName) {
-          itemMap.set(dSem.id, dSem);
-        } else if (!existingByName.nivel) {
-          existingByName.nivel = dSem.nivel;
-        }
-      });
-    }
-
-    if (key === 'exams') {
-      const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultExams.forEach(dExam => {
-        const existing = itemMap.get(dExam.id);
-        if (!existing) {
-          itemMap.set(dExam.id, dExam);
-        }
-      });
-    }
-
-    if (key === 'parciales') {
-      const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultParcs.forEach(dParc => {
-        const existing = itemMap.get(dParc.id);
-        if (!existing) {
-          itemMap.set(dParc.id, dParc);
-        }
-      });
-    }
-
-    if (key === 'submissions') {
-      const defaultSubs = (defaults.submissions || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultSubs.forEach(dSub => {
-        const existing = itemMap.get(dSub.id);
-        if (!existing) {
-          itemMap.set(dSub.id, dSub);
-        }
-      });
-    }
-
-    if (key === 'gradeRecords') {
-      const defaultGrades = (defaults.gradeRecords || []).filter(item => item && item.id && !deletedIds.has(item.id));
-      defaultGrades.forEach(dGrade => {
-        const existing = itemMap.get(dGrade.id);
-        if (!existing) {
-          itemMap.set(dGrade.id, dGrade);
+    // 3. Fallback for uninitialized databases only: seed defaults if the collection is entirely empty
+    if (!isInit && itemMap.size === 0 && defaults[key] && (defaults[key] as any[]).length > 0) {
+      (defaults[key] as any[]).forEach(dItem => {
+        if (dItem && dItem.id && !deletedIds.has(dItem.id)) {
+          itemMap.set(dItem.id, dItem);
         }
       });
     }
@@ -921,7 +1248,11 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
     merged.users = sanitizeUserAsignaturas(merged.users, merged.subjects);
   }
 
-  return merged;
+  const { state: dedupedSemestersDb } = deduplicateSemesters(merged);
+  const { state: dedupedSubjectsDb } = deduplicateSubjects(dedupedSemestersDb);
+  const { state: finalCleanMerged } = deduplicateParciales(dedupedSubjectsDb);
+
+  return finalCleanMerged;
 }
 
 export function cleanExamTitle(rawTitle?: string): string {

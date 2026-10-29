@@ -309,9 +309,6 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
       const filterAliveAndClean = <T extends { id: string }>(coll: string, list: T[]): T[] => {
         return (list || []).filter(item => {
           if (item && item.id && deletedIds.has(item.id)) {
-            if (coll === 'subjects' || coll === 'semesters' || coll === 'users') {
-              return true;
-            }
             deleteDocFromFirestore(coll, item.id).catch(() => {});
             return false;
           }

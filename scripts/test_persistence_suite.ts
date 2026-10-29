@@ -3,7 +3,20 @@
  * Datos 100% simulados en memoria (Sin mutaciones ni llamadas remotas a Supabase/Firebase)
  */
 
-import { mergeStates, parseSafeTimestamp, countMeaningfulAnswers } from '../src/lib/db';
+import { 
+  mergeStates, 
+  parseSafeTimestamp, 
+  countMeaningfulAnswers, 
+  deduplicateSubjects, 
+  deduplicateParciales, 
+  deduplicateSemesters,
+  normalizeSubjectCanonicalKey,
+  normalizeSemesterCanonicalKey,
+  restoreBackupState,
+  getDeletedIds,
+  markAsDeleted,
+  PROTECTED_IDS 
+} from '../src/lib/db';
 import { AppState, Submission, GradeRecord } from '../src/types';
 
 function createDummyState(): AppState {
@@ -594,6 +607,261 @@ console.log('\nPRUEBA 16: Concurrencia de actualizaciones consecutivas');
   assert(stateRef.current.users.length === 1, 'Usuario retenido tras actualizaciones consecutivas');
   assert(stateRef.current.exams.length === 1, 'Examen retenido tras actualizaciones consecutivas');
   assert(stateRef.current.submissions.length === 1, 'Entrega retenida tras actualizaciones consecutivas');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 17: Deduplicación y unificación de materias/asignaturas duplicadas
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 17: Deduplicación de materias y reasignación de referencias académicas');
+{
+  const state = createDummyState();
+  // Dos materias duplicadas por nombre con ligeras diferencias de formato y acentos
+  state.subjects = [
+    { id: 'sub-canonical', nombre: 'Teología Sistemática I', codigo: 'TEOL-101', semestre: 'sem-1', docenteId: 'doc-1', activa: true } as any,
+    { id: 'sub-duplicate', nombre: 'TEOLOGIA SISTEMATICA I', codigo: 'TEOL-101-DUP', semestre: 'sem-1', docenteId: 'doc-1', activa: true } as any,
+  ];
+
+  // Examen que apunta a la materia duplicada
+  state.exams = [
+    { id: 'ex-1', titulo: 'Examen 1', materia: 'sub-duplicate', materiaId: 'sub-duplicate', docenteId: 'doc-1', parcialId: 'par-1', preguntas: [] } as any
+  ];
+
+  // Docente que tiene asignada la materia duplicada
+  state.users = [
+    { id: 'doc-1', nombre: 'Profesor Test', email: 'prof@test.com', rol: 'docente', asignaturas: ['sub-duplicate'] } as any
+  ];
+
+  // Parcial que apunta a la materia duplicada
+  state.parciales = [
+    { id: 'par-1', nombre: 'Primer Parcial', asignatura: 'sub-duplicate', semestre: 'sem-1' } as any
+  ];
+
+  // Calificaciones históricas oficiales que apuntan a la materia canónica
+  state.gradeRecords = [
+    { id: 'gr-1', estudianteId: 'est-1', asignaturaId: 'sub-canonical', semestreId: 'sem-1', parcial1: 95 } as any,
+    { id: 'gr-2', estudianteId: 'est-2', asignaturaId: 'sub-canonical', semestreId: 'sem-1', parcial1: 88 } as any,
+    { id: 'gr-3', estudianteId: 'est-3', asignaturaId: 'sub-canonical', semestreId: 'sem-1', parcial1: 92 } as any,
+  ];
+
+  const { state: cleanState, duplicateIds, report } = deduplicateSubjects(state);
+
+  // La materia duplicada debe ser retirada de la lista activa y registrada en duplicateIds
+  const dupSub = cleanState.subjects.find(s => s.id === 'sub-duplicate');
+  assert(dupSub === undefined, 'Materia duplicada eliminada de lista activa de subjects');
+  assert(duplicateIds.includes('sub-duplicate'), 'duplicateIds registra ID de materia duplicada eliminada');
+  assert(report.length > 0 && report[0].includes('sub-duplicate'), 'Reporte registra log descriptivo de la unificación');
+
+  // El examen debe haber sido re-enlazado a sub-canonical
+  assert(cleanState.exams[0].materia === 'sub-canonical', 'Examen re-enlazado a materia canónica');
+
+  // El docente debe tener la materia canónica en sus asignaturas
+  assert(cleanState.users[0].asignaturas?.includes('sub-canonical') === true, 'Docente re-enlazado a materia canónica');
+  assert(cleanState.users[0].asignaturas?.includes('sub-duplicate') === false, 'Materia duplicada retirada de asignaturas del docente');
+
+  // El parcial debe apuntar a la materia canónica
+  assert(cleanState.parciales[0].asignatura === 'sub-canonical', 'Parcial re-enlazado a materia canónica');
+
+  // El registro de notas debe apuntar a la materia canónica
+  assert(cleanState.gradeRecords[0].asignaturaId === 'sub-canonical', 'GradeRecord re-enlazado a materia canónica');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 18: Deduplicación de parciales protegiendo entregas de estudiantes
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 18: Deduplicación de parciales priorizando entregas reales de estudiantes');
+{
+  const state = createDummyState();
+  state.subjects = [
+    { id: 'sub-1', nombre: 'Historia Eclesiástica', activa: true } as any
+  ];
+
+  // Parcial 1: Creado primero pero SIN entregas de estudiantes
+  const pEmpty = { id: 'par-empty', nombre: 'PRIMER PARCIAL', asignatura: 'sub-1', semestre: 'sem-1', porcentaje: 30 } as any;
+  // Parcial 2: Duplicado ("PARCIAL I") que TIENE un examen con 3 entregas de estudiantes
+  const pWithSubs = { id: 'par-active', nombre: 'PARCIAL 1', asignatura: 'sub-1', semestre: 'sem-1', porcentaje: 30 } as any;
+
+  state.parciales = [pEmpty, pWithSubs];
+
+  // Examen 1 en par-empty
+  const examEmpty = { id: 'ex-empty', titulo: 'Test Vacío', materiaId: 'sub-1', parcialId: 'par-empty', preguntas: [] } as any;
+  // Examen 2 en par-active con entregas
+  const examActive = { id: 'ex-active', titulo: 'Test Real', materiaId: 'sub-1', parcialId: 'par-active', preguntas: [] } as any;
+
+  state.exams = [examEmpty, examActive];
+
+  // Entregas reales asociadas a ex-active
+  state.submissions = [
+    { id: 'sub-1', examenId: 'ex-active', estudianteId: 'est-1', puntaje: 90, estado: 'calificado' } as any,
+    { id: 'sub-2', examenId: 'ex-active', estudianteId: 'est-2', puntaje: 85, estado: 'calificado' } as any,
+    { id: 'sub-3', examenId: 'ex-active', estudianteId: 'est-3', puntaje: 95, estado: 'calificado' } as any,
+  ];
+
+  const { state: cleanState, duplicateIds, report } = deduplicateParciales(state);
+
+  // Parcial activo con entregas DEBE ser seleccionado como el canónico
+  const pActiveResult = cleanState.parciales.find(p => p.id === 'par-active');
+  assert(pActiveResult !== undefined && !(pActiveResult as any).is_deleted, 'Parcial con entregas reales conservado como canónico');
+
+  // Parcial sin entregas DEBE ser retirado de parciales activos y listado en duplicateIds
+  const pEmptyResult = cleanState.parciales.find(p => p.id === 'par-empty');
+  assert(pEmptyResult === undefined, 'Parcial sin entregas retirado de parciales activos');
+  assert(duplicateIds.includes('par-empty'), 'duplicateIds registra parcial vacío eliminado');
+  assert(report.length > 0 && report[0].includes('par-empty'), 'Reporte describe el parcial vacío eliminado y unificado');
+
+  // El examen que estaba en par-empty no se pierde: debe haberse re-enlazado a par-active
+  const remappedExam = cleanState.exams.find(e => e.id === 'ex-empty');
+  assert(remappedExam?.parcialId === 'par-active', 'Examen de parcial duplicado re-enlazado a parcial canónico');
+
+  // Las 3 entregas reales se mantienen íntegras
+  assert(cleanState.submissions.length === 3, 'Las 3 entregas reales se preservan intactas');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 19: No reaparición de materias, exámenes y parciales eliminados
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 19: Protección contra resurrección de elementos eliminados en mergeStates');
+{
+  const localState = createDummyState();
+  const remoteState = createDummyState();
+
+  // Elemento eliminado con is_deleted: true
+  const deletedExam = { id: 'ex-deleted-1', titulo: 'Examen Borrado', materiaId: 'sub-1', is_deleted: true, actualizado: '2026-10-28T10:00:00Z' } as any;
+  localState.exams = [deletedExam];
+
+  // Remote tiene el examen viejo antes de eliminarse
+  const remoteExam = { id: 'ex-deleted-1', titulo: 'Examen Borrado', materiaId: 'sub-1', actualizado: '2026-10-28T09:00:00Z' } as any;
+  remoteState.exams = [remoteExam];
+
+  const merged = mergeStates(localState, remoteState);
+
+  // El examen eliminado con fecha más reciente debe conservar is_deleted: true
+  const mergedEx = merged.exams.find(e => e.id === 'ex-deleted-1');
+  assert(mergedEx !== undefined && (mergedEx as any).is_deleted === true, 'Examen eliminado conserva marca de borrado en mergeStates');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 20: Desbloqueo de PROTECTED_IDS para permitir borrado y depuración
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 20: Verificación de que PROTECTED_IDS solo contiene cuentas esenciales del sistema');
+{
+  // Verificamos que materias, parciales y exámenes comunes no están protegidos contra borrado
+  assert(!PROTECTED_IDS.has('sub-1'), 'Materias comunes NO están en PROTECTED_IDS');
+  assert(!PROTECTED_IDS.has('par-1'), 'Parciales comunes NO están en PROTECTED_IDS');
+  assert(!PROTECTED_IDS.has('ex-1'), 'Exámenes comunes NO están en PROTECTED_IDS');
+  assert(PROTECTED_IDS.has('u-admin'), 'u-admin permanece protegido');
+  assert(PROTECTED_IDS.has('inst-1'), 'inst-1 permanece protegido');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 21: Deduplicación exacta de casos mostrados en la captura del usuario
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 21: Deduplicación exacta de materias (AT, NT, Libros Históricos con error tipográfico)');
+{
+  const state = createDummyState();
+  // 1. Grupo Semestre I: 3 materias que son la misma
+  const subAT1 = { id: 'sub-iat-1', nombre: 'INTRODUCCIÓN AL ANTIGUO T', codigo: 'IAA-102', semestre: 'Semestre I' } as any;
+  const subAT2 = { id: 'sub-iat-2', nombre: 'INTRODUCCIÓN AL ANTIGUO TESTAMENTO', codigo: 'IAT-101', semestre: 'Semestre I' } as any;
+  const subAT3 = { id: 'sub-iat-3', nombre: 'Introducción al AT', codigo: 'IAT-101', semestre: 'Semestre I' } as any;
+
+  // 2. Grupo Semestre II: 2 materias que son la misma
+  const subNT1 = { id: 'sub-int-1', nombre: 'Introducción al NT', codigo: 'INT-102', semestre: 'Semestre II' } as any;
+  const subNT2 = { id: 'sub-int-2', nombre: 'INTRODUCCIÓN AL NUEVO TESTAMENTO', codigo: 'IAN-101', semestre: 'Semestre II' } as any;
+
+  // 3. Grupo Semestre IV: 2 materias que son la misma (con error tipográfico "HITORICOS")
+  const subLH1 = { id: 'sub-lhd-1', nombre: 'LIBROS HITORICOS DEL NUEVO TESTAMENTO', codigo: 'LHD-101', semestre: 'Semestre IV' } as any;
+  const subLH2 = { id: 'sub-lhn-2', nombre: 'Libros Históricos del NT', codigo: 'LHN-104', semestre: 'Semestre IV' } as any;
+
+  state.subjects = [subAT1, subAT2, subAT3, subNT1, subNT2, subLH1, subLH2];
+
+  // Asignamos un examen a una de las duplicadas de AT para validar reasignación
+  state.exams = [
+    { id: 'ex-at', titulo: 'Parcial AT', materia: 'sub-iat-1', docenteId: 'doc-1', preguntas: [] } as any
+  ];
+
+  const { state: cleanState, duplicateIds, report } = deduplicateSubjects(state);
+
+  // De las 7 materias iniciales (3 AT + 2 NT + 2 Libros Históricos), deben quedar EXACTAMENTE 3
+  assert(cleanState.subjects.length === 3, `Deduplicación redujo 7 materias redundantes a exactamente 3 (resultado: ${cleanState.subjects.length})`);
+  assert(duplicateIds.length === 4, `Se identificaron y purgaron 4 IDs duplicados (resultado: ${duplicateIds.length})`);
+
+  // Las 3 materias resultantes deben ser únicas en su concepto
+  const hasOnlyOneAT = cleanState.subjects.filter(s => normalizeSubjectCanonicalKey(s.nombre).includes('antiguo_testamento')).length === 1;
+  const hasOnlyOneNT = cleanState.subjects.filter(s => normalizeSubjectCanonicalKey(s.nombre).includes('introduccion') && normalizeSubjectCanonicalKey(s.nombre).includes('nuevo_testamento')).length === 1;
+  const hasOnlyOneLH = cleanState.subjects.filter(s => normalizeSubjectCanonicalKey(s.nombre).includes('historico')).length === 1;
+
+  assert(hasOnlyOneAT, 'Queda exactamente 1 sola materia de Introducción al Antiguo Testamento');
+  assert(hasOnlyOneNT, 'Queda exactamente 1 sola materia de Introducción al Nuevo Testamento');
+  assert(hasOnlyOneLH, 'Queda exactamente 1 sola materia de Libros Históricos del NT (unificando error tipográfico)');
+
+  // El examen asociado a sub-iat-1 debe estar re-enlazado a la versión canónica
+  const survivorAT = cleanState.subjects.find(s => normalizeSubjectCanonicalKey(s.nombre).includes('antiguo_testamento'));
+  assert(cleanState.exams[0].materia === survivorAT?.id, 'Examen re-enlazado con éxito a la materia canónica de AT');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 22: Deduplicación de 18 semestres duplicados a 9 oficiales
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 22: Deduplicación de semestres (de 18 duplicados a 9 oficiales)');
+{
+  const state = createDummyState();
+  const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+  
+  // Generar 18 semestres: Set A ("Semestre I") y Set B ("SEMESTRE I" o duplicado con otro ID)
+  const setA = roman.map((r, idx) => ({
+    id: `sem-orig-${idx + 1}`,
+    nombre: `Semestre ${r}`,
+    codigo: `SEM-26${String.fromCharCode(65 + idx)}`,
+    estado: 'activo'
+  } as any));
+
+  const setB = roman.map((r, idx) => ({
+    id: `sem-dup-${idx + 1}`,
+    nombre: `SEMESTRE ${r}`,
+    codigo: `SEM-DUP-${idx + 1}`,
+    estado: 'activo'
+  } as any));
+
+  state.semesters = [...setA, ...setB]; // 18 semestres
+
+  // Asignamos una materia y un estudiante a uno de los semestres duplicados de set B
+  state.subjects = [
+    { id: 'sub-test-sem', nombre: 'Materia Sem 2', semestre: 'sem-dup-2' } as any
+  ];
+  state.users = [
+    { id: 'user-test-sem', nombre: 'Estudiante Sem 2', semestre: 'sem-dup-2', rol: 'estudiante' } as any
+  ];
+
+  const { state: cleanState, duplicateIds } = deduplicateSemesters(state);
+
+  assert(cleanState.semesters.length === 9, `18 semestres reducidos a exactamente 9 (resultado: ${cleanState.semesters.length})`);
+  assert(duplicateIds.length === 9, `9 IDs de semestres duplicados identificados para purga`);
+
+  // Verificar que la materia y el estudiante fueron reasignados al ID canónico (sem-orig-2)
+  const updatedSub = cleanState.subjects.find(s => s.id === 'sub-test-sem');
+  assert(updatedSub?.semestre === 'Semestre II' || updatedSub?.semestre === 'sem-orig-2', 'Materia reasignada a semestre canónico');
+
+  const updatedUser = cleanState.users.find(u => u.id === 'user-test-sem');
+  assert(updatedUser?.semestre === 'Semestre II' || updatedUser?.semestre === 'sem-orig-2', 'Estudiante reasignado a semestre canónico');
+}
+
+// --------------------------------------------------------------------------
+// PRUEBA 23: Persistencia de eliminación frente a recargas y restauraciones
+// --------------------------------------------------------------------------
+console.log('\nPRUEBA 23: Garantía de no resurrección de elementos eliminados tras restoreBackupState');
+{
+  // Simulamos marcar un ID de materia de respaldo como eliminado
+  const deletedSubId = 'sub-deleted-test';
+  markAsDeleted(deletedSubId);
+
+  assert(getDeletedIds().has(deletedSubId), 'El ID eliminado queda registrado en getDeletedIds');
+
+  // Ejecutamos restoreBackupState(): NO debe borrar el set de eliminados ni re-insertar el elemento
+  const restored = restoreBackupState();
+  assert(getDeletedIds().has(deletedSubId), 'restoreBackupState conserva el ID eliminado en getDeletedIds (no lo borra)');
+
+  // Comprobamos que el elemento eliminado no forma parte del estado restaurado
+  const foundInRestored = restored.subjects.some(s => s.id === deletedSubId);
+  assert(!foundInRestored, 'Elemento eliminado NO resucita en el estado restaurado');
 }
 
 // Evaluación del resumen

@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Milestone, Plus, Trash2, Edit2, Calendar, Target, Award, ChevronLeft, ChevronRight, Search, FileSpreadsheet } from 'lucide-react';
-import { Parcial, Semester, Subject, User } from '../types';
-import { uid, now, fmtDate } from '../lib/db';
+import React, { useState, useMemo } from 'react';
+import { Milestone, Plus, Trash2, Edit2, Calendar, Target, Award, ChevronLeft, ChevronRight, Search, FileSpreadsheet, ShieldCheck } from 'lucide-react';
+import { Parcial, Semester, Subject, User, Exam, Submission } from '../types';
+import { uid, now, fmtDate, normalizeParcialPeriod } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
 import { saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
 
@@ -14,14 +14,17 @@ interface ParcialesProps {
   parciales: Parcial[];
   semesters: Semester[];
   subjects: Subject[];
+  exams?: Exam[];
+  submissions?: Submission[];
   onUpdateParciales: (updated: Parcial[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
   currentUser?: User;
   users?: User[];
+  onDeduplicateParciales?: () => void;
 }
 
 export default function Parciales({ 
-  parciales, semesters, subjects, onUpdateParciales, toast, currentUser, users 
+  parciales, semesters, subjects, exams = [], submissions = [], onUpdateParciales, toast, currentUser, users, onDeduplicateParciales 
 }: ParcialesProps) {
   const isTeacher = currentUser?.rol === 'docente';
   
@@ -46,6 +49,20 @@ export default function Parciales({
   const [fechaFin, setFechaFin] = useState('');
   const [porcentaje, setPorcentaje] = useState(30);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Conteo de parciales duplicados
+  const duplicateParcialesCount = useMemo(() => {
+    const groups = new Map<string, number>();
+    parciales.forEach(p => {
+      const k = `${p.asignatura}__${normalizeParcialPeriod(p.nombre)}`;
+      groups.set(k, (groups.get(k) || 0) + 1);
+    });
+    let dups = 0;
+    groups.forEach(cnt => {
+      if (cnt > 1) dups += (cnt - 1);
+    });
+    return dups;
+  }, [parciales]);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,14 +192,27 @@ export default function Parciales({
             }
           </div>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
-          style={{ backgroundColor: 'var(--primary)' }}
-        >
-          <Milestone className="w-4 h-4" />
-          <span>Nuevo corte parcial</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {duplicateParcialesCount > 0 && onDeduplicateParciales && (
+            <button
+              type="button"
+              onClick={onDeduplicateParciales}
+              className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 font-semibold text-xs shadow-xs cursor-pointer transition-all"
+              title="Eliminar parciales duplicados (conserva aquellos con exámenes presentados por estudiantes)"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-amber-600" />
+              <span>Depurar Parciales Duplicados ({duplicateParcialesCount})</span>
+            </button>
+          )}
+          <button
+            onClick={handleOpenCreateModal}
+            className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
+            style={{ backgroundColor: 'var(--primary)' }}
+          >
+            <Milestone className="w-4 h-4" />
+            <span>Nuevo corte parcial</span>
+          </button>
+        </div>
       </div>
 
       {/* Caja de Búsqueda de Parciales */}
@@ -295,6 +325,7 @@ export default function Parciales({
                   <th className="py-3 px-4">Syllabus Materia</th>
                   <th className="py-3 px-4">Periodo Calendario</th>
                   <th className="py-3 px-4">Ponderado %</th>
+                  <th className="py-3 px-4">Exámenes / Entregas</th>
                   <th className="py-3 px-4">Vigencia corte</th>
                   <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
@@ -303,6 +334,9 @@ export default function Parciales({
                 {currentParciales.map(p => {
                   const sem = semesters.find(s => s.id === p.semestre);
                   const sub = subjects.find(s => s.id === p.asignatura);
+                  const linkedExams = (exams || []).filter(e => e.parcialId === p.id);
+                  const linkedExamIds = new Set(linkedExams.map(e => e.id));
+                  const linkedSubs = (submissions || []).filter(s => linkedExamIds.has(s.examenId));
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/50">
@@ -320,6 +354,21 @@ export default function Parciales({
                           <Target className="w-3.5 h-3.5 text-indigo-600" />
                           <span>{p.porcentaje}%</span>
                         </span>
+                      </td>
+                      <td className="py-4 px-4 text-xs">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{linkedExams.length} {linkedExams.length === 1 ? 'examen' : 'exámenes'}</span>
+                          </div>
+                          {linkedSubs.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
+                              {linkedSubs.length} {linkedSubs.length === 1 ? 'entrega real' : 'entregas reales'}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 italic">0 entregas</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-4 text-xs text-slate-400">
                         {p.fechaInicio && p.fechaFin ? (
