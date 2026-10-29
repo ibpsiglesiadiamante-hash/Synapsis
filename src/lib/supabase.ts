@@ -34,6 +34,12 @@ export const KNOWN_SUPABASE_TABLES = new Set([
   'gradeRecords',
   'assignments',
   'assignmentSubmissions',
+  'payments',
+  'matriculaStatus',
+  'agenda',
+  'wikiArticles',
+  'deleted_records',
+  'attendance',
 ]);
 
 /**
