@@ -100,8 +100,20 @@ export async function saveDocToSupabase(table: string, item: any): Promise<Remot
     };
   }
   try {
-    const cleanItem = sanitizeForSupabase(item);
-    const { error } = await supabase.from(table).upsert(cleanItem);
+    const cleanItem = sanitizeForSupabase(item, table);
+    let { error } = await supabase.from(table).upsert(cleanItem);
+
+    // Self-healing: If Supabase reports a missing column in schema cache, automatically strip it and retry once
+    if (error && error.message.includes('Could not find the') && error.message.includes('column of')) {
+      const match = error.message.match(/Could not find the '([^']+)' column of/);
+      if (match && match[1] && cleanItem[match[1]] !== undefined) {
+        console.warn(`[Supabase Adaptive Fix] Omitting column "${match[1]}" not present in table "${table}" and retrying.`);
+        delete cleanItem[match[1]];
+        const retryResult = await supabase.from(table).upsert(cleanItem);
+        error = retryResult.error;
+      }
+    }
+
     if (error) {
       console.warn(`Supabase upsert warning on table "${table}":`, error.message);
       return {
@@ -172,13 +184,17 @@ export async function deleteDocFromSupabase(table: string, id: string): Promise<
 /**
  * Cleans object properties before writing to Supabase
  */
-function sanitizeForSupabase(obj: any): any {
+function sanitizeForSupabase(obj: any, table?: string): any {
   if (obj === undefined) return null;
   if (obj === null || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj;
   const clean: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
+      // In the live Supabase schema, 'submissions' table does not have an 'actualizado' column
+      if (table === 'submissions' && key === 'actualizado') {
+        continue;
+      }
       clean[key] = value;
     }
   }
@@ -263,7 +279,7 @@ export async function pushAllStateToSupabase(state: AppState): Promise<number> {
     ];
 
     for (const { table, items } of collections) {
-      const validItems = items.filter(it => it && it.id && !deletedIds.has(it.id)).map(sanitizeForSupabase);
+      const validItems = items.filter(it => it && it.id && !deletedIds.has(it.id)).map(it => sanitizeForSupabase(it, table));
       if (validItems.length > 0) {
         // Upsert in batches of 50 to avoid network payload limits
         for (let i = 0; i < validItems.length; i += 50) {

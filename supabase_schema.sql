@@ -121,6 +121,9 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   actualizado TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Asegurar columna actualizado en caso de que la tabla ya existiera previamente
+ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS actualizado TIMESTAMPTZ DEFAULT NOW();
+
 -- 8. Registro de Calificaciones Finales (GradeRecords / Notas)
 CREATE TABLE IF NOT EXISTS public."gradeRecords" (
   id TEXT PRIMARY KEY,

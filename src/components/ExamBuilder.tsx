@@ -459,7 +459,7 @@ export default function ExamBuilder({
   };
 
   const handleUpdateQText = (id: string, text: string) => {
-    setQuestions(prev => prev.map(q => q.id === id ? { ...q, texto: text } : q));
+    setQuestions(prev => prev.map(q => q.id === id ? { ...q, texto: text, enunciado: text } : q));
   };
 
   const handleUpdateQPts = (id: string, pts: number) => {
