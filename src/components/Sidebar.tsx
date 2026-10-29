@@ -59,10 +59,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
 
   const navItemClass = (pageId: string) => {
     const isSelected = activePage === pageId;
-    return `nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-[10.5px] font-bold tracking-widest uppercase cursor-pointer select-none transition-all duration-150 ${
+    return `nav-item flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-[10.5px] font-bold tracking-widest uppercase cursor-pointer select-none transition-all duration-150 ${
       isSelected 
-        ? 'active shadow-sm' 
-        : ''
+        ? 'active bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 font-black shadow-md shadow-teal-500/20' 
+        : 'hover:text-teal-600 hover:bg-teal-50/50 dark:hover:bg-teal-950/40'
     }`;
   };
 
@@ -74,10 +74,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
       <div className="nav-group">
         <div 
           onClick={() => toggleGroup('principal')} 
-          className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors"
+          className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
         >
           <span>Principal</span>
-          {expandedGroups.principal ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+          {expandedGroups.principal ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
         </div>
         {expandedGroups.principal && (
           <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
@@ -96,10 +96,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
       <div className="nav-group mt-2">
         <div 
           onClick={() => toggleGroup('gestion')} 
-          className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors"
+          className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
         >
           <span>Gestión Escolar</span>
-          {expandedGroups.gestion ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+          {expandedGroups.gestion ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
         </div>
         {expandedGroups.gestion && (
           <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
@@ -146,10 +146,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
       <div className="nav-group mt-2">
         <div 
           onClick={() => toggleGroup('recursos')} 
-          className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors hover:bg-slate-100/40"
+          className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
         >
           <span>Recursos y Comunidad</span>
-          {expandedGroups.recursos ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+          {expandedGroups.recursos ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
         </div>
         {expandedGroups.recursos && (
           <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
@@ -176,10 +176,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
         <div className="nav-group mt-2">
           <div 
             onClick={() => toggleGroup('docente')} 
-            className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors"
+            className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
           >
             <span>Docente</span>
-            {expandedGroups.docente ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+            {expandedGroups.docente ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
           </div>
           {expandedGroups.docente && (
             <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
@@ -214,10 +214,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
         <div className="nav-group mt-2">
           <div 
             onClick={() => toggleGroup('estudiante')} 
-            className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors"
+            className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
           >
             <span>Estudiante</span>
-            {expandedGroups.estudiante ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+            {expandedGroups.estudiante ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
           </div>
           {expandedGroups.estudiante && (
             <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
@@ -252,10 +252,10 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
         <div className="nav-group mt-2">
           <div 
             onClick={() => toggleGroup('admin')} 
-            className="nav-group-header flex items-center justify-between text-[9.5px] font-bold uppercase tracking-widest text-slate-450 py-2 px-2.5 rounded cursor-pointer select-none transition-colors"
+            className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
           >
             <span>Administrador</span>
-            {expandedGroups.admin ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+            {expandedGroups.admin ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
           </div>
           {expandedGroups.admin && (
             <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">

@@ -635,3 +635,50 @@ body.theme-cosmos-contraste .border-slate-200 {
     page-break-inside: avoid !important;
   }
 }
+
+/* 3D High-Relief Text Shadows & Petrol Teal Utilities */
+.text-relief-3d {
+  text-shadow: 
+    0 1px 0 #0f626c,
+    0 2px 0 #0c4d55,
+    0 3px 0 #09393f,
+    0 4px 0 #06262a,
+    0 5px 0 #04191c,
+    0 6px 14px rgba(0,0,0,0.9),
+    0 0 25px rgba(45, 212, 191, 0.45);
+}
+
+.text-relief-header {
+  text-shadow: 
+    0 1px 0 #0e5b65,
+    0 2px 0 #094047,
+    0 3px 0 #062b30,
+    0 4px 8px rgba(0,0,0,0.8),
+    0 0 16px rgba(20, 184, 166, 0.35);
+}
+
+.text-relief-white {
+  text-shadow: 
+    0 1px 0 #cbd5e1,
+    0 2px 0 #94a3b8,
+    0 3px 6px rgba(0,0,0,0.6);
+}
+
+.text-relief-teal {
+  text-shadow: 
+    0 1px 0 #134e4a,
+    0 2px 0 #042f2e,
+    0 3px 6px rgba(0,0,0,0.7);
+}
+
+/* Petrol Teal Theme (Azul Verdoso) */
+.bg-petrol-950 { background-color: #03181c; }
+.bg-petrol-900 { background-color: #05242a; }
+.bg-petrol-850 { background-color: #072d35; }
+.bg-petrol-800 { background-color: #093741; }
+.bg-petrol-750 { background-color: #0d4652; }
+.border-petrol-700 { border-color: #125463; }
+.border-petrol-600 { border-color: #16697a; }
+.border-petrol-500 { border-color: #14b8a6; }
+
+
