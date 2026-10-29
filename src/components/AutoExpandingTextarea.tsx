@@ -18,7 +18,7 @@ export const AutoExpandingTextarea = React.forwardRef<
       onValueChange,
       className = '',
       rows = 1,
-      minHeight,
+      minHeight = 36,
       style,
       ...props
     },
@@ -30,21 +30,31 @@ export const AutoExpandingTextarea = React.forwardRef<
       const el = internalRef.current;
       if (!el) return;
 
-      // Use 'auto' instead of '0px' to avoid collapsing to zero,
-      // losing typing cursor, dropping keystrokes, and layout thrashing
+      // Reset height to auto first to let scrollHeight recalculate naturally without collapsing to 0px
       el.style.height = 'auto';
-      const targetHeight = Math.max(el.scrollHeight, minHeight || 0);
+      
+      const scrollH = el.scrollHeight;
+      const targetHeight = Math.max(scrollH, minHeight || 36);
+      
       el.style.height = `${targetHeight}px`;
+      el.scrollTop = 0; // Prevent content from getting scrolled up and hidden
     }, [minHeight]);
 
-    // Recalculate height safely on value change
+    // Update synchronously before paint when value changes (handles initial load and keystrokes)
     useLayoutEffect(() => {
       adjustHeight();
     }, [value, adjustHeight]);
 
-    // Adjust on window resize
+    // Handle paste and font rendering updates immediately after paint
     useEffect(() => {
-      adjustHeight();
+      const raf = requestAnimationFrame(() => {
+        adjustHeight();
+      });
+      return () => cancelAnimationFrame(raf);
+    }, [value, adjustHeight]);
+
+    // Handle window resize
+    useEffect(() => {
       const handleResize = () => adjustHeight();
       window.addEventListener('resize', handleResize);
       return () => {
@@ -69,12 +79,21 @@ export const AutoExpandingTextarea = React.forwardRef<
           onValueChange?.(e.target.value);
           adjustHeight();
         }}
-        className={`auto-expand-textarea resize-none block w-full ${className}`}
+        onInput={(e) => {
+          props.onInput?.(e);
+          adjustHeight();
+        }}
+        onPaste={(e) => {
+          props.onPaste?.(e);
+          // Force immediate recalculation on clipboard paste so all lines expand without needing spacebar
+          setTimeout(adjustHeight, 10);
+        }}
+        className={`auto-expand-textarea resize-none block w-full leading-relaxed ${className}`}
         style={{
-          fieldSizing: 'content', // Modern CSS native auto-sizing
           overflowY: 'hidden',
           resize: 'none',
-          minHeight: minHeight ? `${minHeight}px` : undefined,
+          lineHeight: '1.65', // Ensures generous vertical spacing between lines
+          minHeight: `${minHeight}px`,
           ...style,
         }}
         {...props}

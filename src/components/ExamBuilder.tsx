@@ -1486,23 +1486,26 @@ export default function ExamBuilder({
                                 ? q.matchCorrectos[eIdx] 
                                 : 0;
                               return (
-                                <div key={enunKey} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-lg border border-slate-150 shadow-sm">
-                                  <span className="text-xs font-extrabold text-slate-400 shrink-0 w-6">
+                                <div key={enunKey} className="flex flex-col sm:flex-row sm:items-start gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm transition hover:border-slate-300">
+                                  <span className="text-xs font-extrabold text-slate-400 shrink-0 w-6 pt-1.5 select-none">
                                     {eIdx + 1}.
                                   </span>
-                                  <AutoExpandingTextarea
-                                    value={enun}
-                                    onChange={e => handleUpdateEnunciadoText(q.id, eIdx, e.target.value)}
-                                    placeholder={`Definición / Enunciado ${eIdx + 1}`}
-                                    className="flex-1 text-xs sm:text-sm bg-transparent border-b border-slate-100 font-medium py-1 focus:border-indigo-400 outline-none whitespace-pre-wrap font-sans block"
-                                    rows={1}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') {
-                                        e.stopPropagation();
-                                      }
-                                    }}
-                                  />
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <AutoExpandingTextarea
+                                      value={enun}
+                                      onChange={e => handleUpdateEnunciadoText(q.id, eIdx, e.target.value)}
+                                      placeholder={`Definición / Enunciado ${eIdx + 1}`}
+                                      className="w-full text-xs sm:text-sm bg-transparent border-b border-slate-200 font-medium py-1.5 focus:border-indigo-500 outline-none whitespace-pre-wrap font-sans block leading-relaxed"
+                                      rows={1}
+                                      minHeight={38}
+                                      onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                          e.stopPropagation();
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0 pt-0.5">
                                     <span className="text-xs font-bold text-slate-400 block shrink-0">Respuesta:</span>
                                     <select
                                       value={matchCorrectIdx}
