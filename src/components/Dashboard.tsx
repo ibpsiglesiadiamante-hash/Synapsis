@@ -65,20 +65,43 @@ export default function Dashboard({
   const [examsPage, setExamsPage] = useState(1);
 
   // Layout & Category States matching image_6cff5dfb.png & image_d35f7ea1.png
-  // Defaults to the category of the last visited module so the user returns right there
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => initialCategory || 'todas');
+  // All sections are 'recogidas' (collapsed) by default when returning to menu
+  const ALL_SECTIONS_COLLAPSED: Record<string, boolean> = {
+    gestion: true,
+    recursos: true,
+    docente: true,
+    estudiante: true,
+    admin: true
+  };
+
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (!initialCategory || initialCategory === 'recogido') return 'todas';
+    return initialCategory;
+  });
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    if (!initialCategory || initialCategory === 'todas' || initialCategory === 'recogido') {
+      return ALL_SECTIONS_COLLAPSED;
+    }
+    return {
+      ...ALL_SECTIONS_COLLAPSED,
+      [initialCategory]: false
+    };
+  });
 
   // Sync with initialCategory when navigating back from a module
   useEffect(() => {
-    if (initialCategory) {
+    if (!initialCategory || initialCategory === 'todas' || initialCategory === 'recogido') {
+      setSelectedCategory('todas');
+      // Always collapsed / recogido when returning to menu
+      setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+    } else {
       setSelectedCategory(initialCategory);
-      setCollapsedSections(prev => ({
-        ...prev,
+      setCollapsedSections({
+        ...ALL_SECTIONS_COLLAPSED,
         [initialCategory]: false
-      }));
+      });
     }
     // Always start at the top of the dashboard so the Hero banner and category buttons are fully visible
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -95,18 +118,17 @@ export default function Dashboard({
     }));
   };
 
+  const allAreCollapsed = ['gestion', 'recursos', 'docente', 'estudiante', 'admin'].every(
+    key => !!collapsedSections[key]
+  );
+
   const toggleAllSections = () => {
-    const areSomeCollapsed = Object.values(collapsedSections).some(v => v);
-    if (areSomeCollapsed) {
+    if (allAreCollapsed) {
+      // Desplegar todos los módulos
       setCollapsedSections({});
     } else {
-      setCollapsedSections({
-        gestion: true,
-        recursos: true,
-        docente: true,
-        estudiante: true,
-        admin: true
-      });
+      // Recoger todo el menú
+      setCollapsedSections(ALL_SECTIONS_COLLAPSED);
     }
   };
 
@@ -551,7 +573,10 @@ export default function Dashboard({
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('gestion')}
+            onClick={() => {
+              setSelectedCategory('gestion');
+              setCollapsedSections(prev => ({ ...prev, gestion: false }));
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'gestion'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -564,7 +589,10 @@ export default function Dashboard({
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('recursos')}
+            onClick={() => {
+              setSelectedCategory('recursos');
+              setCollapsedSections(prev => ({ ...prev, recursos: false }));
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'recursos'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -577,7 +605,10 @@ export default function Dashboard({
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('docente')}
+            onClick={() => {
+              setSelectedCategory('docente');
+              setCollapsedSections(prev => ({ ...prev, docente: false }));
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'docente'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -590,7 +621,10 @@ export default function Dashboard({
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('estudiante')}
+            onClick={() => {
+              setSelectedCategory('estudiante');
+              setCollapsedSections(prev => ({ ...prev, estudiante: false }));
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'estudiante'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -603,7 +637,10 @@ export default function Dashboard({
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('admin')}
+            onClick={() => {
+              setSelectedCategory('admin');
+              setCollapsedSections(prev => ({ ...prev, admin: false }));
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'admin'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -622,8 +659,17 @@ export default function Dashboard({
             onClick={toggleAllSections}
             className="px-3 py-1.5 rounded-xl bg-[#072d35] border border-[#104b58] hover:border-cyan-400/50 text-teal-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Desplegar Todos</span>
+            {allAreCollapsed ? (
+              <>
+                <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Desplegar Todos</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Recoger Todos</span>
+              </>
+            )}
           </button>
 
           <div className="flex items-center bg-[#072d35] border border-[#104b58] rounded-xl p-1 gap-1 text-xs">

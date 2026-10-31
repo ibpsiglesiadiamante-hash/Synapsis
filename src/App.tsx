@@ -1500,7 +1500,23 @@ export default function App() {
               {activeTab !== 'dashboard' && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
                   <div className="flex items-center gap-2">
-                    {/* Botón principal: Volver y posicionarse justo en la categoría del módulo (ej: Estudiante, Administrador) */}
+                    {/* Botón principal (marcado por el usuario): Volver a Menú (siempre recogido y limpio) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDashboardCategory('recogido');
+                        try { localStorage.setItem('synapsis_dash_cat', 'recogido'); } catch(e) {}
+                        setActiveTab('dashboard');
+                        setActiveEditExamId(null);
+                      }}
+                      className="flex items-center gap-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md group active:scale-95"
+                      title="Regresar al menú principal recogido"
+                    >
+                      <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                      <span>Volver a Menú</span>
+                    </button>
+
+                    {/* Botón secundario: Volver y desplegar la categoría del módulo (ej: Volver a Estudiante, Volver a Administrador) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1510,27 +1526,11 @@ export default function App() {
                         setActiveTab('dashboard');
                         setActiveEditExamId(null);
                       }}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md group active:scale-95"
-                      title={`Regresar al menú posicionado en ${getModuleCategory(activeTab).name}`}
-                    >
-                      <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                      <span>Volver a {getModuleCategory(activeTab).name}</span>
-                    </button>
-
-                    {/* Botón secundario: Ver Menú General con todas las categorías */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDashboardCategory('todas');
-                        try { localStorage.setItem('synapsis_dash_cat', 'todas'); } catch(e) {}
-                        setActiveTab('dashboard');
-                        setActiveEditExamId(null);
-                      }}
-                      className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-[#041c21] hover:bg-[#0a3842] border border-[#115463] px-3 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
-                      title="Ver todas las categorías del menú"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-[#041c21] hover:bg-[#0a3842] border border-[#115463] px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+                      title={`Volver a ${getModuleCategory(activeTab).name}`}
                     >
                       <LayoutGrid className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Todas las Categorías</span>
+                      <span>Volver a {getModuleCategory(activeTab).name}</span>
                     </button>
                   </div>
 
