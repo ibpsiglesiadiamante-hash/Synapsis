@@ -911,7 +911,7 @@ export default function ExamBuilder({
           className="btn btn-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs cursor-pointer shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 text-teal-600" />
-          <span>← Volver a Docente</span>
+          <span>Volver a Docente</span>
         </button>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (

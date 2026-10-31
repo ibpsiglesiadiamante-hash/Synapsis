@@ -59,7 +59,7 @@ export default function Header({
 
   return (
     <header className="header fixed top-0 left-0 right-0 h-[60px] bg-white border-b border-slate-200 flex items-center px-4.5 gap-3.5 z-50 shadow-sm theme-bg-surface theme-border">
-      {/* Botón directo a Menú Principal o Categoría activa */}
+      {/* Botón directo a Menú Principal (de tajo al menú) */}
       <button
         onClick={() => onNavigate && onNavigate('dashboard')}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs select-none active:scale-95 ${
@@ -67,14 +67,14 @@ export default function Header({
             ? 'bg-slate-100 hover:bg-slate-200/90 text-slate-700 border-slate-200'
             : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 border-teal-400 shadow-teal-500/20'
         }`}
-        title={activeTab === 'dashboard' ? 'Menú Principal' : `Volver al módulo ${categoryName || 'Menú'}`}
+        title="Volver al Menú Principal"
       >
         {activeTab === 'dashboard' ? (
           <LayoutGrid className="w-4 h-4 text-teal-600" />
         ) : (
           <ArrowLeft className="w-4 h-4" />
         )}
-        <span>{activeTab === 'dashboard' ? 'Menú' : (categoryName ? `← Volver a ${categoryName}` : 'Volver al Menú')}</span>
+        <span>{activeTab === 'dashboard' ? 'Menú' : 'Volver a Menú'}</span>
       </button>
 
       <div 

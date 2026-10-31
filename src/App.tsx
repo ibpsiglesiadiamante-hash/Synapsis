@@ -1481,10 +1481,10 @@ export default function App() {
             onSyncFirebase={handleManualSync}
             isSyncing={isSyncingFirebase}
             onNavigate={(tab) => {
-              if (tab === 'dashboard' && activeTab !== 'dashboard') {
-                const cat = getModuleCategory(activeTab);
-                setDashboardCategory(cat.id);
-                try { localStorage.setItem('synapsis_dash_cat', cat.id); } catch(e) {}
+              if (tab === 'dashboard') {
+                // Ir de tajo al menú general (todas las categorías)
+                setDashboardCategory('todas');
+                try { localStorage.setItem('synapsis_dash_cat', 'todas'); } catch(e) {}
               }
               setActiveTab(tab);
               setActiveEditExamId(null);
@@ -1500,7 +1500,7 @@ export default function App() {
               {activeTab !== 'dashboard' && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
                   <div className="flex items-center gap-2">
-                    {/* Botón principal: Volver y posicionarse justo en la categoría del módulo (ej: Estudiante) */}
+                    {/* Botón principal: Volver y posicionarse justo en la categoría del módulo (ej: Estudiante, Administrador) */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1514,7 +1514,7 @@ export default function App() {
                       title={`Regresar al menú posicionado en ${getModuleCategory(activeTab).name}`}
                     >
                       <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                      <span>← Volver a {getModuleCategory(activeTab).name}</span>
+                      <span>Volver a {getModuleCategory(activeTab).name}</span>
                     </button>
 
                     {/* Botón secundario: Ver Menú General con todas las categorías */}

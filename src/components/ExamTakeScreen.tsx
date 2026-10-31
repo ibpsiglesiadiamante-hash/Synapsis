@@ -418,7 +418,7 @@ export default function ExamTakeScreen({
           className="btn border border-[#dadce0] bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 text-xs py-1.5 px-3.5 rounded-md shadow-sm font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer focus:outline-none"
         >
           <ChevronLeft className="w-4 h-4 text-cyan-600" />
-          <span>← Volver a Estudiante</span>
+          <span>Volver a Estudiante</span>
         </button>
 
         <h3 className="exam-take-title text-sm md:text-base font-bold text-slate-800 truncate max-w-sm hidden sm:block">
