@@ -30,14 +30,16 @@ export const AutoExpandingTextarea = React.forwardRef<
       const el = internalRef.current;
       if (!el) return;
 
-      // Reset height to auto first to let scrollHeight recalculate naturally without collapsing to 0px
+      // If browser supports native CSS field-sizing: content, let the browser handle sizing seamlessly
+      if (typeof CSS !== 'undefined' && CSS.supports && CSS.supports('field-sizing', 'content')) {
+        return;
+      }
+
+      // Height recalculation without jarring collapse
       el.style.height = 'auto';
-      
       const scrollH = el.scrollHeight;
       const targetHeight = Math.max(scrollH, minHeight || 36);
-      
       el.style.height = `${targetHeight}px`;
-      el.scrollTop = 0; // Prevent content from getting scrolled up and hidden
     }, [minHeight]);
 
     // Update synchronously before paint when value changes (handles initial load and keystrokes)
@@ -85,17 +87,19 @@ export const AutoExpandingTextarea = React.forwardRef<
         }}
         onPaste={(e) => {
           props.onPaste?.(e);
-          // Force immediate recalculation on clipboard paste so all lines expand without needing spacebar
-          setTimeout(adjustHeight, 10);
+          // Recalculate on paste so multiline content immediately expands
+          requestAnimationFrame(() => adjustHeight());
+          setTimeout(adjustHeight, 16);
         }}
         className={`auto-expand-textarea resize-none block w-full leading-relaxed ${className}`}
         style={{
-          overflowY: 'hidden',
+          fieldSizing: 'content',
+          overflowY: 'auto',
           resize: 'none',
-          lineHeight: '1.65', // Ensures generous vertical spacing between lines
+          lineHeight: '1.65',
           minHeight: `${minHeight}px`,
           ...style,
-        }}
+        } as React.CSSProperties}
         {...props}
       />
     );

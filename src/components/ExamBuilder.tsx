@@ -445,6 +445,7 @@ export default function ExamBuilder({
   }, []);
 
   const handleAddField = () => {
+    notifyUserEdit();
     const qId = uid();
     const newQ: Question = {
       id: qId,
@@ -455,11 +456,20 @@ export default function ExamBuilder({
       opcionIds: [`opt_${qId}_0_${uid()}`, `opt_${qId}_1_${uid()}`],
       correctas: [],
     };
-    setQuestions(prev => [...prev, newQ]);
+    setQuestions(prev => {
+      const next = [...prev, newQ];
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateQText = (id: string, text: string) => {
-    setQuestions(prev => prev.map(q => q.id === id ? { ...q, texto: text, enunciado: text } : q));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => q.id === id ? { ...q, texto: text, enunciado: text } : q);
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateQPts = (id: string, pts: number) => {
@@ -716,54 +726,66 @@ export default function ExamBuilder({
 
   const handleUpdateOptionText = (qid: string, oIdx: number, val: string) => {
     notifyUserEdit();
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextOpts = [...(q.opciones || [])];
-        nextOpts[oIdx] = val;
-        return { ...q, opciones: nextOpts };
-      }
-      return q;
-    }));
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextOpts = [...(q.opciones || [])];
+          nextOpts[oIdx] = val;
+          return { ...q, opciones: nextOpts };
+        }
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleToggleCorrect = (qid: string, oIdx: number) => {
     notifyUserEdit();
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        let nextCorrect: number[] = [];
-        if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'dropdown' || q.tipo === 'tf') {
-          nextCorrect = [oIdx];
-        } else {
-          // Checkbox allowing multiple correct selectors
-          if (q.correctas.includes(oIdx)) {
-            nextCorrect = q.correctas.filter(c => c !== oIdx);
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          let nextCorrect: number[] = [];
+          if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'dropdown' || q.tipo === 'tf') {
+            nextCorrect = [oIdx];
           } else {
-            const maxAllowed = q.maxRespuestas && q.maxRespuestas > 0 ? q.maxRespuestas : 99;
-            if (q.correctas.length >= maxAllowed) {
-              toast(`Solo puedes marcar hasta ${maxAllowed} respuesta${maxAllowed > 1 ? 's' : ''} correcta${maxAllowed > 1 ? 's' : ''}`, 'warning');
-              return q;
+            // Checkbox allowing multiple correct selectors
+            if (q.correctas.includes(oIdx)) {
+              nextCorrect = q.correctas.filter(c => c !== oIdx);
+            } else {
+              const maxAllowed = q.maxRespuestas && q.maxRespuestas > 0 ? q.maxRespuestas : 99;
+              if (q.correctas.length >= maxAllowed) {
+                toast(`Solo puedes marcar hasta ${maxAllowed} respuesta${maxAllowed > 1 ? 's' : ''} correcta${maxAllowed > 1 ? 's' : ''}`, 'warning');
+                return q;
+              }
+              nextCorrect = [...q.correctas, oIdx];
             }
-            nextCorrect = [...q.correctas, oIdx];
           }
+          return { ...q, correctas: nextCorrect };
         }
-        return { ...q, correctas: nextCorrect };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateMaxRespuestas = (qid: string, maxVal?: number) => {
     notifyUserEdit();
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        let nextCorrect = q.correctas || [];
-        if (maxVal && maxVal > 0 && nextCorrect.length > maxVal) {
-          nextCorrect = nextCorrect.slice(0, maxVal);
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          let nextCorrect = q.correctas || [];
+          if (maxVal && maxVal > 0 && nextCorrect.length > maxVal) {
+            nextCorrect = nextCorrect.slice(0, maxVal);
+          }
+          return { ...q, maxRespuestas: maxVal, correctas: nextCorrect };
         }
-        return { ...q, maxRespuestas: maxVal, correctas: nextCorrect };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const getNextOptionLabel = (count: number) => {
@@ -777,24 +799,28 @@ export default function ExamBuilder({
 
   const handleAddOption = (qid: string) => {
     notifyUserEdit();
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const currentOpts = Array.isArray(q.opciones) ? [...q.opciones] : [];
-        const currentOptIds = Array.isArray(q.opcionIds) 
-          ? [...q.opcionIds] 
-          : currentOpts.map((_, i) => `opt_${q.id}_${i}_${uid()}`);
-        const newLabel = q.tipo === 'matching' || q.tipo === 'table'
-          ? `Término ${currentOpts.length + 1}`
-          : getNextOptionLabel(currentOpts.length);
-        const newOptId = `opt_${q.id}_${currentOpts.length}_${uid()}`;
-        return {
-          ...q,
-          opciones: [...currentOpts, newLabel],
-          opcionIds: [...currentOptIds, newOptId],
-        };
-      }
-      return q;
-    }));
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const currentOpts = Array.isArray(q.opciones) ? [...q.opciones] : [];
+          const currentOptIds = Array.isArray(q.opcionIds) 
+            ? [...q.opcionIds] 
+            : currentOpts.map((_, i) => `opt_${q.id}_${i}_${uid()}`);
+          const newLabel = q.tipo === 'matching' || q.tipo === 'table'
+            ? `Término ${currentOpts.length + 1}`
+            : getNextOptionLabel(currentOpts.length);
+          const newOptId = `opt_${q.id}_${currentOpts.length}_${uid()}`;
+          return {
+            ...q,
+            opciones: [...currentOpts, newLabel],
+            opcionIds: [...currentOptIds, newOptId],
+          };
+        }
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleRemoveOption = (qid: string, oIdx: number) => {
@@ -1228,11 +1254,11 @@ export default function ExamBuilder({
                             const isCorrect = q.correctas.includes(oIdx) || (q as any).correcta === oIdx;
                             const optKey = q.opcionIds?.[oIdx] || `${q.id}-opt-${oIdx}`;
                             return (
-                              <div key={optKey} className="flex items-center gap-2">
+                              <div key={optKey} className="flex items-start gap-2.5 py-1">
                                 {isCheck ? (
-                                  <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded shrink-0 bg-slate-50" />
+                                  <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded shrink-0 bg-slate-50 mt-1" />
                                 ) : (
-                                  <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded-full shrink-0 bg-slate-50" />
+                                  <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded-full shrink-0 bg-slate-50 mt-1" />
                                 )}
                                 <AutoExpandingTextarea 
                                   value={opt}
@@ -1249,7 +1275,7 @@ export default function ExamBuilder({
                                 <button 
                                   type="button" 
                                   onClick={() => handleToggleCorrect(q.id, oIdx)}
-                                  className={`text-xs w-6 h-6 rounded flex items-center justify-center font-bold border transition shrink-0 ${
+                                  className={`text-xs w-6 h-6 rounded flex items-center justify-center font-bold border transition shrink-0 mt-0.5 ${
                                     isCorrect 
                                       ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
                                       : 'text-slate-300 border-slate-200 bg-white hover:text-slate-500 hover:border-slate-300'
@@ -1261,7 +1287,7 @@ export default function ExamBuilder({
                                 <button 
                                   type="button" 
                                   onClick={() => handleRemoveOption(q.id, oIdx)}
-                                  className="text-slate-300 hover:text-red-500 p-1.5 border border-transparent hover:border-slate-100 rounded transition"
+                                  className="text-slate-300 hover:text-red-500 p-1.5 border border-transparent hover:border-slate-100 rounded transition shrink-0 mt-0.5"
                                   title="Eliminar opción"
                                 >
                                   ✕

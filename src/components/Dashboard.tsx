@@ -79,13 +79,9 @@ export default function Dashboard({
         ...prev,
         [initialCategory]: false
       }));
-      setTimeout(() => {
-        const el = document.getElementById(`category-${initialCategory}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 120);
     }
+    // Always start at the top of the dashboard so the Hero banner and category buttons are fully visible
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }, [initialCategory]);
 
   const handleNextQuote = () => {

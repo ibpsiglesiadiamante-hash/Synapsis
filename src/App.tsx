@@ -1493,9 +1493,9 @@ export default function App() {
             categoryName={activeTab !== 'dashboard' ? getModuleCategory(activeTab).name : undefined}
           />
 
-          <div className="flex-1 flex flex-col relative pt-[60px]">
+          <div className={`flex-1 flex flex-col relative pt-[60px] ${activeTab === 'dashboard' ? 'bg-[#03181e]' : 'bg-slate-50'}`}>
             {/* MAIN CONTENT WORKSPACE (Full width clean dashboard & focused module view) */}
-            <main className="flex-1 p-3.5 sm:p-5 md:p-6.5 bg-slate-50 w-full max-w-7xl mx-auto overflow-x-hidden relative">
+            <main className={`flex-1 p-3.5 sm:p-5 md:p-6.5 ${activeTab === 'dashboard' ? 'bg-[#03181e] min-h-[calc(100vh-60px)]' : 'bg-slate-50'} w-full max-w-7xl mx-auto overflow-x-hidden relative`}>
               {/* Opción destacada: Volver a la categoría exacta del módulo o al menú general */}
               {activeTab !== 'dashboard' && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
