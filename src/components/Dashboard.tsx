@@ -64,46 +64,34 @@ export default function Dashboard({
   const [subsPage, setSubsPage] = useState(1);
   const [examsPage, setExamsPage] = useState(1);
 
-  // Layout & Category States matching image_6cff5dfb.png & image_d35f7ea1.png
-  // All sections are 'recogidas' (collapsed) by default when returning to menu
-  const ALL_SECTIONS_COLLAPSED: Record<string, boolean> = {
-    gestion: true,
-    recursos: true,
-    docente: true,
-    estudiante: true,
-    admin: true
+  // Layout & Category States matching image_c1e3123d.png (screenshot 2)
+  // Selected category defaults to the module's category or the current user's role
+  const getDefaultCategory = () => {
+    if (initialCategory && initialCategory !== 'todas' && initialCategory !== 'recogido') {
+      return initialCategory;
+    }
+    if (currentUser.rol === 'estudiante') return 'estudiante';
+    if (currentUser.rol === 'docente') return 'docente';
+    return 'admin';
   };
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
-    if (!initialCategory || initialCategory === 'recogido') return 'todas';
-    return initialCategory;
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>(getDefaultCategory);
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
-    if (!initialCategory || initialCategory === 'todas' || initialCategory === 'recogido') {
-      return ALL_SECTIONS_COLLAPSED;
-    }
-    return {
-      ...ALL_SECTIONS_COLLAPSED,
-      [initialCategory]: false
-    };
-  });
+  // Sections are NOT collapsed by default; cards are visible as in screenshot 2
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   // Sync with initialCategory when navigating back from a module
   useEffect(() => {
-    if (!initialCategory || initialCategory === 'todas' || initialCategory === 'recogido') {
-      setSelectedCategory('todas');
-      // Always collapsed / recogido when returning to menu
-      setCollapsedSections(ALL_SECTIONS_COLLAPSED);
-    } else {
+    if (initialCategory && initialCategory !== 'todas' && initialCategory !== 'recogido') {
       setSelectedCategory(initialCategory);
-      setCollapsedSections({
-        ...ALL_SECTIONS_COLLAPSED,
-        [initialCategory]: false
-      });
+    } else if (initialCategory === 'todas') {
+      setSelectedCategory('todas');
+    } else {
+      setSelectedCategory(getDefaultCategory());
     }
-    // Always start at the top of the dashboard so the Hero banner and category buttons are fully visible
+    // Always keep cards expanded and visible
+    setCollapsedSections({});
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [initialCategory]);
 
@@ -129,7 +117,13 @@ export default function Dashboard({
         setCollapsedSections({});
       } else {
         // Plegar todo el menú
-        setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+        setCollapsedSections({
+          gestion: true,
+          recursos: true,
+          docente: true,
+          estudiante: true,
+          admin: true
+        });
       }
     } else {
       // Plegar o desplegar la categoría actual seleccionada
@@ -570,7 +564,7 @@ export default function Dashboard({
             type="button"
             onClick={() => {
               setSelectedCategory('todas');
-              setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+              setCollapsedSections({});
             }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'todas'

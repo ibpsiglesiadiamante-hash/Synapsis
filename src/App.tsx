@@ -225,7 +225,9 @@ export default function App() {
     return localStorage.getItem('synapsis_activeTab') || 'dashboard';
   });
   const [dashboardCategory, setDashboardCategory] = useState<string>(() => {
-    return localStorage.getItem('synapsis_dash_cat') || 'todas';
+    const saved = localStorage.getItem('synapsis_dash_cat');
+    if (saved && saved !== 'todas' && saved !== 'recogido') return saved;
+    return 'admin';
   });
 
   useEffect(() => {
@@ -1482,9 +1484,9 @@ export default function App() {
             isSyncing={isSyncingFirebase}
             onNavigate={(tab) => {
               if (tab === 'dashboard') {
-                // Ir de tajo al menú general (todas las categorías)
-                setDashboardCategory('todas');
-                try { localStorage.setItem('synapsis_dash_cat', 'todas'); } catch(e) {}
+                const defaultCat = currentUser?.rol === 'estudiante' ? 'estudiante' : currentUser?.rol === 'docente' ? 'docente' : 'admin';
+                setDashboardCategory(defaultCat);
+                try { localStorage.setItem('synapsis_dash_cat', defaultCat); } catch(e) {}
               }
               setActiveTab(tab);
               setActiveEditExamId(null);
