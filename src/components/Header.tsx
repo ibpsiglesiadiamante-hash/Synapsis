@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout, QrCode, Share2, RefreshCw, Cloud } from 'lucide-react';
+import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout, QrCode, Share2, RefreshCw, Cloud, LayoutGrid, ArrowLeft } from 'lucide-react';
 import { User } from '../types';
 import { avatarColor, avatarLetter } from '../lib/db';
 import { bioCosmicSynth } from '../lib/audioEngine';
@@ -14,11 +14,14 @@ interface HeaderProps {
   theme: string;
   onThemeChange: (newTheme: string) => void;
   onLogout: () => void;
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
   onOpenShareModal?: () => void;
   onSyncFirebase?: () => void;
   isSyncing?: boolean;
+  onNavigate?: (pageId: string) => void;
+  activeTab?: string;
+  categoryName?: string;
 }
 
 export default function Header({ 
@@ -30,7 +33,10 @@ export default function Header({
   onToggleSidebar,
   onOpenShareModal,
   onSyncFirebase,
-  isSyncing = false
+  isSyncing = false,
+  onNavigate,
+  activeTab = 'dashboard',
+  categoryName
 }: HeaderProps) {
   const roleLabel = (currentUser?.rol && {
     admin: 'Administrador',
@@ -53,18 +59,31 @@ export default function Header({
 
   return (
     <header className="header fixed top-0 left-0 right-0 h-[60px] bg-white border-b border-slate-200 flex items-center px-4.5 gap-3.5 z-50 shadow-sm theme-bg-surface theme-border">
-      {/* Retractable Sidebar Menu Toggle Button */}
+      {/* Botón directo a Menú Principal o Categoría activa */}
       <button
-        onClick={onToggleSidebar}
-        className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-500 hover:text-slate-800 transition-colors cursor-pointer focus:outline-none flex items-center justify-center"
-        title={sidebarOpen ? "Ocultar menú" : "Mostrar menú"}
+        onClick={() => onNavigate && onNavigate('dashboard')}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs select-none active:scale-95 ${
+          activeTab === 'dashboard'
+            ? 'bg-slate-100 hover:bg-slate-200/90 text-slate-700 border-slate-200'
+            : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 border-teal-400 shadow-teal-500/20'
+        }`}
+        title={activeTab === 'dashboard' ? 'Menú Principal' : `Volver al módulo ${categoryName || 'Menú'}`}
       >
-        <Menu className="w-5.5 h-5.5" />
+        {activeTab === 'dashboard' ? (
+          <LayoutGrid className="w-4 h-4 text-teal-600" />
+        ) : (
+          <ArrowLeft className="w-4 h-4" />
+        )}
+        <span>{activeTab === 'dashboard' ? 'Menú' : (categoryName ? `← Volver a ${categoryName}` : 'Volver al Menú')}</span>
       </button>
 
-      <div className="header-logo flex items-center gap-2">
+      <div 
+        onClick={() => onNavigate && onNavigate('dashboard')}
+        className="header-logo flex items-center gap-2 cursor-pointer select-none"
+        title="Ir al Menú Principal"
+      >
         <div 
-          className="logo-icon w-[34px] h-[34px] rounded-lg flex items-center justify-center text-white text-lg font-bold"
+          className="logo-icon w-[34px] h-[34px] rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-xs"
           style={{ backgroundColor: 'var(--primary)' }}
         >
           S

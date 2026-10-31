@@ -908,10 +908,10 @@ export default function ExamBuilder({
       <div className="page-header flex items-center justify-between gap-3 mb-6 border-b border-slate-200 pb-3">
         <button 
           onClick={handleBack}
-          className="btn btn-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-250 hover:bg-slate-50 text-slate-700 cursor-pointer"
+          className="btn btn-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs cursor-pointer shadow-xs"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Volver</span>
+          <ArrowLeft className="w-4 h-4 text-teal-600" />
+          <span>← Volver a Docente</span>
         </button>
         <div className="flex items-center gap-2">
           {saveStatus === 'saving' && (

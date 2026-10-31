@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, CheckSquare, Users, Award, 
   HelpCircle, XCircle, TrendingUp, Sparkles, FileSpreadsheet,
@@ -11,7 +11,9 @@ import {
   Calendar, Layers, Clock, ShieldCheck, DollarSign,
   ChevronDown, ChevronUp, Eye, EyeOff, LayoutGrid,
   School, QrCode, ArrowRight, Activity, Cloud, Settings,
-  BarChart3, FileText, CheckCircle2, SlidersHorizontal
+  BarChart3, FileText, CheckCircle2, SlidersHorizontal,
+  Milestone, BookMarked, Library, Megaphone, ClipboardList,
+  Scroll
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester } from '../types';
 import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester } from '../lib/db';
@@ -26,6 +28,7 @@ interface DashboardProps {
   onNavigate: (pageId: string) => void;
   onTakeExam?: (examId: string) => void;
   theme?: string;
+  initialCategory?: string;
 }
 
 const natureQuotes = [
@@ -41,7 +44,18 @@ const natureQuotes = [
   { quote: "Admira la constelación lejana y aprende su lección: iluminar la inmensa noche con humilde silencio activo.", author: "Sabiduría del Cosmos" }
 ];
 
-export default function Dashboard({ currentUser, users, exams, submissions, subjects = [], semesters = [], onNavigate, onTakeExam, theme }: DashboardProps) {
+export default function Dashboard({ 
+  currentUser, 
+  users, 
+  exams, 
+  submissions, 
+  subjects = [], 
+  semesters = [], 
+  onNavigate, 
+  onTakeExam, 
+  theme,
+  initialCategory = 'todas'
+}: DashboardProps) {
   const rol = currentUser.rol;
   const allMyUserIds = users 
     ? users.filter(u => u.nombre === currentUser.nombre || u.email.toLowerCase() === currentUser.email.toLowerCase()).map(u => u.id)
@@ -50,11 +64,29 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
   const [subsPage, setSubsPage] = useState(1);
   const [examsPage, setExamsPage] = useState(1);
 
-  // Layout & Category States matching image_6cff5dfb.png
-  const [selectedCategory, setSelectedCategory] = useState<string>('todas');
+  // Layout & Category States matching image_6cff5dfb.png & image_d35f7ea1.png
+  // Defaults to the category of the last visited module so the user returns right there
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => initialCategory || 'todas');
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  // Sync with initialCategory when navigating back from a module
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+      setCollapsedSections(prev => ({
+        ...prev,
+        [initialCategory]: false
+      }));
+      setTimeout(() => {
+        const el = document.getElementById(`category-${initialCategory}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 120);
+    }
+  }, [initialCategory]);
 
   const handleNextQuote = () => {
     setQuoteIndex((prev) => (prev + 1) % natureQuotes.length);
@@ -73,11 +105,11 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
       setCollapsedSections({});
     } else {
       setCollapsedSections({
-        academico: true,
-        evaluaciones: true,
-        estudiantes: true,
-        finanzas: true,
-        comunidad: true
+        gestion: true,
+        recursos: true,
+        docente: true,
+        estudiante: true,
+        admin: true
       });
     }
   };
@@ -151,7 +183,7 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
     { label: 'Estudiantes Activos', value: totalStudents, icon: <Users className="w-5 h-5" />, color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)' },
   ];
 
-  // Definition of ERP Modules Categorized (16 modules total)
+  // DEFINICIÓN EXACTA DE CATEGORÍAS Y MÓDULOS DEL MENÚ (Identical to image_d35f7ea1.png)
   interface ModuleItem {
     id: string;
     title: string;
@@ -171,174 +203,217 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
 
   const categories: CategoryGroup[] = [
     {
-      id: 'academico',
-      name: 'Académico & Programas',
-      badgeCount: 4,
+      id: 'gestion',
+      name: 'Gestión Escolar',
+      badgeCount: 5,
+      accentDot: 'bg-teal-400',
+      modules: [
+        {
+          id: 'asistencia',
+          title: 'Asistencia',
+          desc: 'Control de asistencia diario por fecha y clase',
+          icon: <CheckSquare className="w-4 h-4" />,
+          pageId: 'asistencia',
+          color: 'text-teal-400'
+        },
+        {
+          id: 'boletines',
+          title: 'Boletines Acad.',
+          desc: 'Generación de actas y boletines oficiales',
+          icon: <Award className="w-4 h-4" />,
+          pageId: 'boletines',
+          color: 'text-amber-400'
+        },
+        {
+          id: 'agenda',
+          title: 'Agenda Escolar',
+          desc: 'Calendario escolar y eventos del campus',
+          icon: <Calendar className="w-4 h-4" />,
+          pageId: 'agenda',
+          color: 'text-cyan-400'
+        },
+        {
+          id: 'tablon',
+          title: 'Tablón de Anunc.',
+          desc: 'Comunicados y avisos institucionales',
+          icon: <Megaphone className="w-4 h-4" />,
+          pageId: 'tablon',
+          color: 'text-sky-300'
+        },
+        {
+          id: 'finanzas',
+          title: 'Finanzas / Pagos',
+          desc: 'Control de pensiones, matrículas y cartera',
+          icon: <DollarSign className="w-4 h-4" />,
+          pageId: 'finanzas',
+          color: 'text-emerald-400'
+        }
+      ]
+    },
+    {
+      id: 'recursos',
+      name: 'Recursos y Comunidad',
+      badgeCount: 2,
+      accentDot: 'bg-emerald-400',
+      modules: [
+        {
+          id: 'educativo',
+          title: 'Biblioteca de Conocimiento',
+          desc: 'Recursos educativos y material pedagógico',
+          icon: <Library className="w-4 h-4" />,
+          pageId: 'educativo',
+          color: 'text-indigo-400'
+        },
+        {
+          id: 'biblia',
+          title: 'La Sagrada Biblia',
+          desc: 'Lectura bíblica, libros, capítulos y versículos',
+          icon: <BookMarked className="w-4 h-4" />,
+          pageId: 'biblia',
+          color: 'text-amber-500'
+        }
+      ]
+    },
+    {
+      id: 'docente',
+      name: 'Docente',
+      badgeCount: 3,
       accentDot: 'bg-cyan-400',
       modules: [
         {
+          id: 'misExamenes',
+          title: 'Mis exámenes',
+          desc: 'Banco de evaluaciones, diseño y editor IA',
+          icon: <FileText className="w-4 h-4" />,
+          pageId: 'misExamenes',
+          color: 'text-cyan-400'
+        },
+        {
+          id: 'parciales',
+          title: 'Mis parciales',
+          desc: 'Configuración de fechas, cortes y semestres',
+          icon: <Milestone className="w-4 h-4" />,
+          pageId: 'parciales',
+          color: 'text-teal-300'
+        },
+        {
+          id: 'resultados',
+          title: 'Resultados',
+          desc: 'Calificación de exámenes y retroalimentación',
+          icon: <BarChart3 className="w-4 h-4" />,
+          pageId: 'resultados',
+          color: 'text-emerald-300'
+        }
+      ]
+    },
+    {
+      id: 'estudiante',
+      name: 'Estudiante',
+      badgeCount: 3,
+      accentDot: 'bg-purple-400',
+      modules: [
+        {
+          id: 'misMaterias',
+          title: 'Mis Asignaturas',
+          desc: 'Materias inscritas y docentes titulares',
+          icon: <BookOpen className="w-4 h-4" />,
+          pageId: 'misMaterias',
+          color: 'text-purple-400'
+        },
+        {
+          id: 'misExamenesTake',
+          title: 'Exámenes disp.',
+          desc: 'Presentar exámenes y evaluaciones activas',
+          icon: <GraduationCap className="w-4 h-4" />,
+          pageId: 'misExamenesTake',
+          color: 'text-cyan-300'
+        },
+        {
+          id: 'miHistorial',
+          title: 'Mi historial',
+          desc: 'Histórico de notas, intentos y resultados',
+          icon: <Clock className="w-4 h-4" />,
+          pageId: 'miHistorial',
+          color: 'text-amber-300'
+        }
+      ]
+    },
+    {
+      id: 'admin',
+      name: 'Administrador',
+      badgeCount: 8,
+      accentDot: 'bg-blue-400',
+      modules: [
+        {
+          id: 'usuarios',
+          title: 'Usuarios',
+          desc: 'Gestión de credenciales, roles y accesos',
+          icon: <Users className="w-4 h-4" />,
+          pageId: 'usuarios',
+          color: 'text-blue-400'
+        },
+        {
+          id: 'instituciones',
+          title: 'Institutos',
+          desc: 'Configuración de sedes e institución',
+          icon: <School className="w-4 h-4" />,
+          pageId: 'instituciones',
+          color: 'text-teal-300'
+        },
+        {
           id: 'asignaturas',
-          title: 'Asignaturas & Malla',
-          desc: 'Gestión de materias y docentes',
+          title: 'Asignaturas',
+          desc: 'Malla de materias, códigos y créditos',
           icon: <BookOpen className="w-4 h-4" />,
           pageId: 'asignaturas',
           color: 'text-cyan-400'
         },
         {
           id: 'semestres',
-          title: 'Semestres & Períodos',
-          desc: 'Niveles académicos activos',
+          title: 'Semestres',
+          desc: 'Semestres académicos (I al IX oficiales)',
           icon: <Layers className="w-4 h-4" />,
           pageId: 'semestres',
-          color: 'text-teal-300'
+          color: 'text-emerald-300'
         },
         {
-          id: 'horarios',
-          title: 'Horarios & Aulas',
-          desc: 'Distribución horaria y salones',
-          icon: <Clock className="w-4 h-4" />,
-          pageId: 'asignaturas',
+          id: 'registroNotas',
+          title: 'Reg. de Notas',
+          desc: 'Libro oficial de calificaciones',
+          icon: <Award className="w-4 h-4" />,
+          pageId: 'registroNotas',
+          color: 'text-amber-400'
+        },
+        {
+          id: 'trabajos',
+          title: 'Trabajos Acad.',
+          desc: 'Asignaciones y recepción de tareas',
+          icon: <ClipboardList className="w-4 h-4" />,
+          pageId: 'trabajos',
+          color: 'text-purple-300'
+        },
+        {
+          id: 'historialAcademico',
+          title: 'Historial Acad.',
+          desc: 'Kárdex global de calificaciones',
+          icon: <Scroll className="w-4 h-4" />,
+          pageId: 'historialAcademico',
           color: 'text-sky-300'
         },
         {
-          id: 'mallaCurricular',
-          title: 'Plan de Estudios PEI',
-          desc: 'Registro y créditos por ciclo',
-          icon: <School className="w-4 h-4" />,
-          pageId: 'semestres',
-          color: 'text-emerald-300'
-        }
-      ]
-    },
-    {
-      id: 'evaluaciones',
-      name: 'Evaluaciones & Parciales',
-      badgeCount: 4,
-      accentDot: 'bg-teal-400',
-      modules: [
-        {
-          id: 'examenes',
-          title: 'Banco de Exámenes',
-          desc: 'Creación y edición de parciales',
-          icon: <FileText className="w-4 h-4" />,
-          pageId: 'examenes',
-          color: 'text-teal-400'
-        },
-        {
-          id: 'builder',
-          title: 'Constructor con IA',
-          desc: 'Generador asistido de preguntas',
-          icon: <Sparkles className="w-4 h-4" />,
-          pageId: 'builder',
-          color: 'text-amber-300'
-        },
-        {
-          id: 'calificaciones',
-          title: 'Boletines & Notas',
-          desc: 'Consolidado de actas y notas',
-          icon: <Award className="w-4 h-4" />,
-          pageId: 'resultados',
-          color: 'text-emerald-400'
-        },
-        {
-          id: 'presentar',
-          title: 'Presentar Parcial',
-          desc: 'Portal de pruebas en línea',
-          icon: <CheckSquare className="w-4 h-4" />,
-          pageId: 'misExamenesTake',
-          color: 'text-cyan-300'
-        }
-      ]
-    },
-    {
-      id: 'estudiantes',
-      name: 'Estudiantes & Matrículas',
-      badgeCount: 3,
-      accentDot: 'bg-purple-400',
-      modules: [
-        {
-          id: 'directorio',
-          title: 'Directorio Estudiantil',
-          desc: 'Fichas, cédulas y carnetización',
+          id: 'estudiantes',
+          title: 'Estudiantes',
+          desc: 'Directorio estudiantil, cédulas y carnet',
           icon: <Users className="w-4 h-4" />,
           pageId: 'estudiantes',
-          color: 'text-purple-400'
-        },
-        {
-          id: 'matriculas',
-          title: 'Matrículas & Semestres',
-          desc: 'Inscripción y asignación de materias',
-          icon: <CheckCircle2 className="w-4 h-4" />,
-          pageId: 'matriculas',
-          color: 'text-teal-300'
-        },
-        {
-          id: 'asistencia',
-          title: 'Control de Asistencia',
-          desc: 'Registro por fecha y clase',
-          icon: <Calendar className="w-4 h-4" />,
-          pageId: 'asistencia',
-          color: 'text-sky-400'
-        }
-      ]
-    },
-    {
-      id: 'finanzas',
-      name: 'Finanzas & Tesorería',
-      badgeCount: 2,
-      accentDot: 'bg-emerald-400',
-      modules: [
-        {
-          id: 'pensiones',
-          title: 'Control de Pensiones',
-          desc: 'Pagos, matrículas y cartera',
-          icon: <DollarSign className="w-4 h-4" />,
-          pageId: 'finanzas',
           color: 'text-emerald-400'
-        },
-        {
-          id: 'pazysalvo',
-          title: 'Paz y Salvos & Facturación',
-          desc: 'Certificados y comprobantes',
-          icon: <FileSpreadsheet className="w-4 h-4" />,
-          pageId: 'finanzas',
-          color: 'text-cyan-300'
-        }
-      ]
-    },
-    {
-      id: 'comunidad',
-      name: 'Comunidad & Respaldo Cloud',
-      badgeCount: 3,
-      accentDot: 'bg-sky-400',
-      modules: [
-        {
-          id: 'docentes',
-          title: 'Directorio Docente',
-          desc: 'Cuerpo profesoral y asignaciones',
-          icon: <GraduationCap className="w-4 h-4" />,
-          pageId: 'docentes',
-          color: 'text-sky-300'
-        },
-        {
-          id: 'auditoria',
-          title: 'Auditoría Cloud & Backups',
-          desc: 'Sincronización Supabase & Firebase',
-          icon: <Cloud className="w-4 h-4" />,
-          pageId: 'auditoria',
-          color: 'text-teal-400'
-        },
-        {
-          id: 'cosmos',
-          title: 'Portal Bio-Cósmico',
-          desc: 'Sintonía, sabiduría y reflexión',
-          icon: <Leaf className="w-4 h-4" />,
-          pageId: 'dashboard',
-          color: 'text-emerald-300'
         }
       ]
     }
   ];
+
+  // Total Modules: 5 + 2 + 3 + 3 + 8 = 21
+  const totalModulesCount = categories.reduce((acc, c) => acc + c.badgeCount, 0);
 
   const filteredCategories = selectedCategory === 'todas'
     ? categories
@@ -459,11 +534,11 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
       )}
 
       {/* ========================================================= */}
-      {/* CATEGORY FILTER PILLS BAR (Identical to image_6cff5dfb)    */}
+      {/* CATEGORY FILTER PILLS BAR (Matching image_d35f7ea1.png)    */}
       {/* ========================================================= */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2">
         
-        {/* Left: Filter Pills */}
+        {/* Left: Filter Pills matching the 5 authentic categories */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
@@ -475,72 +550,72 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Todas (16)</span>
+            <span>Todas ({totalModulesCount})</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('academico')}
+            onClick={() => setSelectedCategory('gestion')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'academico'
+              selectedCategory === 'gestion'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Académico (4)</span>
+            <CheckSquare className="w-3.5 h-3.5" />
+            <span>Gestión Escolar (5)</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('evaluaciones')}
+            onClick={() => setSelectedCategory('recursos')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'evaluaciones'
+              selectedCategory === 'recursos'
+                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
+                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
+            }`}
+          >
+            <BookMarked className="w-3.5 h-3.5" />
+            <span>Recursos y Comunidad (2)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedCategory('docente')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
+              selectedCategory === 'docente'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Evaluaciones (4)</span>
+            <span>Docente (3)</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('estudiantes')}
+            onClick={() => setSelectedCategory('estudiante')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'estudiantes'
+              selectedCategory === 'estudiante'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Estudiantes (3)</span>
+            <span>Estudiante (3)</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSelectedCategory('finanzas')}
+            onClick={() => setSelectedCategory('admin')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'finanzas'
+              selectedCategory === 'admin'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
             }`}
           >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>Finanzas (2)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('comunidad')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'comunidad'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <Cloud className="w-3.5 h-3.5" />
-            <span>Comunidad (3)</span>
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Administrador (8)</span>
           </button>
         </div>
 
@@ -586,14 +661,22 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
       </div>
 
       {/* ========================================================= */}
-      {/* CATEGORY SECTIONS WITH HORIZONTAL MODULE CARDS            */}
+      {/* CATEGORY SECTIONS WITH REAL MODULE CARDS                  */}
       {/* ========================================================= */}
       <div className="space-y-6 pt-1">
         {filteredCategories.map(cat => {
           const isCollapsed = !!collapsedSections[cat.id];
 
           return (
-            <div key={cat.id} className="space-y-3">
+            <div 
+              key={cat.id} 
+              id={`category-${cat.id}`} 
+              className={`space-y-3 scroll-mt-24 transition-all rounded-3xl p-3 sm:p-4 border ${
+                selectedCategory === cat.id 
+                  ? 'bg-[#062c34]/70 border-cyan-500/60 shadow-[0_0_25px_rgba(6,182,212,0.15)] ring-1 ring-cyan-400/40' 
+                  : 'bg-transparent border-transparent'
+              }`}
+            >
               {/* Category Header with 3D Relief and glowing dot */}
               <div 
                 onClick={() => toggleSection(cat.id)}
@@ -604,6 +687,11 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
                   <h2 className="text-xs sm:text-sm font-black tracking-widest uppercase text-white text-relief-header">
                     {cat.name}
                   </h2>
+                  {selectedCategory === cat.id && (
+                    <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-950/90 px-2 py-0.5 rounded-full border border-cyan-600/60 font-semibold shadow-xs hidden sm:inline">
+                      Categoría seleccionada
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#072d35] border border-[#11505e] group-hover:border-cyan-400/60 transition-colors">
@@ -659,7 +747,7 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
       </div>
 
       {/* ========================================================= */}
-      {/* BOTTOM STATUS ROW (Exact match to image_6cff5dfb)         */}
+      {/* BOTTOM STATUS ROW (Cumplimiento, Crecimiento, Respaldo)   */}
       {/* ========================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-4">
         
@@ -834,7 +922,7 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
                   <span>Exámenes y Parciales en Curso</span>
                 </h3>
                 <button 
-                  onClick={() => onNavigate(rol === 'estudiante' ? 'misExamenesTake' : 'examenes')} 
+                  onClick={() => onNavigate(rol === 'estudiante' ? 'misExamenesTake' : 'misExamenes')} 
                   className="text-xs font-bold text-cyan-400 hover:underline cursor-pointer"
                 >
                   Gestionar →
@@ -874,7 +962,7 @@ export default function Dashboard({ currentUser, users, exams, submissions, subj
                         ) : (
                           <button
                             type="button"
-                            onClick={() => onNavigate('examenes')}
+                            onClick={() => onNavigate('misExamenes')}
                             className="px-2.5 py-1 rounded-lg bg-[#073038] hover:bg-[#0c4450] text-cyan-300 text-xs font-semibold shrink-0 cursor-pointer border border-[#11505e]"
                           >
                             Ver Detalles

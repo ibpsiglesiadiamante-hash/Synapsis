@@ -25,7 +25,9 @@ import {
   CheckCircle2,
   Phone,
   CreditCard,
-  Camera
+  Camera,
+  ArrowLeft,
+  LayoutGrid
 } from 'lucide-react';
 
 import { 
@@ -82,7 +84,6 @@ import {
 } from './lib/supabase';
 
 import Header from './components/Header';
-import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import MisExamenes from './components/MisExamenes';
 import ExamBuilder from './components/ExamBuilder';
@@ -223,14 +224,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('synapsis_activeTab') || 'dashboard';
   });
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem('synapsis_sidebarOpen');
-    return saved !== null ? saved === 'true' : true;
+  const [dashboardCategory, setDashboardCategory] = useState<string>(() => {
+    return localStorage.getItem('synapsis_dash_cat') || 'todas';
   });
 
   useEffect(() => {
-    localStorage.setItem('synapsis_sidebarOpen', String(sidebarOpen));
-  }, [sidebarOpen]);
+    localStorage.setItem('synapsis_dash_cat', dashboardCategory);
+  }, [dashboardCategory]);
 
   const [theme, setTheme] = useState<'theme-academia' | 'theme-cyber'>(() => {
     const saved = localStorage.getItem('synapsis-theme');
@@ -774,6 +774,79 @@ export default function App() {
     showToast(`Se depuraron ${duplicateIds.length} parciales duplicados (se conservaron intactos los parciales con evaluaciones de estudiantes).`, 'success');
   };
 
+  // Helper to get module category id & display name
+  const getModuleCategory = (tab: string): { id: string; name: string } => {
+    switch (tab) {
+      case 'asistencia':
+      case 'boletines':
+      case 'agenda':
+      case 'tablon':
+      case 'finanzas':
+        return { id: 'gestion', name: 'Gestión Escolar' };
+
+      case 'educativo':
+      case 'biblia':
+        return { id: 'recursos', name: 'Recursos y Comunidad' };
+
+      case 'misExamenes':
+      case 'examenes':
+      case 'parciales':
+      case 'resultados':
+        return { id: 'docente', name: 'Docente' };
+
+      case 'misMaterias':
+      case 'misExamenesTake':
+      case 'miHistorial':
+        return { id: 'estudiante', name: 'Estudiante' };
+
+      case 'usuarios':
+      case 'docentes':
+      case 'instituciones':
+      case 'asignaturas':
+      case 'materias':
+      case 'semestres':
+      case 'registroNotas':
+      case 'trabajos':
+      case 'historialAcademico':
+      case 'estudiantes':
+        return { id: 'admin', name: 'Administrador' };
+
+      default:
+        return { id: 'todas', name: 'Menú Principal' };
+    }
+  };
+
+  // Helper to get friendly name of active module
+  const getModuleName = (tab: string) => {
+    switch (tab) {
+      case 'asistencia': return 'Control de Asistencia';
+      case 'boletines': return 'Boletines Académicos';
+      case 'agenda': return 'Agenda Escolar';
+      case 'tablon': return 'Tablón de Anuncios';
+      case 'finanzas': return 'Finanzas & Tesorería';
+      case 'educativo': return 'Biblioteca de Conocimiento';
+      case 'biblia': return 'La Sagrada Biblia';
+      case 'examenes':
+      case 'misExamenes': return 'Banco de Exámenes';
+      case 'parciales': return 'Mis Parciales';
+      case 'resultados': return 'Resultados & Calificaciones';
+      case 'misMaterias': return 'Mis Asignaturas';
+      case 'misExamenesTake': return 'Exámenes Disponibles';
+      case 'miHistorial': return 'Mi Historial de Notas';
+      case 'usuarios':
+      case 'docentes': return 'Directorio de Usuarios';
+      case 'instituciones': return 'Sedes e Institutos';
+      case 'asignaturas':
+      case 'materias': return 'Asignaturas & Materias';
+      case 'semestres': return 'Semestres Académicos';
+      case 'registroNotas': return 'Registro Oficial de Notas';
+      case 'trabajos': return 'Trabajos Académicos';
+      case 'historialAcademico': return 'Historial Académico Global';
+      case 'estudiantes': return 'Gestión de Estudiantes';
+      default: return tab;
+    }
+  };
+
   // Dynamic panel mapper
   const renderActivePanel = () => {
     if (!currentUser) return null;
@@ -794,7 +867,11 @@ export default function App() {
           examId={activeEditExamId}
           exams={db.exams}
           parciales={db.parciales}
-          onBack={() => setActiveEditExamId(null)}
+          onBack={() => {
+            setActiveEditExamId(null);
+            setDashboardCategory('docente');
+            try { localStorage.setItem('synapsis_dash_cat', 'docente'); } catch(e) {}
+          }}
           onUpdateExams={updateExams}
           toast={showToast}
         />
@@ -812,13 +889,18 @@ export default function App() {
             subjects={db.subjects}
             semesters={db.semesters}
             theme={theme}
+            initialCategory={dashboardCategory}
             onNavigate={(page) => {
+              const cat = getModuleCategory(page);
+              setDashboardCategory(cat.id);
+              try { localStorage.setItem('synapsis_dash_cat', cat.id); } catch(e) {}
               setActiveTab(page);
               setActiveEditExamId(null);
             }}
             onTakeExam={(examId) => setActiveTakeExamId(examId)}
           />
         );
+      case 'examenes':
       case 'misExamenes':
         return (
           <MisExamenes
@@ -877,6 +959,7 @@ export default function App() {
             submissions={db.submissions}
           />
         );
+      case 'docentes':
       case 'usuarios':
         return (
           <Usuarios
@@ -896,6 +979,7 @@ export default function App() {
             toast={showToast}
           />
         );
+      case 'materias':
       case 'asignaturas':
         return (
           <Asignaturas
@@ -1393,57 +1477,77 @@ export default function App() {
             theme={theme}
             onThemeChange={(newTheme) => setTheme(newTheme as 'theme-academia' | 'theme-cyber')}
             onLogout={handleLogout}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen(prev => !prev)}
             onOpenShareModal={() => setIsShareModalOpen(true)}
             onSyncFirebase={handleManualSync}
             isSyncing={isSyncingFirebase}
+            onNavigate={(tab) => {
+              if (tab === 'dashboard' && activeTab !== 'dashboard') {
+                const cat = getModuleCategory(activeTab);
+                setDashboardCategory(cat.id);
+                try { localStorage.setItem('synapsis_dash_cat', cat.id); } catch(e) {}
+              }
+              setActiveTab(tab);
+              setActiveEditExamId(null);
+            }}
+            activeTab={activeTab}
+            categoryName={activeTab !== 'dashboard' ? getModuleCategory(activeTab).name : undefined}
           />
 
-          <div className="flex-1 flex relative pt-[60px]">
-            
-            {/* BACKDROP FOR MOBILE SCREEN OVERLAY */}
-            {sidebarOpen && (
-              <div 
-                className="fixed inset-0 bg-black/35 z-30 md:hidden backdrop-blur-[1.5px] transition-opacity duration-300 pointer-events-auto"
-                onClick={() => setSidebarOpen(false)}
-              />
-            )}
+          <div className="flex-1 flex flex-col relative pt-[60px]">
+            {/* MAIN CONTENT WORKSPACE (Full width clean dashboard & focused module view) */}
+            <main className="flex-1 p-3.5 sm:p-5 md:p-6.5 bg-slate-50 w-full max-w-7xl mx-auto overflow-x-hidden relative">
+              {/* Opción destacada: Volver a la categoría exacta del módulo o al menú general */}
+              {activeTab !== 'dashboard' && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
+                  <div className="flex items-center gap-2">
+                    {/* Botón principal: Volver y posicionarse justo en la categoría del módulo (ej: Estudiante) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cat = getModuleCategory(activeTab);
+                        setDashboardCategory(cat.id);
+                        try { localStorage.setItem('synapsis_dash_cat', cat.id); } catch(e) {}
+                        setActiveTab('dashboard');
+                        setActiveEditExamId(null);
+                      }}
+                      className="flex items-center gap-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md group active:scale-95"
+                      title={`Regresar al menú posicionado en ${getModuleCategory(activeTab).name}`}
+                    >
+                      <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                      <span>← Volver a {getModuleCategory(activeTab).name}</span>
+                    </button>
 
-            {/* SIDEBAR NAVIGATION COLUMN */}
-            <Sidebar 
-              currentUser={currentUser}
-              activePage={activeTab}
-              isOpen={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              onOpenShareModal={() => setIsShareModalOpen(true)}
-              onPageChange={(tab) => {
-                setActiveTab(tab);
-                setActiveEditExamId(null); // clear builder state on page navigate
-                if (window.innerWidth < 768) {
-                  setSidebarOpen(false);
-                }
-              }}
-            />
+                    {/* Botón secundario: Ver Menú General con todas las categorías */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDashboardCategory('todas');
+                        try { localStorage.setItem('synapsis_dash_cat', 'todas'); } catch(e) {}
+                        setActiveTab('dashboard');
+                        setActiveEditExamId(null);
+                      }}
+                      className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-[#041c21] hover:bg-[#0a3842] border border-[#115463] px-3 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+                      title="Ver todas las categorías del menú"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Todas las Categorías</span>
+                    </button>
+                  </div>
 
-            {/* MAIN CONTENT WORKSPACE */}
-            <main className={`flex-1 p-4 md:p-6.5 bg-slate-50 max-w-full overflow-x-hidden relative transition-all duration-300 ease-in-out ${
-              sidebarOpen ? 'md:pl-[266px]' : ''
-            }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-teal-200/70 uppercase">
+                      Módulo actual:
+                    </span>
+                    <span className="text-xs font-black text-cyan-300 px-3 py-1 rounded-lg bg-[#041c21] border border-[#115463]">
+                      {getModuleName(activeTab)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {renderActivePanel()}
             </main>
           </div>
-
-          {/* FLOATING ACTION BUTTON TO SHOW COLLAPSED SIDEBAR */}
-          {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="fixed bottom-6 left-6 z-50 bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl p-4 rounded-full cursor-pointer transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95 border-2 border-white focus:outline-none"
-              title="Mostrar menú de navegación"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          )}
 
           {/* ACTIVE TEST OVERLAY TAKING PORTAL PANEL */}
           {activeTakeExamId && (
@@ -1455,7 +1559,11 @@ export default function App() {
               subjects={db.subjects}
               semesters={db.semesters}
               currentUser={currentUser}
-              onExit={() => setActiveTakeExamId(null)}
+              onExit={() => {
+                setActiveTakeExamId(null);
+                setDashboardCategory('estudiante');
+                try { localStorage.setItem('synapsis_dash_cat', 'estudiante'); } catch(e) {}
+              }}
               onSubmit={(sub) => {
                 // Prepend new submittal
                 const nextSubs = [sub, ...db.submissions];
