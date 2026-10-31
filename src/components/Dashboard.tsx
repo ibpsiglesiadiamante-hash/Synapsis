@@ -118,17 +118,25 @@ export default function Dashboard({
     }));
   };
 
-  const allAreCollapsed = ['gestion', 'recursos', 'docente', 'estudiante', 'admin'].every(
-    key => !!collapsedSections[key]
-  );
+  const isCurrentViewCollapsed = selectedCategory === 'todas'
+    ? ['gestion', 'recursos', 'docente', 'estudiante', 'admin'].every(key => !!collapsedSections[key])
+    : !!collapsedSections[selectedCategory];
 
   const toggleAllSections = () => {
-    if (allAreCollapsed) {
-      // Desplegar todos los módulos
-      setCollapsedSections({});
+    if (selectedCategory === 'todas') {
+      if (isCurrentViewCollapsed) {
+        // Desplegar todos los módulos
+        setCollapsedSections({});
+      } else {
+        // Plegar todo el menú
+        setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+      }
     } else {
-      // Recoger todo el menú
-      setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+      // Plegar o desplegar la categoría actual seleccionada
+      setCollapsedSections(prev => ({
+        ...prev,
+        [selectedCategory]: !prev[selectedCategory]
+      }));
     }
   };
 
@@ -560,7 +568,10 @@ export default function Dashboard({
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
-            onClick={() => setSelectedCategory('todas')}
+            onClick={() => {
+              setSelectedCategory('todas');
+              setCollapsedSections(ALL_SECTIONS_COLLAPSED);
+            }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'todas'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
@@ -657,19 +668,10 @@ export default function Dashboard({
           <button
             type="button"
             onClick={toggleAllSections}
-            className="px-3 py-1.5 rounded-xl bg-[#072d35] border border-[#104b58] hover:border-cyan-400/50 text-teal-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-[#072d35] border border-[#104b58] hover:border-cyan-400/50 text-teal-100 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer select-none"
           >
-            {allAreCollapsed ? (
-              <>
-                <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Desplegar Todos</span>
-              </>
-            ) : (
-              <>
-                <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Recoger Todos</span>
-              </>
-            )}
+            <ChevronDown className={`w-3.5 h-3.5 text-cyan-400 transition-transform duration-200 ${!isCurrentViewCollapsed ? 'rotate-180' : ''}`} />
+            <span>{isCurrentViewCollapsed ? 'Desplegar Todos' : 'Plegar Todos'}</span>
           </button>
 
           <div className="flex items-center bg-[#072d35] border border-[#104b58] rounded-xl p-1 gap-1 text-xs">
