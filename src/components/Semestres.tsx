@@ -237,7 +237,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left text-sm text-slate-600">
               <thead>
-                <tr className="bg-slate-50 text-slate-400 font-medium text-xs uppercase tracking-wider theme-bg-surface border-b border-slate-200">
+                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs theme-bg-surface border-b border-slate-200">
                   <th className="py-3 px-4">Semestre / Ciclo</th>
                   <th className="py-3 px-4">Código único</th>
                   <th className="py-3 px-4">Nivel Académico</th>
@@ -392,20 +392,20 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
 
             <form onSubmit={handleSubmit} className="modal-body p-5 space-y-4">
               <div className="form-group">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre del ciclo <span className="text-red-500">*</span></label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Nombre del ciclo <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   required
                   value={nombre}
                   onChange={e => handleNombreChange(e.target.value)}
                   placeholder="Ej / Semestre 2026-I"
-                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white"
+                  className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-white font-medium"
                 />
               </div>
 
               <div className="form-group">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  <label className="form-label text-xs font-semibold text-slate-700 block">
                     Código de semestre <span className="text-indigo-600 font-semibold font-mono">(Automático)</span>
                   </label>
                   <button
@@ -427,7 +427,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
                       setIsCodeAuto(false);
                     }}
                     placeholder="Ej / SEM-26A"
-                    className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-slate-50 font-mono font-bold text-indigo-900 uppercase"
+                    className="form-control w-full p-2 border rounded-lg text-sm focus:outline-indigo-650 bg-slate-50 font-mono font-bold text-indigo-900"
                   />
                   <span className="absolute right-2.5 top-2.5 pointer-events-none">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
@@ -439,7 +439,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
               </div>
 
               <div className="form-group flex flex-col">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nivel Académico</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Nivel Académico</label>
                 <select
                   value={nivel}
                   onChange={e => setNivel(e.target.value)}
@@ -451,7 +451,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
               </div>
 
               <div className="form-group flex flex-col">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Habilitación temporal</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Habilitación temporal</label>
                 <select
                   value={estado}
                   onChange={e => setEstado(e.target.value as 'activo' | 'inactivo')}

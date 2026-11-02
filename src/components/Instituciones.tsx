@@ -286,7 +286,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
             <form onSubmit={handleSubmit} className="modal-body p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group mb-1">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre de Institución <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Nombre de Institución <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
@@ -297,7 +297,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
                   />
                 </div>
                 <div className="form-group mb-1">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tipo de centro</label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Tipo de centro</label>
                   <select
                     value={tipo}
                     onChange={e => setTipo(e.target.value)}
@@ -312,7 +312,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Código institucional o NIT</label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Código institucional o NIT</label>
                   <input
                     type="text"
                     value={codigo}
@@ -322,7 +322,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ciudad o localidad</label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Ciudad o localidad</label>
                   <input
                     type="text"
                     value={ciudad}
@@ -334,7 +334,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
               </div>
 
               <div className="form-group">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Dirección postal de contacto</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Dirección postal de contacto</label>
                 <input
                   type="text"
                   value={direccion}
@@ -346,7 +346,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Teléfono</label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Teléfono</label>
                   <input
                     type="text"
                     value={telefono}
@@ -356,7 +356,7 @@ export default function Instituciones({ instituciones, onUpdateInstituciones, to
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Correo electrónico</label>
+                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Correo electrónico</label>
                   <input
                     type="email"
                     value={email}

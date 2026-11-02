@@ -913,7 +913,7 @@ export default function Asignaturas({
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {/* Nombre */}
               <div>
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Nombre de la materia <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -932,7 +932,7 @@ export default function Asignaturas({
               {/* Semestre & Nivel */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Semestre <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -947,7 +947,7 @@ export default function Asignaturas({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
                     Nivel Académico
                   </label>
                   <select
@@ -964,7 +964,7 @@ export default function Asignaturas({
               {/* Código */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                  <label className="text-xs font-semibold text-slate-700 block">
                     Código de materia <span className="text-indigo-600 font-mono">(Automático)</span>
                   </label>
                   <button
@@ -986,7 +986,7 @@ export default function Asignaturas({
                       setIsCodeAuto(false);
                     }}
                     placeholder="Ej. TEO-101"
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 bg-slate-50 font-mono font-bold text-indigo-900 uppercase"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-600 bg-slate-50 font-mono font-bold text-indigo-900"
                   />
                   <span className="absolute right-3 top-3 pointer-events-none">
                     <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -996,7 +996,7 @@ export default function Asignaturas({
 
               {/* Docente a cargo */}
               <div>
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
                   Docente a cargo
                 </label>
                 <select

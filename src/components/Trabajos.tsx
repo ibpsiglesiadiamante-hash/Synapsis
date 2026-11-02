@@ -572,7 +572,7 @@ export default function Trabajos({
 
             <form onSubmit={handleSubmit} className="modal-body p-6 space-y-4">
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                   Título del Trabajo <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -586,7 +586,7 @@ export default function Trabajos({
               </div>
 
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                   Asignatura <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -616,8 +616,8 @@ export default function Trabajos({
               </div>
 
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
-                  Vincular a un Parcial / Corte <span className="text-slate-400 text-[9px] lowercase font-normal">(opcional)</span>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
+                  Vincular a un Parcial / Corte <span className="text-slate-400 text-[10px] font-normal">(opcional)</span>
                 </label>
                 <select
                   value={parcialId}
@@ -633,7 +633,7 @@ export default function Trabajos({
               </div>
 
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                   Puntaje Máximo
                 </label>
                 <input
@@ -647,7 +647,7 @@ export default function Trabajos({
               </div>
 
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">
                   Fecha de Límite de Entrega
                 </label>
                 <input
@@ -659,7 +659,7 @@ export default function Trabajos({
               </div>
 
               <div className="form-group flex flex-col font-sans">
-                <label className="form-label text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descripción / Indicaciones</label>
+                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Descripción / Indicaciones</label>
                 <textarea
                   value={descripcion}
                   onChange={e => setDescripcion(e.target.value)}

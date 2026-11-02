@@ -384,22 +384,22 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
             <form onSubmit={handleSubmit} className="modal-body p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group flex flex-col">
-                  <label className="form-label text-xs font-bold text-slate-500 mb-1 leading-none uppercase">Nombre Completo <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-semibold text-slate-700 mb-1 leading-none">Nombre Completo <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={nombre}
                     onChange={e => setNombre(e.target.value)}
                     placeholder="Tu nombre completo"
-                    className="form-control p-2 border rounded-lg text-sm bg-white shrink-0 focus:outline-indigo-600"
+                    className="form-control p-2 border rounded-lg text-sm bg-white shrink-0 focus:outline-indigo-600 font-medium"
                   />
                 </div>
                 <div className="form-group flex flex-col">
-                  <label className="form-label text-xs font-bold text-slate-500 mb-1 leading-none uppercase">Rol de acceso <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-semibold text-slate-700 mb-1 leading-none">Rol de acceso <span className="text-red-500">*</span></label>
                   <select
                     value={rol}
                     onChange={e => setRol(e.target.value as User['rol'])}
-                    className="form-control p-2 border rounded-lg text-sm bg-white shrink-0 focus:outline-indigo-600 cursor-pointer text-slate-700"
+                    className="form-control p-2 border rounded-lg text-sm bg-white shrink-0 focus:outline-indigo-600 cursor-pointer text-slate-700 font-semibold"
                   >
                     <option value="estudiante">Estudiante</option>
                     <option value="docente">Docente</option>
@@ -409,7 +409,7 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
               </div>
 
               <div className="form-group flex flex-col">
-                <label className="form-label text-xs font-bold text-slate-500 mb-1 leading-none uppercase">Correo electrónico <span className="text-red-500">*</span></label>
+                <label className="form-label text-xs font-semibold text-slate-700 mb-1 leading-none">Correo electrónico <span className="text-red-500">*</span></label>
                 <input
                   type="email"
                   required
@@ -421,7 +421,7 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
               </div>
 
               <div className="form-group flex flex-col">
-                <label className="form-label text-xs font-bold text-slate-500 mb-1 leading-none uppercase">
+                <label className="form-label text-xs font-semibold text-slate-700 mb-1 leading-none">
                   Contraseña {editingUserId ? '(Opcional cambiar)' : <span className="text-red-500">*</span>}
                 </label>
                 <input
