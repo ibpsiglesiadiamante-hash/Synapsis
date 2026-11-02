@@ -109,10 +109,10 @@ export default function MisExamenes({
 
     const newExam: Exam = {
       id: uid(),
-      titulo: resolvedTitle.toUpperCase(),
-      materia: materia.trim().toUpperCase(),
+      titulo: resolvedTitle.trim(),
+      materia: materia.trim(),
       parcialId: parcialId || null,
-      descripcion: description.trim().toUpperCase(),
+      descripcion: description.trim(),
       docenteId: currentUser.id,
       estado,
       tiempo: Number(tiempo) || 0,
@@ -295,11 +295,11 @@ export default function MisExamenes({
                             referrerPolicy="no-referrer"
                           />
                           <div className="min-w-0">
-                            <span className="block font-extrabold truncate max-w-sm" title={e.titulo}>
+                            <span className="block font-extrabold truncate max-w-md xl:max-w-2xl" title={e.titulo}>
                               {cleanExamTitle(e.titulo)}
                             </span>
                             {e.subtitulo && (
-                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-sm">{e.subtitulo}</span>
+                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-md xl:max-w-2xl">{e.subtitulo}</span>
                             )}
                           </div>
                         </div>

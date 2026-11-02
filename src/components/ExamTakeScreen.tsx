@@ -330,19 +330,19 @@ export default function ExamTakeScreen({
       return `${mins}m ${secs}s`;
     };
 
-    const uppercaseAnswers: Record<string, any> = {};
+    const studentAnswers: Record<string, any> = {};
     Object.keys(answers || {}).forEach(k => {
       const val = answers[k];
       if (typeof val === 'string') {
-        uppercaseAnswers[k] = val.toUpperCase();
+        studentAnswers[k] = val.trim();
       } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
         const subMap: Record<string, any> = {};
         Object.keys(val).forEach(subK => {
-          subMap[subK] = typeof val[subK] === 'string' ? val[subK].toUpperCase() : val[subK];
+          subMap[subK] = typeof val[subK] === 'string' ? val[subK].trim() : val[subK];
         });
-        uppercaseAnswers[k] = subMap;
+        studentAnswers[k] = subMap;
       } else {
-        uppercaseAnswers[k] = val;
+        studentAnswers[k] = val;
       }
     });
 
@@ -350,8 +350,8 @@ export default function ExamTakeScreen({
       id: uid(),
       examenId: exam.id,
       estudianteId: currentUser.id,
-      estudianteNombre: currentUser.nombre ? currentUser.nombre.toUpperCase() : '',
-      respuestas: uppercaseAnswers,
+      estudianteNombre: currentUser.nombre || '',
+      respuestas: studentAnswers,
       puntaje: percent,
       aprobado: isApproved,
       correctas: correctCount,
@@ -492,7 +492,7 @@ export default function ExamTakeScreen({
                   return lines.map((line, idx) => (
                     <div 
                       key={idx} 
-                      className={`uppercase text-center tracking-wide text-slate-900 ${
+                      className={`text-center tracking-wide text-slate-900 ${
                         idx === 0 
                           ? 'font-extrabold text-base md:text-lg text-[#1a237e]' 
                           : 'font-semibold text-xs md:text-sm text-slate-600 mt-0.5'

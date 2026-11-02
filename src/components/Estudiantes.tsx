@@ -258,11 +258,11 @@ export default function Estudiantes({
 
         const updatedUser: User = {
           ...nextUsers[idx],
-          nombre: nombre.trim().toUpperCase(),
+          nombre: nombre.trim(),
           email: finalEmail.toLowerCase(),
           codigo: finalCode,
-          cedula: cedula.trim().toUpperCase() || undefined,
-          celular: celular.trim().toUpperCase() || undefined,
+          cedula: cedula.trim() || undefined,
+          celular: celular.trim() || undefined,
           ...(pass ? { pass: pass.trim() } : {}),
         };
         nextUsers[idx] = updatedUser;
@@ -278,14 +278,14 @@ export default function Estudiantes({
 
       const newSt: User = {
         id: uid(),
-        nombre: nombre.trim().toUpperCase(),
+        nombre: nombre.trim(),
         email: finalEmail.toLowerCase(),
         pass: pass.trim() || finalCode,
         codigo: finalCode,
         rol: 'estudiante',
         creado: now(),
-        cedula: cedula.trim().toUpperCase() || undefined,
-        celular: celular.trim().toUpperCase() || undefined,
+        cedula: cedula.trim() || undefined,
+        celular: celular.trim() || undefined,
       };
 
       saveDocToFirestore('users', newSt);
@@ -350,14 +350,14 @@ export default function Estudiantes({
 
       const newSt: User = {
         id: uid(),
-        nombre: studentName.toUpperCase(),
+        nombre: studentName.trim(),
         email: finalEmail,
         pass: automaticCode,
         codigo: automaticCode,
         rol: 'estudiante',
         creado: now(),
-        cedula: customCedula ? customCedula.toUpperCase() : undefined,
-        celular: customCelular ? customCelular.toUpperCase() : undefined,
+        cedula: customCedula ? customCedula.trim() : undefined,
+        celular: customCelular ? customCelular.trim() : undefined,
       };
 
       saveDocToFirestore('users', newSt);

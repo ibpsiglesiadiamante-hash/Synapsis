@@ -138,7 +138,7 @@ export default function Parciales({
       if (idx > -1) {
         const updatedP: Parcial = {
           ...nextParciales[idx],
-          nombre: resolvedNombre.toUpperCase(),
+          nombre: resolvedNombre.trim(),
           semestre,
           asignatura,
           fechaInicio,
@@ -154,7 +154,7 @@ export default function Parciales({
     } else {
       const newParcial: Parcial = {
         id: uid(),
-        nombre: resolvedNombre.toUpperCase(),
+        nombre: resolvedNombre.trim(),
         semestre,
         asignatura,
         fechaInicio,

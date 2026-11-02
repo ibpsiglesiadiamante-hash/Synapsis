@@ -1060,7 +1060,7 @@ export default function ExamBuilder({
                 onChange={e => setTitle(e.target.value)}
                 placeholder="INSTITUTO BÍBLICO PATRICIO SYMES - MATERIA..."
                 rows={1}
-                className="w-full text-center text-md md:text-lg font-bold text-slate-800 bg-transparent border border-dashed border-slate-200 rounded-lg py-3 px-3 outline-none placeholder-slate-400 focus:border-indigo-500 uppercase tracking-wide leading-normal"
+                className="w-full text-center text-md md:text-lg font-bold text-slate-800 bg-transparent border border-dashed border-slate-200 rounded-lg py-3 px-3 outline-none placeholder-slate-400 focus:border-indigo-500 tracking-wide leading-normal"
                 style={{ lineHeight: '1.5' }}
               />
               <p className="text-[10px] text-slate-400 mt-1.5 select-none">
@@ -1959,7 +1959,7 @@ export default function ExamBuilder({
                       return lines.map((line, idx) => (
                         <div 
                           key={idx} 
-                          className={`uppercase text-center leading-relaxed tracking-wider text-slate-800 ${
+                          className={`text-center leading-relaxed tracking-wider text-slate-800 ${
                             idx === 0 
                               ? 'font-bold text-xs text-slate-900' 
                               : 'font-semibold text-[10px] text-slate-500 mt-0.5'

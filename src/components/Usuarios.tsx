@@ -89,7 +89,7 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
         const existing = nextUsers[userIdx];
         nextUsers[userIdx] = {
           ...existing,
-          nombre: nombre.trim().toUpperCase(),
+          nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
           rol,
           ...(pass ? { pass } : {}), // only override if typed
@@ -106,7 +106,7 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
 
       const newUser: User = {
         id: uid(),
-        nombre: nombre.trim().toUpperCase(),
+        nombre: nombre.trim(),
         email: email.trim().toLowerCase(),
         pass,
         rol,

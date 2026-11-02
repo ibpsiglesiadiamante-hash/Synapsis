@@ -125,10 +125,10 @@ export default function Trabajos({
       if (idx > -1) {
         nextTasks[idx] = {
           ...nextTasks[idx],
-          titulo: resolvedTitulo.toUpperCase(),
+          titulo: resolvedTitulo.trim(),
           asignatura: asignaturaId,
           parcialId: parcialId || undefined,
-          descripcion: descripcion.trim().toUpperCase(),
+          descripcion: descripcion.trim(),
           fechaEntrega,
           puntos: Number(puntos) || 100,
           actualizado: now(),
@@ -139,10 +139,10 @@ export default function Trabajos({
     } else {
       const newAssignment: Assignment = {
         id: uid(),
-        titulo: resolvedTitulo.toUpperCase(),
+        titulo: resolvedTitulo.trim(),
         asignatura: asignaturaId,
         parcialId: parcialId || undefined,
-        descripcion: descripcion.trim().toUpperCase(),
+        descripcion: descripcion.trim(),
         fechaEntrega,
         puntos: Number(puntos) || 100,
         creado: now(),
