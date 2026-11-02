@@ -267,7 +267,7 @@ export default function MisExamenes({
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left text-sm text-slate-600">
               <thead>
-                <tr className="bg-slate-50 text-slate-400 font-medium text-xs uppercase tracking-wider border-b border-slate-250 theme-bg-surface">
+                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs tracking-wide border-b border-slate-250 theme-bg-surface">
                   <th className="py-3 px-4">Título</th>
                   <th className="py-3 px-4">Materia</th>
                   <th className="py-3 px-4">Preguntas</th>
@@ -353,13 +353,13 @@ export default function MisExamenes({
                                   handleDeleteExam(e.id);
                                   setConfirmDeleteId(null);
                                 }}
-                                className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
                               >
                                 Sí
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
                               >
                                 No
                               </button>

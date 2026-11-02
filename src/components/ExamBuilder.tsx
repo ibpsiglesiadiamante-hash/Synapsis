@@ -1069,7 +1069,7 @@ export default function ExamBuilder({
 
               {/* Subtitle / Bible Verse */}
               <div className="w-full mt-4 flex flex-col items-center">
-                <span className="text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Subtítulo / Mensaje / Cita Bíblica</span>
+                <span className="text-xs font-semibold text-slate-500 mb-1">Subtítulo / Mensaje / Cita Bíblica</span>
                 <AutoExpandingTextarea 
                   value={subtitulo}
                   onChange={e => setSubtitulo(e.target.value)}
@@ -1081,7 +1081,7 @@ export default function ExamBuilder({
 
               {/* General Description / Instructions */}
               <div className="w-full mt-4 flex flex-col items-center">
-                <span className="text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1">Instrucciones Generales</span>
+                <span className="text-xs font-semibold text-slate-500 mb-1">Instrucciones Generales</span>
                 <AutoExpandingTextarea 
                   value={description}
                   onChange={e => setDescription(e.target.value)}
@@ -1096,7 +1096,7 @@ export default function ExamBuilder({
             <div className="bg-white p-5 border-t border-slate-100 theme-bg-surface theme-border">
               <div className="grid grid-cols-12 gap-4">
                 <div className="col-span-12 md:col-span-6">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Materia</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Materia</label>
                   <input 
                     type="text" 
                     value={materia} 
@@ -1106,7 +1106,7 @@ export default function ExamBuilder({
                   />
                 </div>
                 <div className="col-span-6 md:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Tiempo límite</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Tiempo límite</label>
                   <select 
                     value={tiempo} 
                     onChange={e => setTiempo(Number(e.target.value))}
@@ -1122,7 +1122,7 @@ export default function ExamBuilder({
                   </select>
                 </div>
                 <div className="col-span-6 md:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Intentos</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Intentos</label>
                   <select 
                     value={intentos} 
                     onChange={e => setIntentos(Number(e.target.value))}
@@ -1134,7 +1134,7 @@ export default function ExamBuilder({
                   </select>
                 </div>
                 <div className="col-span-12 md:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nota aprobatoria</label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Nota aprobatoria</label>
                   <input 
                     type="number" 
                     min={1} 
@@ -1210,7 +1210,7 @@ export default function ExamBuilder({
                       <div className="flex flex-col gap-2 mb-4">
                         {isTF ? (
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-205 theme-bg-surface">
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-3">
+                            <span className="text-xs font-semibold text-slate-600 block mb-3">
                               ¿Cuál es la respuesta correcta predeterminada para esta afirmación?
                             </span>
                             <div className="flex gap-3">
@@ -1355,7 +1355,7 @@ export default function ExamBuilder({
                       <div className="space-y-4 mb-4">
                         {/* Word bank manager */}
                         <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-left">
-                          <label className="text-xs font-bold text-indigo-750 uppercase tracking-wide block mb-1">
+                          <label className="text-xs font-semibold text-indigo-800 block mb-1">
                             📦 Caja de Palabras / Banco de Vocabulario (Listado de Palabras)
                           </label>
                           <p className="text-[11px] text-slate-500 mb-3 block">
@@ -1498,7 +1498,7 @@ export default function ExamBuilder({
 
                         {/* Enunciados manager */}
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left">
-                          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-2">
+                          <label className="text-xs font-semibold text-slate-700 block mb-2">
                             📑 Enunciados y Definiciones Correctas
                           </label>
                           <p className="text-[11px] text-slate-400 mb-3 block">
@@ -1570,7 +1570,7 @@ export default function ExamBuilder({
                       <div className="space-y-4 mb-4">
                         {/* Word bank manager */}
                         <div className="bg-indigo-55 border border-indigo-110 p-4 rounded-xl text-left dark:bg-slate-900/40 dark:border-slate-800">
-                          <label className="text-xs font-bold text-indigo-750 uppercase tracking-wide block mb-2 dark:text-cyan-400">
+                          <label className="text-xs font-semibold text-indigo-800 block mb-2 dark:text-cyan-400">
                             📦 Caja de Palabras / Banco de Vocabulario (Listado de Palabras)
                           </label>
                           <p className="text-[11px] text-slate-500 mb-3 block dark:text-slate-400">

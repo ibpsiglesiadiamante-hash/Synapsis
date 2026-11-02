@@ -1537,7 +1537,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono text-teal-200/70 uppercase">
+                    <span className="text-[11px] font-mono text-teal-200/70">
                       Módulo actual:
                     </span>
                     <span className="text-xs font-black text-cyan-300 px-3 py-1 rounded-lg bg-[#041c21] border border-[#115463]">

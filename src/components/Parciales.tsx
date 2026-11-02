@@ -320,7 +320,7 @@ export default function Parciales({
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left text-sm text-slate-600">
               <thead>
-                <tr className="bg-slate-50 text-slate-400 font-medium text-xs uppercase tracking-wider theme-bg-surface border-b border-slate-200">
+                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs tracking-wide theme-bg-surface border-b border-slate-200">
                   <th className="py-3 px-4">Corte Parcial</th>
                   <th className="py-3 px-4">Syllabus Materia</th>
                   <th className="py-3 px-4">Periodo Calendario</th>
@@ -396,13 +396,13 @@ export default function Parciales({
                                   handleDelete(p.id);
                                   setConfirmDeleteId(null);
                                 }}
-                                className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
                               >
                                 Sí
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
+                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
                               >
                                 No
                               </button>
@@ -484,7 +484,7 @@ export default function Parciales({
 
             <form onSubmit={handleSubmit} className="modal-body p-5 space-y-4">
               <div className="form-group">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre del parcial o corte <span className="text-red-500">*</span></label>
+                <label className="form-label text-xs font-semibold text-slate-600 block mb-1">Nombre del parcial o corte <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   required
@@ -497,7 +497,7 @@ export default function Parciales({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Semestre vinculante <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-semibold text-slate-600 block mb-1">Semestre vinculante <span className="text-red-500">*</span></label>
                   <SearchableSelect
                     options={semesters.map(s => ({ value: s.id, label: s.nombre, subLabel: s.estado }))}
                     value={semestre}
@@ -507,7 +507,7 @@ export default function Parciales({
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Programa / Materia <span className="text-red-500">*</span></label>
+                  <label className="form-label text-xs font-semibold text-slate-600 block mb-1">Programa / Materia <span className="text-red-500">*</span></label>
                   <SearchableSelect
                     options={(isTeacher ? teacherSubjects : subjects).map(s => ({ value: s.id, label: s.nombre, subLabel: s.codigo ? `Código: ${s.codigo}` : undefined }))}
                     value={asignatura}
@@ -528,7 +528,7 @@ export default function Parciales({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-sans">Fecha de Apertura</label>
+                  <label className="form-label text-xs font-semibold text-slate-600 block mb-1 font-sans">Fecha de Apertura</label>
                   <input
                     type="date"
                     value={fechaInicio}
@@ -537,7 +537,7 @@ export default function Parciales({
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-sans">Fecha de Cierre</label>
+                  <label className="form-label text-xs font-semibold text-slate-600 block mb-1 font-sans">Fecha de Cierre</label>
                   <input
                     type="date"
                     value={fechaFin}
@@ -548,7 +548,7 @@ export default function Parciales({
               </div>
 
               <div className="form-group">
-                <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ponderación académica (%) <span className="text-red-500">*</span></label>
+                <label className="form-label text-xs font-semibold text-slate-600 block mb-1">Ponderación académica (%) <span className="text-red-500">*</span></label>
                 <input
                   type="number"
                   min={1}

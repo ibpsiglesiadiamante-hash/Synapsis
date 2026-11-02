@@ -184,7 +184,7 @@ export default function Asistencia({ currentUser, users, subjects, semesters, to
       };
     });
     setActiveRecords(newRecords);
-    toast(`Todos los estudiantes marcados como: ${status.toUpperCase()}`, 'success');
+    toast(`Todos los estudiantes marcados como: ${status}`, 'success');
   };
 
   const saveAttendance = () => {

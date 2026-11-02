@@ -561,7 +561,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 text-slate-400 font-medium uppercase tracking-wider theme-bg-surface border-b border-slate-200">
+                <tr className="bg-slate-50 text-slate-500 font-semibold theme-bg-surface border-b border-slate-200">
                   <th className="py-3 px-5">Referencia</th>
                   <th className="py-3 px-5">Estudiante</th>
                   <th className="py-3 px-5">Concepto</th>
@@ -738,7 +738,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
             {/* Form Fields */}
             <form onSubmit={handleSavePayment} className="p-6 space-y-4 text-xs font-semibold">
               <div className="flex flex-col">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Elegir Estudiante <span className="text-red-500">*</span></label>
+                <label className="text-xs font-medium text-slate-600 mb-1">Elegir Estudiante <span className="text-red-500">*</span></label>
                 <SearchableSelect
                   options={students.map(s => ({
                     value: s.id,
@@ -754,7 +754,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Concepto Cobro</label>
+                  <label className="text-xs font-medium text-slate-600 mb-1">Concepto Cobro</label>
                   <select
                     value={concepto}
                     onChange={e => setConcepto(e.target.value as any)}
@@ -768,7 +768,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Monto en COP <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-slate-600 mb-1">Monto en COP <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     required
@@ -782,7 +782,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fecha Vencimiento <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-slate-600 mb-1">Fecha Vencimiento <span className="text-red-500">*</span></label>
                   <input
                     type="date"
                     required
@@ -793,7 +793,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ref. de Facturación</label>
+                  <label className="text-xs font-medium text-slate-600 mb-1">Ref. de Facturación</label>
                   <input
                     type="text"
                     placeholder="Auto-generar si vacío"
@@ -806,7 +806,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
 
               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                 <div className="flex flex-col">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Estado de Pago</label>
+                  <label className="text-xs font-medium text-slate-600 mb-1">Estado de Pago</label>
                   <select
                     value={estado}
                     onChange={e => setEstado(e.target.value as any)}

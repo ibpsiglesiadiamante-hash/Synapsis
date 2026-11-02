@@ -163,15 +163,15 @@ export default function HistorialAcademico({
                 <div className="flex gap-4 self-stretch md:self-auto font-sans">
                   <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
                     <span className="block text-xl font-black text-indigo-700">{overallAvg > 0 ? overallAvg.toFixed(1) : '—'}</span>
-                    <span className="text-[9px] uppercase font-bold text-slate-400">Promedio</span>
+                    <span className="text-[10px] font-semibold text-slate-500">Promedio</span>
                   </div>
                   <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
                     <span className="block text-xl font-bold text-slate-705">{studentSubs.length}</span>
-                    <span className="text-[9px] uppercase font-bold text-slate-400">Exámenes</span>
+                    <span className="text-[10px] font-semibold text-slate-500">Exámenes</span>
                   </div>
                   <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
                     <span className="block text-xl font-bold text-slate-705">{studentGrades.length}</span>
-                    <span className="text-[9px] uppercase font-bold text-slate-400">Notas Reg</span>
+                    <span className="text-[10px] font-semibold text-slate-500">Notas Reg</span>
                   </div>
                 </div>
               </div>
@@ -197,7 +197,7 @@ export default function HistorialAcademico({
                           <div key={sub.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl relative flex justify-between items-center text-xs">
                             <div>
                               <div className="font-bold text-slate-800">{ex?.titulo || 'Evaluación'}</div>
-                              <div className="text-[10px] text-slate-400 mt-1 uppercase font-bold">{ex?.materia} · {sub.tiempoUsado} usado</div>
+                              <div className="text-[10px] text-slate-500 mt-1 font-medium">{ex?.materia} · {sub.tiempoUsado} usado</div>
                               <div className="text-[9px] text-slate-400 mt-0.5">{fmtDate(sub.fecha)}</div>
                             </div>
                             <div className="text-right shrink-0">
@@ -230,7 +230,7 @@ export default function HistorialAcademico({
                           <div key={grade.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex justify-between items-center text-xs">
                             <div className="max-w-[190px] truncate">
                               <div className="font-bold text-slate-805 truncate">{sCourse.subName}</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5 font-bold uppercase">{sCourse.parcName}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5 font-medium">{sCourse.parcName}</div>
                               {grade.comentario && <div className="text-[10px] text-slate-450 italic mt-1.5 truncate">"{grade.comentario}"</div>}
                             </div>
                             <div className="text-right shrink-0">

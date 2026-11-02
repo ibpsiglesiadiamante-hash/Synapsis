@@ -322,8 +322,8 @@ export default function Tablon({ currentUser, users, toast }: TablonProps) {
                 {/* Notice header card */}
                 <div className="p-5 space-y-3 pb-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className={`px-2.5 py-0.5 rounded-full border text-[9px] uppercase font-bold tracking-wider ${catBadge}`}>
-                      {n.categoria.toUpperCase()}
+                    <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-semibold ${catBadge}`}>
+                      {n.categoria}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono font-medium flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" /> {fmtDate(n.creado)}

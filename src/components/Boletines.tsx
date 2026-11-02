@@ -186,7 +186,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
     }
     
     let csvContent = "sep=;\n";
-    csvContent += `REPORTE ACADÉMICO INDIVIDUAL;${targetStudent.nombre.toUpperCase()}\n`;
+    csvContent += `REPORTE ACADÉMICO INDIVIDUAL;${targetStudent.nombre}\n`;
     csvContent += `Instituto Synapsis;NIT: 322199-B12;Resolución 2341-99\n`;
     csvContent += `Generado el: ${fmtDate(new Date().toISOString())}\n\n`;
     
@@ -198,7 +198,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
     
     csvContent += `ASIGNATURA;CÓDIGO;`;
     activeParciales.forEach(p => {
-      csvContent += `${p.nombre.toUpperCase()} EV1;${p.nombre.toUpperCase()} EV2;${p.nombre.toUpperCase()} TRABAJOS;${p.nombre.toUpperCase()} NOTA FINAL (${p.porcentaje}%);`;
+      csvContent += `${p.nombre} EV1;${p.nombre} EV2;${p.nombre} TRABAJOS;${p.nombre} NOTA FINAL (${p.porcentaje}%);`;
     });
     csvContent += `DEFINITIVA GENERAL;DESEMPEÑO\n`;
     
@@ -360,14 +360,14 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
     }
     
     let csvContent = "sep=;\n";
-    csvContent += `REPORTE CONSOLIDADO COLECTIVO - SEMESTRE: ${targetSemester.nombre.toUpperCase()}\n`;
+    csvContent += `REPORTE CONSOLIDADO COLECTIVO - SEMESTRE: ${targetSemester.nombre}\n`;
     csvContent += `Instituto Synapsis;NIT: 322199-B12\n`;
     csvContent += `Generado el: ${fmtDate(new Date().toISOString())}\n\n`;
     
     // CSV table header
     csvContent += `ESTUDIANTE;DOCUMENTO IND;CORREO;ASISTENCIA %;`;
     subjects.forEach(sub => {
-      csvContent += `${sub.nombre.toUpperCase()};`;
+      csvContent += `${sub.nombre};`;
     });
     csvContent += `PROMEDIO GENERAL;ASIGNATURAS APROBADAS;ASIGNATURAS REPROBADAS;ESTADO ACADÉMICO\n`;
     
