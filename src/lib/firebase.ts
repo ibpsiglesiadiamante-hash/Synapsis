@@ -192,8 +192,8 @@ export async function deleteDocFromFirestore(collName: string, docId: string): P
   }
 }
 
-import { User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission } from '../types';
-import { mergeStates, saveState, getDeletedIds, markAsDeleted, PROTECTED_IDS } from './db';
+import { User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission, RecycleItem } from '../types';
+import { mergeStates, saveState, getDeletedIds, markAsDeleted, unmarkAsDeleted, getRecycleBin, saveRecycleBin, PROTECTED_IDS } from './db';
 
 export interface AppState {
   users: User[];
@@ -206,6 +206,7 @@ export interface AppState {
   gradeRecords: GradeRecord[];
   assignments: Assignment[];
   assignmentSubmissions: AssignmentSubmission[];
+  recycleBin?: RecycleItem[];
 }
 
 /**
@@ -265,6 +266,41 @@ export async function registerDeletedId(id: string, collName?: string): Promise<
 }
 
 /**
+ * Removes an ID from the deleted registry (e.g. when restored from the Recycle Bin).
+ */
+export async function unRegisterDeletedId(id: string): Promise<void> {
+  if (!id) return;
+  unmarkAsDeleted(id);
+  if (isFirestoreAvailable) {
+    try {
+      const metaRef = doc(db, 'system_metadata', 'deleted_records');
+      const allDeleted = Array.from(getDeletedIds());
+      await setDoc(metaRef, { ids: allDeleted, lastUpdated: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      // Background sync error ignored
+    }
+  }
+}
+
+export async function saveRecycleItemToFirestore(item: RecycleItem): Promise<void> {
+  if (!isFirestoreAvailable) return;
+  try {
+    await saveDocToFirestore('recycle_bin', item, false);
+  } catch (e) {
+    console.warn('Failed to save recycle item to Firestore:', e);
+  }
+}
+
+export async function deleteRecycleItemFromFirestore(id: string): Promise<void> {
+  if (!isFirestoreAvailable) return;
+  try {
+    await deleteDocFromFirestore('recycle_bin', id);
+  } catch (e) {
+    console.warn('Failed to delete recycle item from Firestore:', e);
+  }
+}
+
+/**
  * Fetch the complete application state from Firestore
  * Returns null if the users collection is empty (meaning database is completely uninitialized)
  */
@@ -275,7 +311,7 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
 
   const fetchPromise = async (): Promise<AppState | null> => {
     try {
-      // Synchronize deleted IDs and all collections in parallel for maximum speed (<600ms)
+      // Synchronize deleted IDs, recycle bin and all collections in parallel for maximum speed (<600ms)
       const [
         deletedIds,
         users,
@@ -287,7 +323,8 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
         submissions,
         gradeRecords,
         assignments,
-        assignmentSubmissions
+        assignmentSubmissions,
+        recycleBinItems
       ] = await Promise.all([
         syncDeletedIdsWithFirestore(),
         fetchCollectionFromFirestore<User>('users'),
@@ -300,19 +337,30 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
         fetchCollectionFromFirestore<GradeRecord>('gradeRecords'),
         fetchCollectionFromFirestore<Assignment>('assignments'),
         fetchCollectionFromFirestore<AssignmentSubmission>('assignmentSubmissions'),
+        fetchCollectionFromFirestore<RecycleItem>('recycle_bin'),
       ]);
 
       if (users.length === 0 && institutions.length === 0 && subjects.length === 0) {
         return null; // DB is completely fresh/empty
       }
 
+      // Merge local recycle bin with Firestore recycle bin
+      const localRecycle = getRecycleBin();
+      const recycleMap = new Map<string, RecycleItem>();
+      localRecycle.forEach(r => recycleMap.set(r.id, r));
+      recycleBinItems.forEach(r => recycleMap.set(r.id, r));
+      const combinedRecycle = Array.from(recycleMap.values());
+      saveRecycleBin(combinedRecycle);
+      const recycleOriginalIds = new Set(combinedRecycle.map(r => r.originalId));
+
       const filterAliveAndClean = <T extends { id: string }>(coll: string, list: T[]): T[] => {
         return (list || []).filter(item => {
-          if (item && item.id && deletedIds.has(item.id)) {
+          if (!item || !item.id) return false;
+          if (deletedIds.has(item.id) || recycleOriginalIds.has(item.id)) {
             deleteDocFromFirestore(coll, item.id).catch(() => {});
             return false;
           }
-          return item && item.id;
+          return true;
         });
       };
 
@@ -327,6 +375,7 @@ export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
         gradeRecords: filterAliveAndClean('gradeRecords', gradeRecords),
         assignments: filterAliveAndClean('assignments', assignments),
         assignmentSubmissions: filterAliveAndClean('assignmentSubmissions', assignmentSubmissions),
+        recycleBin: combinedRecycle
       };
     } catch (error) {
       console.error('Failed to download full db state from Firestore, continuing with local state.', error);

@@ -269,6 +269,9 @@ service cloud.firestore {
     match /attendance/{id} {
       allow read, write: if true;
     }
+    match /recycle_bin/{id} {
+      allow read, write: if true;
+    }
     match /test/{id} {
       allow read, write: if true;
     }

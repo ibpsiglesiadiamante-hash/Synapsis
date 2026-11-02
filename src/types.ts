@@ -200,6 +200,18 @@ export interface Submission {
   actualizado?: string;
 }
 
+export interface RecycleItem {
+  id: string;
+  originalId: string;
+  tipo: 'parcial' | 'estudiante' | 'examen' | 'materia' | 'semestre' | 'trabajo' | 'institucion' | 'otro';
+  titulo: string;
+  subtitulo?: string;
+  detalles?: string;
+  fechaEliminacion: string;
+  eliminadoPor?: string;
+  data: any; // Serialized entity for exact restoration
+}
+
 export interface AppState {
   users: User[];
   institutions: Institution[];
@@ -211,4 +223,5 @@ export interface AppState {
   gradeRecords: GradeRecord[];
   assignments: Assignment[];
   assignmentSubmissions: AssignmentSubmission[];
+  recycleBin?: RecycleItem[];
 }

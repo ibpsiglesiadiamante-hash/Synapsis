@@ -4,7 +4,7 @@
  */
 
 import { 
-  User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission, AppState 
+  User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission, AppState, RecycleItem 
 } from '../types';
 import { backupAppState } from '../data/backupData';
 export { backupAppState };
@@ -416,158 +416,94 @@ export function markAsDeleted(id: string) {
   }
 }
 
+export function unmarkAsDeleted(id: string) {
+  if (!id) return;
+  try {
+    const deleted = getDeletedIds();
+    deleted.delete(id);
+    safeStorage.setItem('ep_deleted_ids', JSON.stringify(Array.from(deleted)));
+  } catch (e) {
+    console.error('Failed to unmark entity as deleted', e);
+  }
+}
+
+export function getRecycleBin(): RecycleItem[] {
+  try {
+    const raw = safeStorage.getItem('ep_recycle_bin');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveRecycleBin(items: RecycleItem[]): void {
+  try {
+    safeStorage.setItem('ep_recycle_bin', JSON.stringify(items || []));
+  } catch (e) {
+    console.warn('Failed to save recycle bin locally:', e);
+  }
+}
+
 export function getInitialState(): AppState {
   const defaults = buildDefaultSeedData();
   const deletedIds = getDeletedIds();
+  const recycleBin = getRecycleBin();
+  const recycleBinIds = new Set(recycleBin.map(r => r.originalId));
+
   const isInitialized = safeStorage.getItem('ep_initialized') === 'true';
 
-  try {
-    const rawU = safeStorage.getItem('ep_users');
-    const existingU: any[] = rawU ? JSON.parse(rawU) : [];
-    const rawInst = safeStorage.getItem('ep_instituciones');
-    const existingInst: any[] = rawInst ? JSON.parse(rawInst) : [];
-    const hasPatricio = existingInst.some((i: any) => i.nombre && i.nombre.toUpperCase().includes('PATRICIO'));
-    if (!isInitialized || existingU.length < 15 || !hasPatricio) {
-      return restoreBackupState();
-    }
-  } catch (e) {
-    return restoreBackupState();
-  }
-
+  // Helper para cargar una colección sin resucitar eliminados ni reciclados
   const loadCollection = (key: string, defaultItems: any[] = []) => {
     try {
       const raw = safeStorage.getItem(key);
       if (raw !== null) {
         const loaded: any[] = JSON.parse(raw);
         if (Array.isArray(loaded)) {
-          return loaded.filter(item => item && item.id && !deletedIds.has(item.id));
+          return loaded.filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
         }
       }
-      return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
+      // Solo recurrir a defaultItems si la app nunca ha sido inicializada
+      if (!isInitialized) {
+        return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
+      }
+      return [];
     } catch (e) {
-      return defaultItems.filter(item => item && item.id && !deletedIds.has(item.id));
+      return !isInitialized ? defaultItems.filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id)) : [];
     }
   };
 
-  const rawUsers = loadCollection('ep_users', defaults.users);
+  const users = loadCollection('ep_users', defaults.users);
   const institutions = loadCollection('ep_instituciones', defaults.institutions);
-  const rawSubjects = loadCollection('ep_subjects', defaults.subjects);
-  const rawSemesters = loadCollection('ep_semesters', defaults.semesters);
-  const rawParciales = loadCollection('ep_parciales', defaults.parciales);
-  const rawExams = loadCollection('ep_exams', defaults.exams);
-  const rawSubmissions = loadCollection('ep_submissions', defaults.submissions);
-  const rawGrades = loadCollection('ep_notas', defaults.gradeRecords);
+  const subjects = loadCollection('ep_subjects', defaults.subjects);
+  const semesters = loadCollection('ep_semesters', defaults.semesters);
+  const parciales = loadCollection('ep_parciales', defaults.parciales);
+  const exams = loadCollection('ep_exams', defaults.exams);
+  const submissions = loadCollection('ep_submissions', defaults.submissions);
+  const gradeRecords = loadCollection('ep_notas', defaults.gradeRecords);
   const assignments = loadCollection('ep_trabajos', defaults.assignments);
   const assignmentSubmissions = loadCollection('ep_entregas_trabajos', defaults.assignmentSubmissions);
 
-  // Guarantee that all institutional completed evaluations (submissions) are present
-  const defaultSubmissions = (defaults.submissions || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const submisMap = new Map<string, Submission>();
-  defaultSubmissions.forEach(s => submisMap.set(s.id, s));
-  rawSubmissions.forEach(s => {
-    if (!s || !s.id || deletedIds.has(s.id)) return;
-    submisMap.set(s.id, s);
-  });
-  const submissions = Array.from(submisMap.values());
-
-  // Guarantee that all institutional grade records are present
-  const defaultGrades = (defaults.gradeRecords || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const gradeMap = new Map<string, GradeRecord>();
-  defaultGrades.forEach(g => gradeMap.set(g.id, g));
-  rawGrades.forEach(g => {
-    if (!g || !g.id || deletedIds.has(g.id)) return;
-    gradeMap.set(g.id, g);
-  });
-  const gradeRecords = Array.from(gradeMap.values());
-
-  // Guarantee that all students and staff from institute records are present
-  const defaultUsers = (defaults.users || []).filter(item => item && item.id && !deletedIds.has(item.id));
-  const userMap = new Map<string, User>();
-  defaultUsers.forEach(u => userMap.set(u.id, u));
-  rawUsers.forEach(u => {
-    if (!u || !u.id || deletedIds.has(u.id)) return;
-    const existing = userMap.get(u.id) || Array.from(userMap.values()).find(
-      du => (du.cedula && u.cedula && du.cedula.trim() === u.cedula.trim()) ||
-            (du.email && u.email && du.email.trim().toLowerCase() === u.email.trim().toLowerCase()) ||
-            (du.codigo && u.codigo && du.codigo.trim().toUpperCase() === u.codigo.trim().toUpperCase())
-    );
-    if (existing) {
-      const uAsg = Array.isArray(u.asignaturas) ? u.asignaturas : [];
-      const exAsg = Array.isArray(existing.asignaturas) ? existing.asignaturas : [];
-      const mergedAsg = uAsg.length > 0 ? uAsg : exAsg;
-      const combined: User = {
-        ...existing,
-        ...u,
-        id: existing.id,
-        nombre: u.nombre || existing.nombre,
-        cedula: u.cedula || existing.cedula,
-        celular: u.celular || existing.celular,
-        email: u.email || existing.email,
-        codigo: u.codigo || existing.codigo,
-        semestre: u.semestre || existing.semestre,
-        asignaturas: mergedAsg
-      };
-      userMap.set(existing.id, combined);
-      if (u.id !== existing.id) {
-        userMap.delete(u.id);
-      }
-    } else {
-      userMap.set(u.id, u);
-    }
-  });
-  const users = Array.from(userMap.values());
-
-  const subjects: Subject[] = isInitialized && rawSubjects.length > 0
-    ? rawSubjects.filter(s => s && s.id && !deletedIds.has(s.id))
-    : (() => {
-        const defaultSubs = (defaults.subjects || []).filter(item => item && item.id && !deletedIds.has(item.id));
-        const subMap = new Map<string, Subject>();
-        defaultSubs.forEach(s => subMap.set(s.id, s));
-        rawSubjects.forEach(s => {
-          if (!s || !s.id || deletedIds.has(s.id)) return;
-          subMap.set(s.id, s);
-        });
-        return Array.from(subMap.values());
-      })();
-
-  const semesters: Semester[] = isInitialized && rawSemesters.length > 0
-    ? rawSemesters.filter(s => s && s.id && !deletedIds.has(s.id))
-    : (() => {
-        const defaultSems = (defaults.semesters || []).filter(item => item && item.id && !deletedIds.has(item.id));
-        const semMap = new Map<string, Semester>();
-        defaultSems.forEach(s => semMap.set(s.id, s));
-        rawSemesters.forEach(s => {
-          if (!s || !s.id || deletedIds.has(s.id)) return;
-          semMap.set(s.id, s);
-        });
-        return Array.from(semMap.values());
-      })();
-
-  const exams: Exam[] = isInitialized && rawExams.length > 0
-    ? rawExams.filter(e => e && e.id && !deletedIds.has(e.id))
-    : (() => {
-        const defaultExams = (defaults.exams || []).filter(item => item && item.id && !deletedIds.has(item.id));
-        const examMap = new Map<string, Exam>();
-        defaultExams.forEach(e => examMap.set(e.id, e));
-        rawExams.forEach(e => {
-          if (!e || !e.id || deletedIds.has(e.id)) return;
-          examMap.set(e.id, e);
-        });
-        return Array.from(examMap.values());
-      })();
-
-  const parciales: Parcial[] = isInitialized && rawParciales.length > 0
-    ? rawParciales.filter(p => p && p.id && !deletedIds.has(p.id))
-    : (() => {
-        const defaultParcs = (defaults.parciales || []).filter(item => item && item.id && !deletedIds.has(item.id));
-        const parcMap = new Map<string, Parcial>();
-        defaultParcs.forEach(p => parcMap.set(p.id, p));
-        rawParciales.forEach(p => {
-          if (!p || !p.id || deletedIds.has(p.id)) return;
-          parcMap.set(p.id, p);
-        });
-        return Array.from(parcMap.values());
-      })();
+  // Si es la primera vez que se ejecuta la app (sin datos locales), inicializar con defaults
+  if (!isInitialized && users.length === 0) {
+    const freshDefaults = buildDefaultSeedData();
+    const cleanFresh: AppState = {
+      users: (freshDefaults.users || []).filter(u => !deletedIds.has(u.id) && !recycleBinIds.has(u.id)),
+      institutions: (freshDefaults.institutions || []).filter(i => !deletedIds.has(i.id) && !recycleBinIds.has(i.id)),
+      subjects: (freshDefaults.subjects || []).filter(s => !deletedIds.has(s.id) && !recycleBinIds.has(s.id)),
+      semesters: (freshDefaults.semesters || []).filter(s => !deletedIds.has(s.id) && !recycleBinIds.has(s.id)),
+      parciales: (freshDefaults.parciales || []).filter(p => !deletedIds.has(p.id) && !recycleBinIds.has(p.id)),
+      exams: (freshDefaults.exams || []).filter(e => !deletedIds.has(e.id) && !recycleBinIds.has(e.id)),
+      submissions: (freshDefaults.submissions || []).filter(s => !deletedIds.has(s.id) && !recycleBinIds.has(s.id)),
+      gradeRecords: (freshDefaults.gradeRecords || []).filter(g => !deletedIds.has(g.id) && !recycleBinIds.has(g.id)),
+      assignments: (freshDefaults.assignments || []).filter(a => !deletedIds.has(a.id) && !recycleBinIds.has(a.id)),
+      assignmentSubmissions: (freshDefaults.assignmentSubmissions || []).filter(a => !deletedIds.has(a.id) && !recycleBinIds.has(a.id)),
+      recycleBin
+    };
+    saveState(cleanFresh);
+    return cleanFresh;
+  }
 
   const rawState: AppState = {
     users: sanitizeUserAsignaturas(users, subjects),
@@ -580,6 +516,7 @@ export function getInitialState(): AppState {
     gradeRecords,
     assignments,
     assignmentSubmissions,
+    recycleBin
   };
 
   const { state: cleanSemDb } = deduplicateSemesters(rawState);
@@ -1006,13 +943,118 @@ export function deduplicateParciales(state: AppState): {
   return { state: nextState, duplicateIds, report };
 }
 
+/**
+ * Detecta y agrupa estudiantes duplicados por cédula, correo o nombre normalizado.
+ * Conserva como principal al estudiante con mayor historial (entregas de exámenes, notas, trabajos).
+ * Los registros duplicados se devuelven para ser trasladados a la Papelera de Reciclaje.
+ */
+export function deduplicateStudents(state: AppState): {
+  state: AppState;
+  duplicateStudents: User[];
+  report: string[];
+} {
+  const users = state.users || [];
+  const students = users.filter(u => u.rol === 'estudiante');
+  const nonStudents = users.filter(u => u.rol !== 'estudiante');
+  
+  const groups = new Map<string, User[]>();
+
+  students.forEach(st => {
+    const cleanCedula = (st.cedula || '').trim();
+    const cleanEmail = (st.email || '').trim().toLowerCase();
+    const cleanName = normalizeString(st.nombre);
+
+    let key = '';
+    if (cleanCedula && cleanCedula.length >= 4) {
+      key = `ced_${cleanCedula}`;
+    } else if (cleanEmail && !cleanEmail.includes('estudiante.') && !cleanEmail.includes('@instituto.edu.co')) {
+      key = `email_${cleanEmail}`;
+    } else if (cleanName) {
+      key = `name_${cleanName}`;
+    } else {
+      key = `id_${st.id}`;
+    }
+
+    const list = groups.get(key) || [];
+    list.push(st);
+    groups.set(key, list);
+  });
+
+  const survivors: User[] = [];
+  const duplicateStudents: User[] = [];
+  const report: string[] = [];
+  const remapping = new Map<string, string>(); // duplicateId -> canonicalId
+
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      survivors.push(group[0]);
+      return;
+    }
+
+    // Puntuar cada estudiante para conservar prioritariamente el que tiene notas/entregas reales
+    const ranked = group.map(st => {
+      const subs = (state.submissions || []).filter(s => s.estudianteId === st.id);
+      const grades = (state.gradeRecords || []).filter(g => g.estudianteId === st.id);
+      const assignments = (state.assignmentSubmissions || []).filter(a => a.estudianteId === st.id);
+      const score = (subs.length * 100) + (grades.length * 50) + (assignments.length * 20);
+      return { st, score, hasDetails: Boolean(st.cedula || st.celular) };
+    });
+
+    ranked.sort((a, b) => b.score - a.score || (b.hasDetails ? 1 : 0) - (a.hasDetails ? 1 : 0));
+
+    const canonical = ranked[0].st;
+    survivors.push(canonical);
+
+    for (let i = 1; i < ranked.length; i++) {
+      const dup = ranked[i].st;
+      duplicateStudents.push(dup);
+      remapping.set(dup.id, canonical.id);
+      report.push(`Estudiante duplicado: "${dup.nombre}" unificado con "${canonical.nombre}".`);
+    }
+  });
+
+  // Reasignar entregas y notas si algún registro duplicado tenía datos
+  const updatedSubmissions = (state.submissions || []).map(s => {
+    if (s.estudianteId && remapping.has(s.estudianteId)) {
+      return { ...s, estudianteId: remapping.get(s.estudianteId)! };
+    }
+    return s;
+  });
+
+  const updatedGradeRecords = (state.gradeRecords || []).map(g => {
+    if (g.estudianteId && remapping.has(g.estudianteId)) {
+      return { ...g, estudianteId: remapping.get(g.estudianteId)! };
+    }
+    return g;
+  });
+
+  const updatedAssignmentSubmissions = (state.assignmentSubmissions || []).map(a => {
+    if (a.estudianteId && remapping.has(a.estudianteId)) {
+      return { ...a, estudianteId: remapping.get(a.estudianteId)! };
+    }
+    return a;
+  });
+
+  const nextState: AppState = {
+    ...state,
+    users: [...nonStudents, ...survivors],
+    submissions: updatedSubmissions,
+    gradeRecords: updatedGradeRecords,
+    assignmentSubmissions: updatedAssignmentSubmissions,
+  };
+
+  return { state: nextState, duplicateStudents, report };
+}
+
 export function saveState(state: AppState) {
   try {
     const deletedIds = getDeletedIds();
+    const recycleBin = state.recycleBin || getRecycleBin();
+    const recycleBinIds = new Set(recycleBin.map(r => r.originalId));
 
     const filterAlive = (list: any[] = []) => {
       if (!Array.isArray(list)) return [];
-      return list.filter(item => item && item.id && !deletedIds.has(item.id));
+      return list.filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
     };
 
     safeStorage.setItem('ep_users', JSON.stringify(filterAlive(state.users)));
@@ -1025,6 +1067,7 @@ export function saveState(state: AppState) {
     safeStorage.setItem('ep_notas', JSON.stringify(filterAlive(state.gradeRecords)));
     safeStorage.setItem('ep_trabajos', JSON.stringify(filterAlive(state.assignments)));
     safeStorage.setItem('ep_entregas_trabajos', JSON.stringify(filterAlive(state.assignmentSubmissions || [])));
+    safeStorage.setItem('ep_recycle_bin', JSON.stringify(recycleBin));
     safeStorage.setItem('ep_initialized', 'true');
   } catch (e) {
     console.warn('Unable to persist full state to localStorage:', e);
@@ -1089,7 +1132,9 @@ export function countMeaningfulAnswers(resObj: Record<string, any> = {}): number
 export function mergeStates(local: AppState, remote: AppState): AppState {
   const defaults = buildDefaultSeedData();
   const deletedIds = getDeletedIds();
-  const merged: AppState = { ...remote };
+  const recycleBin = local.recycleBin || remote.recycleBin || getRecycleBin();
+  const recycleBinIds = new Set(recycleBin.map(r => r.originalId));
+  const merged: AppState = { ...remote, recycleBin };
 
   const keys: (keyof AppState)[] = [
     'users',
@@ -1105,20 +1150,20 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   ];
 
   keys.forEach((key) => {
-    let localList = ((local[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
-    let remoteList = ((remote[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
+    let localList = ((local[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
+    let remoteList = ((remote[key] || []) as any[]).filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
 
     // Fall back to seed defaults only if both are empty and not initialized
     const isInit = typeof localStorage !== 'undefined' && localStorage.getItem('ep_initialized') === 'true';
     if (!isInit && localList.length === 0 && remoteList.length === 0 && defaults[key] && defaults[key].length > 0) {
-      localList = (defaults[key] as any[]).filter(item => item && item.id && !deletedIds.has(item.id));
+      localList = (defaults[key] as any[]).filter(item => item && item.id && !deletedIds.has(item.id) && !recycleBinIds.has(item.id));
     }
 
     const itemMap = new Map<string, any>();
 
     // 1. Remote items from Cloud Firestore
     remoteList.forEach((remoteItem: any) => {
-      if (remoteItem && remoteItem.id && !deletedIds.has(remoteItem.id)) {
+      if (remoteItem && remoteItem.id && !deletedIds.has(remoteItem.id) && !recycleBinIds.has(remoteItem.id)) {
         itemMap.set(remoteItem.id, remoteItem);
       }
     });
@@ -1251,6 +1296,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
   const { state: dedupedSemestersDb } = deduplicateSemesters(merged);
   const { state: dedupedSubjectsDb } = deduplicateSubjects(dedupedSemestersDb);
   const { state: finalCleanMerged } = deduplicateParciales(dedupedSubjectsDb);
+  finalCleanMerged.recycleBin = recycleBin;
 
   return finalCleanMerged;
 }
