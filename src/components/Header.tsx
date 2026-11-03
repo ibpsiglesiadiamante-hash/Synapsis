@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout, QrCode, Share2, RefreshCw, Cloud, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { LogOut, Monitor, Menu, Music, Volume2, VolumeX, Sparkles, Sprout, QrCode, Share2, RefreshCw, Cloud, LayoutGrid, ArrowLeft, Trash2 } from 'lucide-react';
 import { User } from '../types';
 import { avatarColor, avatarLetter } from '../lib/db';
 import { bioCosmicSynth } from '../lib/audioEngine';
@@ -22,6 +22,7 @@ interface HeaderProps {
   onNavigate?: (pageId: string) => void;
   activeTab?: string;
   categoryName?: string;
+  recycleCount?: number;
 }
 
 export default function Header({ 
@@ -36,7 +37,8 @@ export default function Header({
   isSyncing = false,
   onNavigate,
   activeTab = 'dashboard',
-  categoryName
+  categoryName,
+  recycleCount = 0
 }: HeaderProps) {
   const roleLabel = (currentUser?.rol && {
     admin: 'Administrador',
@@ -151,6 +153,28 @@ export default function Header({
           >
             <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
             <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Nube (Firebase & Supabase)'}</span>
+          </button>
+        )}
+
+        {/* Papelera de Reciclaje Quick Access Button */}
+        {(currentUser?.rol === 'admin' || currentUser?.rol === 'docente') && onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate('papelera')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              activeTab === 'papelera'
+                ? 'bg-rose-100 border-rose-300 text-rose-800'
+                : 'bg-rose-50/80 hover:bg-rose-100/90 border-rose-200 text-rose-700'
+            }`}
+            title="Abrir Papelera de Reciclaje para restaurar o purgar elementos eliminados"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">Papelera</span>
+            {recycleCount > 0 && (
+              <span className="bg-rose-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full min-w-[18px] text-center">
+                {recycleCount}
+              </span>
+            )}
           </button>
         )}
 

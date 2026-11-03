@@ -21,10 +21,11 @@ interface ParcialesProps {
   currentUser?: User;
   users?: User[];
   onDeduplicateParciales?: () => void;
+  onSendToRecycle?: (parcial: Parcial) => void;
 }
 
 export default function Parciales({ 
-  parciales, semesters, subjects, exams = [], submissions = [], onUpdateParciales, toast, currentUser, users, onDeduplicateParciales 
+  parciales, semesters, subjects, exams = [], submissions = [], onUpdateParciales, toast, currentUser, users, onDeduplicateParciales, onSendToRecycle 
 }: ParcialesProps) {
   const isTeacher = currentUser?.rol === 'docente';
   
@@ -172,6 +173,11 @@ export default function Parciales({
   };
 
   const handleDelete = (id: string) => {
+    const parcial = parciales.find(p => p.id === id);
+    if (parcial && onSendToRecycle) {
+      onSendToRecycle(parcial);
+      return;
+    }
     deleteDocFromFirestore('parciales', id);
     const nextParciales = parciales.filter(p => p.id !== id);
     onUpdateParciales(nextParciales);

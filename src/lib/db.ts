@@ -1258,6 +1258,22 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
               });
             }
           }
+        } else if (key === 'exams') {
+          // Protección especial para exámenes: preservar preguntas y opciones recién redactadas
+          const localQs = Array.isArray(localItem.preguntas) ? localItem.preguntas : [];
+          const remoteQs = Array.isArray(remoteItem.preguntas) ? remoteItem.preguntas : [];
+          const localMs = parseSafeTimestamp(localItem.actualizado || localItem.creado);
+          const remoteMs = parseSafeTimestamp(remoteItem.actualizado || remoteItem.creado);
+
+          if (localQs.length > remoteQs.length) {
+            itemMap.set(localItem.id, localItem);
+          } else if (remoteQs.length > localQs.length) {
+            itemMap.set(localItem.id, remoteItem);
+          } else if (localMs >= remoteMs) {
+            itemMap.set(localItem.id, localItem);
+          } else {
+            itemMap.set(localItem.id, remoteItem);
+          }
         } else {
           // Comparación robusta para las demás entidades usando milisegundos numéricos
           const localMs = parseSafeTimestamp(localItem.actualizado || localItem.creado || localItem.fecha);

@@ -16,11 +16,14 @@ interface EstudiantesProps {
   semesters: Semester[];
   onUpdateUsers: (updated: User[]) => void;
   onNavigateToHistory: (studentId: string) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  onDeduplicateStudents?: () => void;
+  onSendToRecycle?: (student: User) => void;
 }
 
 export default function Estudiantes({ 
-  users, subjects, semesters, onUpdateUsers, onNavigateToHistory, toast 
+  users, subjects, semesters, onUpdateUsers, onNavigateToHistory, toast,
+  onDeduplicateStudents, onSendToRecycle
 }: EstudiantesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -297,7 +300,13 @@ export default function Estudiantes({
   };
 
   const handleDelete = (id: string) => {
+    const student = users.find(u => u.id === id);
+    if (student && onSendToRecycle) {
+      onSendToRecycle(student);
+      return;
+    }
     deleteDocFromFirestore('users', id);
+    deleteDocFromSupabase('users', id);
     const nextUsers = users.filter(u => u.id !== id);
     onUpdateUsers(nextUsers);
     toast('Estudiante desvinculado del sistema correctamente', 'success');
@@ -481,6 +490,18 @@ export default function Estudiantes({
             <Sparkles className={`w-4 h-4 text-emerald-600 ${isSyncingFirestore ? 'animate-spin' : ''}`} />
             <span>{isSyncingFirestore ? 'Sincronizando...' : 'Subir a BD'}</span>
           </button>
+
+          {onDeduplicateStudents && (
+            <button
+              type="button"
+              onClick={onDeduplicateStudents}
+              className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold border border-amber-200 transition-all cursor-pointer text-xs shadow-xs"
+              title="Detectar y unificar estudiantes repetidos enviando duplicados a la papelera sin perder historial"
+            >
+              <RefreshCw className="w-4 h-4 text-amber-600" />
+              <span>Deduplicar Estudiantes</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsBatchModalOpen(true)}

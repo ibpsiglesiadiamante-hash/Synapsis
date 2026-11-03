@@ -13,7 +13,7 @@ import {
   School, QrCode, ArrowRight, Activity, Cloud, Settings,
   BarChart3, FileText, CheckCircle2, SlidersHorizontal,
   Milestone, BookMarked, Library, Megaphone, ClipboardList,
-  Scroll
+  Scroll, Trash2
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester } from '../types';
 import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester } from '../lib/db';
@@ -361,7 +361,7 @@ export default function Dashboard({
     {
       id: 'admin',
       name: 'Administrador',
-      badgeCount: 8,
+      badgeCount: 9,
       accentDot: 'bg-blue-400',
       modules: [
         {
@@ -427,12 +427,20 @@ export default function Dashboard({
           icon: <Users className="w-4 h-4" />,
           pageId: 'estudiantes',
           color: 'text-emerald-400'
+        },
+        {
+          id: 'papelera',
+          title: 'Papelera',
+          desc: 'Recuperar o purgar registros eliminados',
+          icon: <Trash2 className="w-4 h-4" />,
+          pageId: 'papelera',
+          color: 'text-rose-400'
         }
       ]
     }
   ];
 
-  // Total Modules: 5 + 2 + 3 + 3 + 8 = 21
+  // Total Modules: 5 + 2 + 3 + 3 + 9 = 22
   const totalModulesCount = categories.reduce((acc, c) => acc + c.badgeCount, 0);
 
   const filteredCategories = selectedCategory === 'todas'

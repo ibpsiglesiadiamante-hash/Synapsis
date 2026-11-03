@@ -27,7 +27,8 @@ import {
   CreditCard,
   Camera,
   ArrowLeft,
-  LayoutGrid
+  LayoutGrid,
+  Trash2
 } from 'lucide-react';
 
 import { 
@@ -41,7 +42,8 @@ import {
   Parcial, 
   GradeRecord, 
   Assignment,
-  AssignmentSubmission
+  AssignmentSubmission,
+  RecycleItem
 } from './types';
 
 import { 
@@ -58,7 +60,12 @@ import {
   generateStudentCode,
   deduplicateSemesters,
   deduplicateSubjects,
-  deduplicateParciales
+  deduplicateParciales,
+  deduplicateStudents,
+  getRecycleBin,
+  saveRecycleBin,
+  markAsDeleted,
+  unmarkAsDeleted
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -68,6 +75,9 @@ import {
   initializeSyncCache,
   fullBidirectionalSync,
   registerDeletedId,
+  unRegisterDeletedId,
+  saveRecycleItemToFirestore,
+  deleteRecycleItemFromFirestore,
   uploadTheologicalSubjectsToFirestore,
   uploadAllStudentsToFirestore,
   uploadAllExamsToFirestore,
@@ -108,6 +118,7 @@ import Tablon from './components/Tablon';
 import Finanzas from './components/Finanzas';
 import Educativo from './components/Educativo';
 import Biblia from './components/Biblia';
+import Papelera from './components/Papelera';
 import ShareAppModal from './components/ShareAppModal';
 
 export default function App() {
@@ -776,6 +787,167 @@ export default function App() {
     showToast(`Se depuraron ${duplicateIds.length} parciales duplicados (se conservaron intactos los parciales con evaluaciones de estudiantes).`, 'success');
   };
 
+  const handleSendToRecycle = (
+    tipo: RecycleItem['tipo'],
+    item: any,
+    titulo: string,
+    subtitulo?: string,
+    detalles?: string
+  ) => {
+    if (!item || !item.id) return;
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    const recItem: RecycleItem = {
+      id: uid(),
+      originalId: item.id,
+      tipo,
+      titulo,
+      subtitulo: subtitulo || '',
+      detalles: detalles || '',
+      fechaEliminacion: now(),
+      data: item,
+      payload: item
+    };
+    const nextRecycle = [recItem, ...currentRecycle];
+    saveRecycleBin(nextRecycle);
+    saveRecycleItemToFirestore(recItem).catch(err => console.warn('Recycle Firestore error:', err));
+    markAsDeleted(item.id);
+
+    let nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
+    if (tipo === 'estudiante') {
+      nextDb.users = (nextDb.users || []).filter(u => u.id !== item.id);
+      deleteDocFromFirestore('users', item.id).catch(() => {});
+      deleteDocFromSupabase('users', item.id).catch(() => {});
+    } else if (tipo === 'parcial') {
+      nextDb.parciales = (nextDb.parciales || []).filter(p => p.id !== item.id);
+      deleteDocFromFirestore('parciales', item.id).catch(() => {});
+      deleteDocFromSupabase('parciales', item.id).catch(() => {});
+    } else if (tipo === 'examen') {
+      nextDb.exams = (nextDb.exams || []).filter(e => e.id !== item.id);
+      deleteDocFromFirestore('exams', item.id).catch(() => {});
+    } else if (tipo === 'materia') {
+      nextDb.subjects = (nextDb.subjects || []).filter(s => s.id !== item.id);
+      deleteDocFromFirestore('subjects', item.id).catch(() => {});
+      deleteDocFromSupabase('subjects', item.id).catch(() => {});
+    } else if (tipo === 'semestre') {
+      nextDb.semesters = (nextDb.semesters || []).filter(s => s.id !== item.id);
+      deleteDocFromFirestore('semesters', item.id).catch(() => {});
+      deleteDocFromSupabase('semesters', item.id).catch(() => {});
+    }
+
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+    showToast(`"${titulo}" fue enviado a la Papelera de Reciclaje`, 'success');
+  };
+
+  const handleRestoreFromRecycle = (item: RecycleItem) => {
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    const nextRecycle = currentRecycle.filter(r => r.id !== item.id);
+    saveRecycleBin(nextRecycle);
+    deleteRecycleItemFromFirestore(item.id).catch(err => console.warn('Delete recycle Firestore error:', err));
+    unmarkAsDeleted(item.originalId);
+    unRegisterDeletedId(item.originalId);
+
+    let nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
+    const payload = item.data || item.payload;
+    if (payload && payload.id) {
+      if (item.tipo === 'estudiante') {
+        const nextUsers = [payload, ...(nextDb.users || []).filter(u => u.id !== payload.id)];
+        nextDb.users = nextUsers;
+        saveDocToFirestore('users', payload).catch(() => {});
+      } else if (item.tipo === 'parcial') {
+        const nextParciales = [payload, ...(nextDb.parciales || []).filter(p => p.id !== payload.id)];
+        nextDb.parciales = nextParciales;
+        saveDocToFirestore('parciales', payload).catch(() => {});
+      } else if (item.tipo === 'examen') {
+        const nextExams = [payload, ...(nextDb.exams || []).filter(e => e.id !== payload.id)];
+        nextDb.exams = nextExams;
+        saveDocToFirestore('exams', payload).catch(() => {});
+      } else if (item.tipo === 'materia') {
+        const nextSubjects = [payload, ...(nextDb.subjects || []).filter(s => s.id !== payload.id)];
+        nextDb.subjects = nextSubjects;
+        saveDocToFirestore('subjects', payload).catch(() => {});
+      } else if (item.tipo === 'semestre') {
+        const nextSemesters = [payload, ...(nextDb.semesters || []).filter(s => s.id !== payload.id)];
+        nextDb.semesters = nextSemesters;
+        saveDocToFirestore('semesters', payload).catch(() => {});
+      }
+    }
+
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+    showToast(`"${item.titulo}" fue restaurado con éxito ✓`, 'success');
+  };
+
+  const handlePermanentDelete = (itemId: string, originalId: string, tipo: string) => {
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    const nextRecycle = currentRecycle.filter(r => r.id !== itemId);
+    saveRecycleBin(nextRecycle);
+    deleteRecycleItemFromFirestore(itemId).catch(err => console.warn('Delete recycle Firestore error:', err));
+    registerDeletedId(originalId);
+    markAsDeleted(originalId);
+
+    const nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+    showToast('Registro eliminado definitivamente del sistema', 'info');
+  };
+
+  const handleEmptyTrash = () => {
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    currentRecycle.forEach(it => {
+      deleteRecycleItemFromFirestore(it.id).catch(() => {});
+      registerDeletedId(it.originalId);
+      markAsDeleted(it.originalId);
+    });
+    saveRecycleBin([]);
+    const nextDb = { ...currentDbRef.current, recycleBin: [] };
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+    showToast('La Papelera de Reciclaje ha sido vaciada por completo', 'success');
+  };
+
+  const handleDeduplicateStudents = () => {
+    const { state: updatedDb, duplicateStudents, report } = deduplicateStudents(currentDbRef.current);
+    if (duplicateStudents.length === 0) {
+      showToast('No se detectaron estudiantes repetidos en el directorio.', 'info');
+      return;
+    }
+
+    // Move duplicate records to recycle bin so they are restorable if needed
+    const currentRecycle = updatedDb.recycleBin || getRecycleBin();
+    const newRecycleItems: RecycleItem[] = duplicateStudents.map(st => ({
+      id: uid(),
+      originalId: st.id,
+      tipo: 'estudiante' as const,
+      titulo: st.nombre || 'Estudiante Duplicado',
+      subtitulo: `${st.email || 'Sin correo'} · Cód: ${st.codigo || 'S/C'}`,
+      detalles: `Registro duplicado unificado. Se conservaron intactos todos los historiales de exámenes y notas.`,
+      fechaEliminacion: now(),
+      data: st,
+      payload: st
+    }));
+
+    newRecycleItems.forEach(it => {
+      saveRecycleItemToFirestore(it).catch(() => {});
+      registerDeletedId(it.originalId, 'users');
+      deleteDocFromFirestore('users', it.originalId).catch(() => {});
+      deleteDocFromSupabase('users', it.originalId).catch(() => {});
+    });
+
+    const finalRecycle = [...newRecycleItems, ...currentRecycle];
+    saveRecycleBin(finalRecycle);
+    const finalDb = { ...updatedDb, recycleBin: finalRecycle };
+
+    currentDbRef.current = finalDb;
+    saveState(finalDb);
+    setDb(finalDb);
+    showToast(`Se unificaron ${duplicateStudents.length} estudiantes repetidos. Las copias fueron enviadas a la Papelera.`, 'success');
+  };
+
   // Helper to get module category id & display name
   const getModuleCategory = (tab: string): { id: string; name: string } => {
     switch (tab) {
@@ -811,6 +983,7 @@ export default function App() {
       case 'trabajos':
       case 'historialAcademico':
       case 'estudiantes':
+      case 'papelera':
         return { id: 'admin', name: 'Administrador' };
 
       default:
@@ -845,6 +1018,7 @@ export default function App() {
       case 'trabajos': return 'Trabajos Académicos';
       case 'historialAcademico': return 'Historial Académico Global';
       case 'estudiantes': return 'Gestión de Estudiantes';
+      case 'papelera': return 'Papelera de Reciclaje';
       default: return tab;
     }
   };
@@ -1015,6 +1189,7 @@ export default function App() {
             currentUser={currentUser}
             users={db.users}
             onDeduplicateParciales={handleDeduplicateParciales}
+            onSendToRecycle={(p) => handleSendToRecycle('parcial', p, p.nombre, p.asignatura, `Semestre: ${p.semestre || 'S/S'}`)}
           />
         );
       case 'registroNotas':
@@ -1062,11 +1237,21 @@ export default function App() {
             semesters={db.semesters}
             onUpdateUsers={updateUsers}
             onNavigateToHistory={(stId) => {
-              // Quick linkage
               setActiveTab('historialAcademico');
-              // Let the browser context know
               showToast('Mostrando ficha del estudiante seleccionado', 'success');
             }}
+            toast={showToast}
+            onDeduplicateStudents={handleDeduplicateStudents}
+            onSendToRecycle={(st) => handleSendToRecycle('estudiante', st, st.nombre, st.email, `Cédula: ${st.cedula || 'S/C'} · Código: ${st.codigo || 'S/C'}`)}
+          />
+        );
+      case 'papelera':
+        return (
+          <Papelera
+            items={db.recycleBin || []}
+            onRestore={handleRestoreFromRecycle}
+            onPermanentDelete={handlePermanentDelete}
+            onEmptyTrash={handleEmptyTrash}
             toast={showToast}
           />
         );
@@ -1493,11 +1678,12 @@ export default function App() {
             }}
             activeTab={activeTab}
             categoryName={activeTab !== 'dashboard' ? getModuleCategory(activeTab).name : undefined}
+            recycleCount={(db.recycleBin || []).length}
           />
 
           <div className={`flex-1 flex flex-col relative pt-[60px] ${activeTab === 'dashboard' ? 'bg-[#03181e]' : 'bg-slate-50'}`}>
             {/* MAIN CONTENT WORKSPACE (Full width pantalla completa & focused module view) */}
-            <main className={`flex-1 p-3.5 sm:p-5 md:p-6 ${activeTab === 'dashboard' ? 'bg-[#03181e] min-h-[calc(100vh-60px)]' : 'bg-slate-50'} w-full overflow-x-hidden relative`}>
+            <main className={`flex-1 p-2 sm:p-4 md:p-5 ${activeTab === 'dashboard' ? 'bg-[#03181e] min-h-[calc(100vh-60px)]' : 'bg-slate-50'} w-full overflow-x-hidden relative`}>
               {/* Opción destacada: Volver a la categoría exacta del módulo o al menú general */}
               {activeTab !== 'dashboard' && (
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">

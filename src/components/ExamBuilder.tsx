@@ -457,7 +457,14 @@ export default function ExamBuilder({
       correctas: [],
     };
     setQuestions(prev => {
-      const next = [...prev, newQ];
+      const safePrev = prev.map(q => ({
+        ...q,
+        opciones: Array.isArray(q.opciones) ? [...q.opciones] : [],
+        opcionIds: Array.isArray(q.opcionIds) && q.opcionIds.length === (q.opciones || []).length
+          ? [...q.opcionIds]
+          : (q.opciones || []).map((_, i) => q.opcionIds?.[i] || `opt_${q.id}_${i}_${uid()}`)
+      }));
+      const next = [...safePrev, newQ];
       latestDataRef.current = { ...latestDataRef.current, questions: next };
       return next;
     });
@@ -731,7 +738,10 @@ export default function ExamBuilder({
         if (q.id === qid) {
           const nextOpts = [...(q.opciones || [])];
           nextOpts[oIdx] = val;
-          return { ...q, opciones: nextOpts };
+          const nextOptIds = Array.isArray(q.opcionIds) && q.opcionIds.length === nextOpts.length
+            ? [...q.opcionIds]
+            : nextOpts.map((_, i) => q.opcionIds?.[i] || `opt_${q.id}_${i}_${uid()}`);
+          return { ...q, opciones: nextOpts, opcionIds: nextOptIds };
         }
         return q;
       });
@@ -803,9 +813,7 @@ export default function ExamBuilder({
       const next = prev.map(q => {
         if (q.id === qid) {
           const currentOpts = Array.isArray(q.opciones) ? [...q.opciones] : [];
-          const currentOptIds = Array.isArray(q.opcionIds) 
-            ? [...q.opcionIds] 
-            : currentOpts.map((_, i) => `opt_${q.id}_${i}_${uid()}`);
+          const currentOptIds = currentOpts.map((_, i) => q.opcionIds?.[i] || `opt_${q.id}_${i}_${uid()}`);
           const newLabel = q.tipo === 'matching' || q.tipo === 'table'
             ? `Término ${currentOpts.length + 1}`
             : getNextOptionLabel(currentOpts.length);

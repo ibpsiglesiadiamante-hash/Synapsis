@@ -207,9 +207,9 @@ export interface RecycleItem {
   titulo: string;
   subtitulo?: string;
   detalles?: string;
-  fechaEliminacion: string;
-  eliminadoPor?: string;
+  fechaEliminacion?: string;
   data: any; // Serialized entity for exact restoration
+  payload?: any; // Compatibility alias
 }
 
 export interface AppState {

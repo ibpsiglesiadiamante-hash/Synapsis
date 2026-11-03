@@ -177,6 +177,7 @@ textarea,
 select, 
 [contenteditable="true"] {
   font-size: 0.92em;
+  text-transform: none !important;
 }
 
 /* Auto-expanding textareas: strictly eliminate scrollbars and resize handles */
