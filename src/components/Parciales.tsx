@@ -65,15 +65,24 @@ export default function Parciales({
     return dups;
   }, [parciales]);
 
-  // Search state
+  // Search and Semester filter state
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterSemestre, setFilterSemestre] = useState<string>('todos');
 
-  // Filter list of parciales based on search query and teacher subjects
+  // Filter list of parciales based on search query, semester and teacher subjects
   const filteredParciales = parciales.filter(p => {
     if (isTeacher && onlyMySubjects) {
       if (!teacherSubjectIds.includes(p.asignatura)) {
         return false;
       }
+    }
+
+    if (filterSemestre !== 'todos') {
+      const sem = semesters.find(s => s.id === p.semestre);
+      const semMatches = p.semestre === filterSemestre || (sem && sem.nombre.toLowerCase().trim() === filterSemestre.toLowerCase().trim());
+      const sub = subjects.find(s => s.id === p.asignatura);
+      const subSemMatches = sub && (sub.semestre === filterSemestre || (sub.semestre && sub.semestre.toLowerCase().trim() === filterSemestre.toLowerCase().trim()));
+      if (!semMatches && !subSemMatches) return false;
     }
 
     const q = searchQuery.toLowerCase().trim();
@@ -289,7 +298,23 @@ export default function Parciales({
               </button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="font-semibold text-slate-600">Semestre:</span>
+              <select
+                value={filterSemestre}
+                onChange={e => {
+                  setFilterSemestre(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="p-1.5 text-xs font-bold border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500 cursor-pointer"
+              >
+                <option value="todos">Todos los Semestres</option>
+                {semesters.map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <span>Mostrar:</span>
               <select

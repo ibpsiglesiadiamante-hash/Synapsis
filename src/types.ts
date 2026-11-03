@@ -177,6 +177,8 @@ export interface Exam {
   actualizado?: string;
   preguntas: Question[];
   bannerUrl?: string;
+  semestre?: string;
+  semestreId?: string;
 }
 
 export interface Submission {

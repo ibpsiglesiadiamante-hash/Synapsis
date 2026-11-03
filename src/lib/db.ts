@@ -240,6 +240,119 @@ export function getStudentAssignedSubjects(student: User | null | undefined, sub
   return [];
 }
 
+export const SEMESTRES_OFICIALES = [
+  'Semestre I',
+  'Semestre II',
+  'Semestre III',
+  'Semestre IV',
+  'Semestre V',
+  'Semestre VI',
+  'Semestre VII',
+  'Semestre VIII',
+  'Semestre IX'
+];
+
+export function resolveExamSemester(
+  exam: Exam,
+  subjects: Subject[] = [],
+  semesters: Semester[] = [],
+  parciales: Parcial[] = []
+): string {
+  if (!exam) return 'Semestre I';
+
+  // 1. Direct property on exam
+  if (exam.semestre) {
+    const sem = (semesters || []).find(s => s && (s.id === exam.semestre || (s.nombre && s.nombre.toLowerCase().trim() === exam.semestre!.toLowerCase().trim())));
+    if (sem) return sem.nombre;
+    const matchOfficial = SEMESTRES_OFICIALES.find(so => so.toLowerCase() === exam.semestre!.toLowerCase().trim());
+    if (matchOfficial) return matchOfficial;
+    return exam.semestre;
+  }
+
+  // 2. Through linked Parcial
+  if (exam.parcialId) {
+    const p = (parciales || []).find(item => item && item.id === exam.parcialId);
+    if (p) {
+      if (p.semestre) {
+        const sem = (semesters || []).find(s => s && (s.id === p.semestre || (s.nombre && s.nombre.toLowerCase().trim() === p.semestre.toLowerCase().trim())));
+        if (sem) return sem.nombre;
+        const matchOfficial = SEMESTRES_OFICIALES.find(so => so.toLowerCase() === p.semestre.toLowerCase().trim());
+        if (matchOfficial) return matchOfficial;
+      }
+      if (p.asignatura) {
+        const subj = (subjects || []).find(s => s && (s.id === p.asignatura || (s.nombre && s.nombre.toLowerCase().trim() === p.asignatura.toLowerCase().trim())));
+        if (subj && subj.semestre) {
+          const sem = (semesters || []).find(s => s && (s.id === subj.semestre || (s.nombre && s.nombre.toLowerCase().trim() === subj.semestre!.toLowerCase().trim())));
+          if (sem) return sem.nombre;
+          const matchOfficial = SEMESTRES_OFICIALES.find(so => so.toLowerCase() === subj.semestre!.toLowerCase().trim());
+          if (matchOfficial) return matchOfficial;
+          return subj.semestre;
+        }
+      }
+    }
+  }
+
+  // 3. Through exam.materia
+  if (exam.materia) {
+    const cleanMat = (exam.materia || '').toLowerCase().trim();
+    const subj = (subjects || []).find(s => 
+      s && (
+        s.id === exam.materia || 
+        (s.nombre && s.nombre.toLowerCase().trim() === cleanMat) || 
+        (s.codigo && s.codigo.toLowerCase().trim() === cleanMat)
+      )
+    );
+    if (subj && subj.semestre) {
+      const sem = (semesters || []).find(s => s && (s.id === subj.semestre || (s.nombre && s.nombre.toLowerCase().trim() === subj.semestre!.toLowerCase().trim())));
+      if (sem) return sem.nombre;
+      const matchOfficial = SEMESTRES_OFICIALES.find(so => so.toLowerCase() === subj.semestre!.toLowerCase().trim());
+      if (matchOfficial) return matchOfficial;
+      return subj.semestre;
+    }
+  }
+
+  // 4. By searching subject names in exam.titulo
+  const cleanTitle = (exam.titulo || '').toLowerCase().trim();
+  for (const s of (subjects || [])) {
+    if (!s || !s.nombre) continue;
+    const sName = s.nombre.toLowerCase().trim();
+    if (sName.length >= 3 && cleanTitle.includes(sName)) {
+      if (s.semestre) {
+        const sem = (semesters || []).find(sem => sem && (sem.id === s.semestre || (sem.nombre && sem.nombre.toLowerCase().trim() === s.semestre!.toLowerCase().trim())));
+        if (sem) return sem.nombre;
+        const matchOfficial = SEMESTRES_OFICIALES.find(so => so.toLowerCase() === s.semestre!.toLowerCase().trim());
+        if (matchOfficial) return matchOfficial;
+        return s.semestre;
+      }
+    }
+  }
+
+  // 5. Special keyword matching in title
+  if (cleanTitle.includes('teologia') || cleanTitle.includes('etica') || cleanTitle.includes('antiguo testamento') || cleanTitle.includes('educacion cristiana i')) {
+    return 'Semestre I';
+  }
+  if (cleanTitle.includes('cristologia') || cleanTitle.includes('geografia biblica') || cleanTitle.includes('nuevo testamento') || cleanTitle.includes('educacion cristiana ii')) {
+    return 'Semestre II';
+  }
+  if (cleanTitle.includes('espiritu santo') || cleanTitle.includes('controversia') || cleanTitle.includes('pentateuco') || cleanTitle.includes('hermeneutica')) {
+    return 'Semestre III';
+  }
+  if (cleanTitle.includes('homiletica') || cleanTitle.includes('libros historicos') || cleanTitle.includes('doctrina del hombre')) {
+    return 'Semestre IV';
+  }
+  if (cleanTitle.includes('consejeria') || cleanTitle.includes('epistolas paulinas')) {
+    return 'Semestre V';
+  }
+  if (cleanTitle.includes('profetas mayores') || cleanTitle.includes('evangelios')) {
+    return 'Semestre VI';
+  }
+  if (cleanTitle.includes('apocalipsis') || cleanTitle.includes('escatologia')) {
+    return 'Semestre VII';
+  }
+
+  return 'Semestre I';
+}
+
 export function exportFullBackupState(state: AppState): void {
   try {
     const exportPayload = {

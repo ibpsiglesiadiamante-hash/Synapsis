@@ -1090,6 +1090,7 @@ export default function App() {
             onUpdateExams={updateExams}
             toast={showToast}
             users={db.users}
+            onSendToRecycle={(exam) => handleSendToRecycle('examen', exam, exam.titulo, exam.materia, `Semestre: ${exam.semestre || 'S/S'}`)}
           />
         );
       case 'resultados':

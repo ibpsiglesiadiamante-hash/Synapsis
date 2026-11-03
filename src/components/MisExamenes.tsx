@@ -3,10 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Plus, BookOpen, Trash2, Edit2, Play, Power, HelpCircle, Search, Copy, Download } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  Plus, BookOpen, Trash2, Edit2, Play, Power, Search, Copy, Download, 
+  LayoutGrid, Table as TableIcon, ArrowRight, Layers, Clock, FileQuestion, 
+  CheckCircle2, Sparkles, Filter, ChevronRight
+} from 'lucide-react';
 import { User, Exam, Parcial, Subject, Semester } from '../types';
-import { fmtDate, uid, now, cleanExamTitle } from '../lib/db';
+import { fmtDate, uid, now, cleanExamTitle, resolveExamSemester, SEMESTRES_OFICIALES } from '../lib/db';
 import { SearchableSelect, SelectOption } from './SearchableSelect';
 
 interface MisExamenesProps {
@@ -18,13 +22,17 @@ interface MisExamenesProps {
   submissions: any[];
   onOpenBuilder: (examId: string) => void;
   onUpdateExams: (updated: Exam[]) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   users?: User[];
+  onSendToRecycle?: (exam: Exam) => void;
 }
+
+export const NIVEL_PASTORAL = 'NIVEL I : Biblioteología Pastoral';
+export const NIVEL_MINISTERIAL = 'NIVEL II : Biblioteología Ministerial';
 
 export default function MisExamenes({ 
   currentUser, exams, parciales, subjects, semesters, submissions, 
-  onOpenBuilder, onUpdateExams, toast, users 
+  onOpenBuilder, onUpdateExams, toast, users, onSendToRecycle 
 }: MisExamenesProps) {
   
   const isTeacher = currentUser.rol === 'docente';
@@ -36,19 +44,19 @@ export default function MisExamenes({
     ? subjects.filter(s => (s.docenteId && allMyUserIds.includes(s.docenteId)) || currentUser.asignaturas?.includes(s.id))
     : subjects;
 
-  const subjectOptions: SelectOption[] = teacherSubjects.map(s => ({
-    value: s.nombre,
-    label: s.nombre,
-    subLabel: s.codigo ? `Código: ${s.codigo}` : undefined,
-  }));
-
-  const [filter, setFilter] = useState<'all' | 'activo' | 'borrador' | 'cerrado'>('all');
+  // View Mode: 'semestres' (Columns layout matching reference image) or 'tabla' (classic table)
+  const [viewMode, setViewMode] = useState<'semestres' | 'tabla'>('semestres');
+  const [filterNivel, setFilterNivel] = useState<'todos' | 'nivel1' | 'nivel2'>('todos');
+  const [filterSemestre, setFilterSemestre] = useState<string>('todos');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'activo' | 'borrador' | 'cerrado'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Form Fields
+  // Form Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [selectedSemestre, setSelectedSemestre] = useState('Semestre I');
   const [materia, setMateria] = useState('');
   const [parcialId, setParcialId] = useState('');
   const [description, setDescription] = useState('');
@@ -58,11 +66,26 @@ export default function MisExamenes({
   const [estado, setEstado] = useState<'borrador' | 'activo'>('borrador');
   const [aleatorio, setAleatorio] = useState(false);
   const [mostrarNota, setMostrarNota] = useState(true);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Filtered subjects based on selected semester in creation modal
+  const modalSubjectOptions: SelectOption[] = useMemo(() => {
+    let list = teacherSubjects;
+    if (selectedSemestre && selectedSemestre !== 'todos') {
+      const matchSubs = list.filter(s => (s.semestre || '').toLowerCase().trim() === selectedSemestre.toLowerCase().trim());
+      if (matchSubs.length > 0) list = matchSubs;
+    }
+    return list.map(s => ({
+      value: s.nombre,
+      label: s.nombre,
+      subLabel: `${s.codigo ? `[${s.codigo}] ` : ''}${s.semestre ? `· ${s.semestre}` : ''}`,
+    }));
+  }, [teacherSubjects, selectedSemestre]);
 
   const userAsignaturas = currentUser.asignaturas || [];
-  const filteredExams = exams
-    .filter(e => {
+
+  // Filter exams by teacher assignment, status, search query
+  const userFilteredExams = useMemo(() => {
+    return exams.filter(e => {
       if (currentUser.rol === 'admin') return true;
       if (e.docenteId && allMyUserIds.includes(e.docenteId)) return true;
       if (currentUser.id === e.docenteId) return true;
@@ -70,24 +93,84 @@ export default function MisExamenes({
       if (subj && (userAsignaturas.includes(subj.id) || (subj.docenteId && allMyUserIds.includes(subj.docenteId)))) return true;
       if (e.materia && userAsignaturas.includes(e.materia)) return true;
       return false;
-    })
-    .filter(e => filter === 'all' ? true : e.estado === filter)
-    .filter(e => {
+    });
+  }, [exams, currentUser, allMyUserIds, subjects, userAsignaturas]);
+
+  // Global search and status filtered exams
+  const searchAndStatusFiltered = useMemo(() => {
+    return userFilteredExams.filter(e => {
+      if (filterStatus !== 'all' && e.estado !== filterStatus) return false;
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
+
+      const semName = resolveExamSemester(e, subjects, semesters, parciales).toLowerCase();
       const subj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
-      const subjName = subj ? subj.nombre.toLowerCase() : '';
-      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
+      const subjName = (subj ? subj.nombre : e.materia || '').toLowerCase();
+      const subjCode = (subj?.codigo || '').toLowerCase();
+      const examTitle = (e.titulo || '').toLowerCase();
+
+      return examTitle.includes(q) || subjName.includes(q) || subjCode.includes(q) || semName.includes(q);
     });
+  }, [userFilteredExams, filterStatus, searchQuery, subjects, semesters, parciales]);
 
-  const examsPerPage = 8;
-  const totalPages = Math.ceil(filteredExams.length / examsPerPage) || 1;
+  // Semesters list with exams grouped
+  const semesterGroups = useMemo(() => {
+    const sem1to5 = ['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V'];
+    const sem6to9 = ['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX'];
+
+    const buildGroup = (semName: string) => {
+      const examsInSem = searchAndStatusFiltered.filter(e => {
+        const resolved = resolveExamSemester(e, subjects, semesters, parciales);
+        return resolved.toLowerCase().trim() === semName.toLowerCase().trim();
+      });
+
+      // Subjects belonging to this semester
+      const semSubjects = subjects.filter(s => (s.semestre || '').toLowerCase().trim() === semName.toLowerCase().trim());
+
+      return {
+        name: semName,
+        exams: examsInSem,
+        subjects: semSubjects
+      };
+    };
+
+    return {
+      nivel1: {
+        title: NIVEL_PASTORAL,
+        badge: 'NIVEL I (Semestres I al V)',
+        semesters: sem1to5.map(buildGroup)
+      },
+      nivel2: {
+        title: NIVEL_MINISTERIAL,
+        badge: 'NIVEL II (Semestres VI al IX)',
+        semesters: sem6to9.map(buildGroup)
+      }
+    };
+  }, [searchAndStatusFiltered, subjects, semesters, parciales]);
+
+  // Table pagination
+  const examsPerPage = 10;
+  const tableFilteredExams = useMemo(() => {
+    if (filterSemestre === 'todos') return searchAndStatusFiltered;
+    return searchAndStatusFiltered.filter(e => {
+      const resolved = resolveExamSemester(e, subjects, semesters, parciales);
+      return resolved.toLowerCase().trim() === filterSemestre.toLowerCase().trim();
+    });
+  }, [searchAndStatusFiltered, filterSemestre, subjects, semesters, parciales]);
+
+  const totalPages = Math.ceil(tableFilteredExams.length / examsPerPage) || 1;
   const currentActivePage = Math.min(currentPage, totalPages);
-  const paginatedExams = filteredExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
+  const paginatedTableExams = tableFilteredExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
 
-  const handleOpenModal = () => {
+  const handleOpenModal = (presetSemestre?: string) => {
     setTitle('');
-    setMateria('');
+    const targetSem = presetSemestre || (filterSemestre !== 'todos' ? filterSemestre : 'Semestre I');
+    setSelectedSemestre(targetSem);
+    
+    // Auto-select first subject in that semester if available
+    const firstSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === targetSem.toLowerCase().trim()) || teacherSubjects[0];
+    setMateria(firstSub ? firstSub.nombre : '');
+    
     setParcialId('');
     setDescription('');
     setTiempo(60);
@@ -107,11 +190,16 @@ export default function MisExamenes({
     }
     const resolvedTitle = title.trim() || `Examen - ${materia.trim()}`;
 
+    // Link semester explicitly to preserve robust relation
+    const targetSubject = subjects.find(s => s.nombre.toLowerCase().trim() === materia.toLowerCase().trim() || s.id === materia);
+    const resolvedSem = selectedSemestre || targetSubject?.semestre || 'Semestre I';
+
     const newExam: Exam = {
       id: uid(),
       titulo: resolvedTitle.trim(),
       materia: materia.trim(),
       parcialId: parcialId || null,
+      semestre: resolvedSem,
       descripcion: description.trim(),
       docenteId: currentUser.id,
       estado,
@@ -122,14 +210,14 @@ export default function MisExamenes({
       mostrarNota,
       creado: now(),
       preguntas: [],
-      bannerUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80', // default books & theology banner
+      bannerUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80',
     };
 
     const nextExams = [...exams, newExam];
     onUpdateExams(nextExams);
     setIsModalOpen(false);
 
-    toast('Examen creado. Abre el editor para agregar preguntas.', 'success');
+    toast(`Examen organizado en ${resolvedSem} con éxito. Abriendo editor...`, 'success');
     onOpenBuilder(newExam.id);
   };
 
@@ -145,10 +233,15 @@ export default function MisExamenes({
     toast('Estado del examen actualizado', 'success');
   };
 
-  const handleDeleteExam = (id: string) => {
-    const nextExams = exams.filter(e => e.id !== id);
-    onUpdateExams(nextExams);
-    toast('Examen eliminado correctamente', 'success');
+  const handleDeleteExam = (exam: Exam) => {
+    if (onSendToRecycle) {
+      onSendToRecycle(exam);
+    } else {
+      const nextExams = exams.filter(e => e.id !== exam.id);
+      onUpdateExams(nextExams);
+      toast('Examen eliminado correctamente', 'success');
+    }
+    setConfirmDeleteId(null);
   };
 
   const handleDuplicateExam = (sourceExam: Exam) => {
@@ -162,7 +255,7 @@ export default function MisExamenes({
       actualizado: now()
     };
     onUpdateExams([clonedExam, ...exams]);
-    toast(`Examen copiado con éxito: "${clonedExam.titulo}"`, 'success');
+    toast(`Examen duplicado con éxito en su semestre: "${clonedExam.titulo}"`, 'success');
   };
 
   const handleExportAllExamsJson = () => {
@@ -173,32 +266,71 @@ export default function MisExamenes({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    toast('Copia de seguridad de los exámenes descargada correctamente', 'success');
+    toast('Copia de seguridad descargada correctamente', 'success');
   };
 
   return (
-    <div className="page-misExamenes animate-fade-in">
-      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+    <div className="page-misExamenes animate-fade-in w-full pb-14">
+      {/* HEADER SECTION */}
+      <div className="page-header flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
-            Mis exámenes
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
+              Mis exámenes y evaluaciones
+            </h2>
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-orange-100 text-[#ea580c] border border-orange-200">
+              {searchAndStatusFiltered.length} evaluaciones
+            </span>
+          </div>
           <div className="page-sub text-sm font-medium mt-1 text-slate-500">
-            Crea, duplica y gestiona tus evaluaciones y cuestionarios interactivos
+            Estructura académica de evaluaciones ordenadas por Semestre y Materia (Docente)
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-center">
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Switcher: Semestres (Columns like image) vs Tabla */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setViewMode('semestres')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'semestres'
+                  ? 'bg-white text-[#ea580c] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Ver evaluaciones organizadas por columnas de Semestre (como el Pensum oficial)"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Por Semestres</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('tabla')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                viewMode === 'tabla'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Ver listado en tabla tradicional"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Vista Tabla</span>
+            </button>
+          </div>
+
           <button 
             type="button"
             onClick={handleExportAllExamsJson}
             className="btn btn-secondary flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-700 bg-white border border-slate-200 text-xs font-semibold shadow-xs hover:bg-slate-50 transition cursor-pointer"
-            title="Descargar copia de seguridad de todos los exámenes en formato JSON"
+            title="Exportar respaldo JSON de todos los exámenes"
           >
             <Download className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Copiar / Exportar Backup ({exams.length})</span>
+            <span>Backup ({exams.length})</span>
           </button>
+
           <button 
-            onClick={handleOpenModal}
+            type="button"
+            onClick={() => handleOpenModal()}
             className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
             style={{ backgroundColor: 'var(--primary)' }}
           >
@@ -208,22 +340,81 @@ export default function MisExamenes({
         </div>
       </div>
 
-      {/* Chip Tabs Filters & Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
-        <div className="chip-tabs flex gap-2 flex-wrap">
+      {/* LEVEL FILTER TABS (MATCHING REFERENCE IMAGE STYLING) */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel('nivel1');
+            setFilterSemestre('todos');
+            setCurrentPage(1);
+          }}
+          className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer border ${
+            filterNivel === 'nivel1'
+              ? 'bg-[#ea580c] text-white border-[#ea580c] shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          <span>NIVEL I : Biblioteología Pastoral (Semestres I al V)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel('nivel2');
+            setFilterSemestre('todos');
+            setCurrentPage(1);
+          }}
+          className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer border ${
+            filterNivel === 'nivel2'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-400 hover:text-indigo-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-white"></span>
+          <span>NIVEL II : Biblioteología Ministerial (Semestres VI al IX)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterNivel('todos');
+            setFilterSemestre('todos');
+            setCurrentPage(1);
+          }}
+          className={`px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer border ${
+            filterNivel === 'todos'
+              ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>Todos los Niveles</span>
+        </button>
+      </div>
+
+      {/* FILTER & SEARCH TOOLBAR */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
+        {/* Status Chips */}
+        <div className="chip-tabs flex gap-2 flex-wrap items-center">
+          <span className="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5" /> Estado:
+          </span>
           {(['all', 'activo', 'borrador', 'cerrado'] as const).map(tabKey => {
             const labels = { all: 'Todos', activo: 'Activos', borrador: 'Borradores', cerrado: 'Cerrados' };
-            const isActive = filter === tabKey;
+            const isActive = filterStatus === tabKey;
             return (
               <button
                 key={tabKey}
-                onClick={() => setFilter(tabKey)}
-                className={`chip-tab px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer border select-none transition-all duration-150 ${
+                onClick={() => {
+                  setFilterStatus(tabKey);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer border transition-all ${
                   isActive 
-                    ? 'bg-indigo-600 border-indigo-600 text-white' 
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                    ? 'bg-slate-900 border-slate-900 text-white shadow-xs' 
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
-                style={isActive ? { backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
               >
                 {labels[tabKey]}
               </button>
@@ -231,347 +422,782 @@ export default function MisExamenes({
           })}
         </div>
 
-        {/* Search input bar */}
-        <div className="relative w-full md:max-w-xs">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            <Search className="w-3.5 h-3.5" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar examen por título o materia..."
-            className="w-full pl-9 pr-8 py-1.5 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs font-semibold text-slate-800 transition duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-150 theme-bg-surface theme-border"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer font-extrabold select-none text-[10px]"
-              title="Limpiar búsqueda"
+        {/* Semester Selector Dropdown + Search Input */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-500 font-medium">Semestre:</span>
+            <select
+              value={filterSemestre}
+              onChange={(e) => {
+                setFilterSemestre(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              ✕
-            </button>
-          )}
+              <option value="todos">Todos los Semestres</option>
+              {SEMESTRES_OFICIALES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="relative w-full md:w-64">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+              <Search className="w-3.5 h-3.5" />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por título, materia o código..."
+              className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 transition placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Exams Grid/Table List */}
-      <div className="card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden theme-bg-surface theme-border">
-        {filteredExams.length === 0 ? (
-          <div className="empty-state py-12 text-center text-slate-500 flex flex-col items-center">
-            <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
-            <h4 className="empty-title text-base font-semibold text-slate-700">Sin exámenes en esta categoría</h4>
-            <p className="empty-sub text-xs text-slate-400 mt-1">Crea tu primer módulo utilizando el botón de arriba</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 font-semibold text-xs tracking-wide border-b border-slate-250 theme-bg-surface">
-                  <th className="py-3 px-4">Título</th>
-                  <th className="py-3 px-4">Materia</th>
-                  <th className="py-3 px-4">Preguntas</th>
-                  <th className="py-3 px-4">Entregas</th>
-                  <th className="py-3 px-4">Estado</th>
-                  <th className="py-3 px-4">Creado</th>
-                  <th className="py-3 px-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedExams.map((e) => {
-                  const numSubs = submissions.filter(s => s.examenId === e.id).length;
-                  const statusBg = e.estado === 'activo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : e.estado === 'borrador' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200';
-                  const subjectObj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
-                  const subjectName = subjectObj?.nombre || e.materia || 'General';
-                  
-                  return (
-                    <tr key={e.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 px-4 font-semibold text-slate-900" style={{ color: 'var(--gray-900)' }}>
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={e.bannerUrl || 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80'}
-                            alt={e.titulo}
-                            className="w-14 h-8 rounded-lg object-cover border border-slate-200 shadow-xs shrink-0 bg-slate-50"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="min-w-0">
-                            <span className="block font-extrabold truncate max-w-md xl:max-w-2xl" title={e.titulo}>
-                              {cleanExamTitle(e.titulo)}
-                            </span>
-                            {e.subtitulo && (
-                              <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1 max-w-md xl:max-w-2xl">{e.subtitulo}</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="badge inline-flex px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 border border-indigo-100">
-                          {subjectName}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500">{e.preguntas?.length || 0}</td>
-                      <td className="py-3.5 px-4 text-slate-500">{numSubs}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`badge inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${statusBg}`}>
-                          {e.estado}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-slate-400">{fmtDate(e.creado)}</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex gap-1.5 items-center justify-end">
-                          <button 
-                            onClick={() => onOpenBuilder(e.id)}
-                            className="btn btn-secondary text-xs px-2.5 py-1 flex items-center gap-1 rounded hover:bg-slate-100 border border-slate-200"
-                            title="Editar preguntas en el Builder"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Contenido</span>
-                          </button>
-                          <button 
-                            onClick={() => handleDuplicateExam(e)}
-                            className="btn btn-secondary text-xs px-2.5 py-1 flex items-center gap-1 rounded hover:bg-slate-100 border border-slate-200 text-slate-700 cursor-pointer"
-                            title="Hacer una copia o duplicado de este examen con todas sus preguntas"
-                          >
-                            <Copy className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Copiar</span>
-                          </button>
-                          <button 
-                            onClick={() => toggleExamStatus(e.id)}
-                            className={`btn text-xs px-2.5 py-1 flex items-center gap-1 rounded border overflow-hidden ${
-                              e.estado === 'activo' 
-                                ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
-                                : 'bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100'
-                            }`}
-                          >
-                            {e.estado === 'activo' ? <Power className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                            <span>{e.estado === 'activo' ? 'Cerrar' : 'Publicar'}</span>
-                          </button>
-                          {confirmDeleteId === e.id ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  handleDeleteExam(e.id);
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
-                              >
-                                Sí
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 cursor-pointer"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button 
-                              onClick={() => setConfirmDeleteId(e.id)} 
-                              className="btn text-xs p-1 rounded border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800 cursor-pointer"
-                              title="Eliminar examen"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {filteredExams.length > 8 && (
-              <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
-                <span className="text-xs font-semibold text-slate-400">
-                  Mostrando { (currentActivePage - 1) * 8 + 1 } a { Math.min(currentActivePage * 8, filteredExams.length) } de { filteredExams.length } exámenes
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-slate-500 mr-2">
-                    Página {currentActivePage} de {totalPages}
+      {/* ============================================================== */}
+      {/* VIEW 1: ORGANIZADO POR SEMESTRES (COLUMN-BASED LIKE REFERENCE) */}
+      {/* ============================================================== */}
+      {viewMode === 'semestres' ? (
+        <div className="space-y-8">
+          {/* SECTION: NIVEL I */}
+          {(filterNivel === 'todos' || filterNivel === 'nivel1') && (
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-amber-200/90 shadow-xs">
+              <div className="text-center pb-4 mb-5 border-b border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-left">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+                    NIVEL I : Biblioteología Pastoral
+                  </h3>
+                  <div className="text-xs font-semibold text-amber-800 mt-0.5">
+                    Evaluaciones de Semestres I al V
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <span className="text-xs font-bold text-amber-800 bg-amber-100/90 px-3 py-1 rounded-full border border-amber-200">
+                    {semesterGroups.nivel1.semesters.reduce((acc, s) => acc + s.exams.length, 0)} evaluaciones registradas
                   </span>
-                  <button
-                    disabled={currentActivePage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    disabled={currentActivePage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
-                  >
-                    Siguiente
-                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* CREATE MODAL */}
+              {/* Grid of Semesters I to V */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                {semesterGroups.nivel1.semesters
+                  .filter(sem => filterSemestre === 'todos' || sem.name === filterSemestre)
+                  .map(sem => (
+                    <div key={sem.name} className="bg-slate-50/80 rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden hover:border-amber-400 transition-all">
+                      {/* Column Header matching reference: orange rounded tab */}
+                      <div className="bg-[#ea580c] text-white py-2.5 px-3 text-center shadow-xs flex items-center justify-between">
+                        <div className="text-xs sm:text-[13px] font-black uppercase tracking-wider">{sem.name}</div>
+                        <span className="text-[10px] font-extrabold bg-white/20 px-2 py-0.5 rounded-full">
+                          {sem.exams.length}
+                        </span>
+                      </div>
+
+                      {/* Evaluations cards list */}
+                      <div className="p-2.5 flex-1 flex flex-col gap-3">
+                        {sem.exams.length === 0 ? (
+                          <div className="text-center py-8 text-slate-400 text-xs italic bg-white rounded-xl border border-dashed border-slate-200 p-4">
+                            Sin evaluaciones creadas en {sem.name}
+                          </div>
+                        ) : (
+                          sem.exams.map(e => {
+                            const numSubs = submissions.filter(s => s.examenId === e.id).length;
+                            const subjectObj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+                            const subjectName = subjectObj?.nombre || e.materia || 'General';
+                            const statusColor = e.estado === 'activo' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : e.estado === 'borrador' 
+                                ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                : 'bg-slate-100 text-slate-600 border-slate-200';
+
+                            return (
+                              <div
+                                key={e.id}
+                                className="group relative bg-white hover:bg-amber-50/40 p-3 rounded-xl border border-slate-200/90 hover:border-amber-400 shadow-xs transition-all flex flex-col justify-between"
+                              >
+                                <div>
+                                  {/* Subject & Status */}
+                                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                                    <span className="font-mono text-[10px] font-extrabold text-amber-900 bg-amber-50 border border-amber-200/80 px-1.5 py-0.5 rounded truncate max-w-[130px]" title={subjectName}>
+                                      {subjectObj?.codigo ? `${subjectObj.codigo} · ` : ''}{subjectName}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExamStatus(e.id)}
+                                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition cursor-pointer ${statusColor}`}
+                                      title="Haz clic para alternar estado"
+                                    >
+                                      {e.estado}
+                                    </button>
+                                  </div>
+
+                                  {/* Exam Title */}
+                                  <h4 className="font-extrabold text-xs text-slate-900 leading-snug line-clamp-2" title={e.titulo}>
+                                    {cleanExamTitle(e.titulo)}
+                                  </h4>
+
+                                  {/* Metadata chips */}
+                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      <FileQuestion className="w-2.5 h-2.5 text-indigo-500" />
+                                      {e.preguntas?.length || 0} preg.
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      <Clock className="w-2.5 h-2.5 text-amber-500" />
+                                      {e.tiempo ? `${e.tiempo}m` : 'S/L'}
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      {numSubs} ent.
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Bar */}
+                                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => onOpenBuilder(e.id)}
+                                    className="px-2 py-1 text-[11px] font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1 transition cursor-pointer"
+                                    title="Editar preguntas en el Builder"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                    <span>Contenido</span>
+                                  </button>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDuplicateExam(e)}
+                                      className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                                      title="Duplicar examen"
+                                    >
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+
+                                    {confirmDeleteId === e.id ? (
+                                      <div className="flex items-center gap-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteExam(e)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white cursor-pointer"
+                                        >
+                                          Sí
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmDeleteId(null)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 cursor-pointer"
+                                        >
+                                          No
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteId(e.id)}
+                                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        title="Eliminar examen"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Quick Add Button per Semester */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenModal(sem.name)}
+                        className="m-2 p-1.5 rounded-xl border border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/70 hover:bg-amber-100 text-[11px] font-bold text-amber-900 flex items-center justify-center gap-1 cursor-pointer transition"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Nueva en {sem.name}</span>
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION: NIVEL II */}
+          {(filterNivel === 'todos' || filterNivel === 'nivel2') && (
+            <div className="bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/30 rounded-3xl p-5 sm:p-6 border border-indigo-200/80 shadow-xs">
+              <div className="text-center pb-4 mb-5 border-b border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="text-left">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+                    NIVEL II : Biblioteología Ministerial
+                  </h3>
+                  <div className="text-xs font-semibold text-indigo-700 mt-0.5">
+                    Evaluaciones de Semestres VI al IX
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-center">
+                  <span className="text-xs font-bold text-indigo-800 bg-indigo-100/90 px-3 py-1 rounded-full border border-indigo-200">
+                    {semesterGroups.nivel2.semesters.reduce((acc, s) => acc + s.exams.length, 0)} evaluaciones registradas
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid of Semesters VI to IX */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-4">
+                {semesterGroups.nivel2.semesters
+                  .filter(sem => filterSemestre === 'todos' || sem.name === filterSemestre)
+                  .map(sem => (
+                    <div key={sem.name} className="bg-slate-50/80 rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden hover:border-indigo-400 transition-all">
+                      {/* Column Header */}
+                      <div className="bg-indigo-600 text-white py-2.5 px-3 text-center shadow-xs flex items-center justify-between">
+                        <div className="text-xs sm:text-[13px] font-black uppercase tracking-wider">{sem.name}</div>
+                        <span className="text-[10px] font-extrabold bg-white/20 px-2 py-0.5 rounded-full">
+                          {sem.exams.length}
+                        </span>
+                      </div>
+
+                      {/* Evaluations list */}
+                      <div className="p-2.5 flex-1 flex flex-col gap-3">
+                        {sem.exams.length === 0 ? (
+                          <div className="text-center py-8 text-slate-400 text-xs italic bg-white rounded-xl border border-dashed border-slate-200 p-4">
+                            Sin evaluaciones creadas en {sem.name}
+                          </div>
+                        ) : (
+                          sem.exams.map(e => {
+                            const numSubs = submissions.filter(s => s.examenId === e.id).length;
+                            const subjectObj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+                            const subjectName = subjectObj?.nombre || e.materia || 'General';
+                            const statusColor = e.estado === 'activo' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                              : e.estado === 'borrador' 
+                                ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                : 'bg-slate-100 text-slate-600 border-slate-200';
+
+                            return (
+                              <div
+                                key={e.id}
+                                className="group relative bg-white hover:bg-indigo-50/40 p-3 rounded-xl border border-slate-200/90 hover:border-indigo-400 shadow-xs transition-all flex flex-col justify-between"
+                              >
+                                <div>
+                                  {/* Subject & Status */}
+                                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                                    <span className="font-mono text-[10px] font-extrabold text-indigo-900 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded truncate max-w-[130px]" title={subjectName}>
+                                      {subjectObj?.codigo ? `${subjectObj.codigo} · ` : ''}{subjectName}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExamStatus(e.id)}
+                                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition cursor-pointer ${statusColor}`}
+                                      title="Haz clic para alternar estado"
+                                    >
+                                      {e.estado}
+                                    </button>
+                                  </div>
+
+                                  {/* Exam Title */}
+                                  <h4 className="font-extrabold text-xs text-slate-900 leading-snug line-clamp-2" title={e.titulo}>
+                                    {cleanExamTitle(e.titulo)}
+                                  </h4>
+
+                                  {/* Metadata chips */}
+                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-medium">
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      <FileQuestion className="w-2.5 h-2.5 text-indigo-500" />
+                                      {e.preguntas?.length || 0} preg.
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      <Clock className="w-2.5 h-2.5 text-amber-500" />
+                                      {e.tiempo ? `${e.tiempo}m` : 'S/L'}
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                      {numSubs} ent.
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Bar */}
+                                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => onOpenBuilder(e.id)}
+                                    className="px-2 py-1 text-[11px] font-bold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1 transition cursor-pointer"
+                                    title="Editar preguntas en el Builder"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                    <span>Contenido</span>
+                                  </button>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDuplicateExam(e)}
+                                      className="p-1 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                                      title="Duplicar examen"
+                                    >
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+
+                                    {confirmDeleteId === e.id ? (
+                                      <div className="flex items-center gap-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteExam(e)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-600 text-white cursor-pointer"
+                                        >
+                                          Sí
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmDeleteId(null)}
+                                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 cursor-pointer"
+                                        >
+                                          No
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteId(e.id)}
+                                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                        title="Eliminar examen"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Quick Add Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenModal(sem.name)}
+                        className="m-2 p-1.5 rounded-xl border border-dashed border-indigo-300 hover:border-indigo-500 bg-indigo-50/70 hover:bg-indigo-100 text-[11px] font-bold text-indigo-900 flex items-center justify-center gap-1 cursor-pointer transition"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Nueva en {sem.name}</span>
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ============================================================== */
+        /* VIEW 2: CLASSIC TABLE VIEW WITH FULL DETAILS                   */
+        /* ============================================================== */
+        <div className="card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden theme-bg-surface theme-border">
+          {tableFilteredExams.length === 0 ? (
+            <div className="empty-state py-12 text-center text-slate-500 flex flex-col items-center">
+              <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
+              <h4 className="empty-title text-base font-semibold text-slate-700">Sin exámenes en este criterio</h4>
+              <p className="empty-sub text-xs text-slate-400 mt-1">Crea tu primera evaluación organizada por semestre</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 font-semibold text-xs tracking-wide border-b border-slate-200 theme-bg-surface">
+                    <th className="py-3 px-4">Título</th>
+                    <th className="py-3 px-4">Semestre</th>
+                    <th className="py-3 px-4">Materia</th>
+                    <th className="py-3 px-4">Preguntas</th>
+                    <th className="py-3 px-4">Entregas</th>
+                    <th className="py-3 px-4">Estado</th>
+                    <th className="py-3 px-4">Creado</th>
+                    <th className="py-3 px-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {paginatedTableExams.map((e) => {
+                    const numSubs = submissions.filter(s => s.examenId === e.id).length;
+                    const statusBg = e.estado === 'activo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : e.estado === 'borrador' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200';
+                    const subjectObj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+                    const subjectName = subjectObj?.nombre || e.materia || 'General';
+                    const semName = resolveExamSemester(e, subjects, semesters, parciales);
+
+                    return (
+                      <tr key={e.id} className="hover:bg-slate-50/50">
+                        <td className="py-3 px-4 font-semibold text-slate-900" style={{ color: 'var(--gray-900)' }}>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={e.bannerUrl || 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80'}
+                              alt={e.titulo}
+                              className="w-12 h-8 rounded-lg object-cover border border-slate-200 shadow-xs shrink-0 bg-slate-50"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="min-w-0">
+                              <span className="block font-extrabold truncate max-w-xs sm:max-w-md xl:max-w-xl" title={e.titulo}>
+                                {cleanExamTitle(e.titulo)}
+                              </span>
+                              {e.subtitulo && (
+                                <span className="block text-[10px] font-medium text-slate-400 italic line-clamp-1">{e.subtitulo}</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-bold bg-orange-50 text-[#ea580c] border border-orange-200">
+                            {semName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {subjectName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 font-bold">{e.preguntas?.length || 0}</td>
+                        <td className="py-3 px-4 text-slate-500 font-bold">{numSubs}</td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${statusBg}`}>
+                            {e.estado}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-400">{fmtDate(e.creado)}</td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex gap-1.5 items-center justify-end">
+                            <button 
+                              onClick={() => onOpenBuilder(e.id)}
+                              className="text-xs px-2.5 py-1 flex items-center gap-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-semibold cursor-pointer"
+                              title="Editar preguntas en el Builder"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              <span>Contenido</span>
+                            </button>
+                            <button 
+                              onClick={() => handleDuplicateExam(e)}
+                              className="text-xs px-2.5 py-1 flex items-center gap-1 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 cursor-pointer"
+                              title="Duplicar examen"
+                            >
+                              <Copy className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Copiar</span>
+                            </button>
+                            <button 
+                              onClick={() => toggleExamStatus(e.id)}
+                              className={`text-xs px-2 py-1 flex items-center gap-1 rounded-lg border cursor-pointer ${
+                                e.estado === 'activo' 
+                                  ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
+                                  : 'bg-emerald-50 border-emerald-250 text-emerald-700 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {e.estado === 'activo' ? <Power className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                              <span>{e.estado === 'activo' ? 'Cerrar' : 'Activar'}</span>
+                            </button>
+                            {confirmDeleteId === e.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleDeleteExam(e)}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-600 text-white cursor-pointer"
+                                >
+                                  Sí
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 cursor-pointer"
+                                >
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setConfirmDeleteId(e.id)} 
+                                className="p-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer"
+                                title="Eliminar examen"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {tableFilteredExams.length > examsPerPage && (
+                <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/50">
+                  <span className="text-xs font-semibold text-slate-400">
+                    Mostrando { (currentActivePage - 1) * examsPerPage + 1 } a { Math.min(currentActivePage * examsPerPage, tableFilteredExams.length) } de { tableFilteredExams.length } evaluaciones
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-500 mr-2">
+                      Página {currentActivePage} de {totalPages}
+                    </span>
+                    <button
+                      disabled={currentActivePage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      disabled={currentActivePage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm transition"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: CREAR NUEVO EXAMEN VINCULADO AL SEMESTRE Y MATERIA      */}
+      {/* ============================================================== */}
       {isModalOpen && (
-        <div className="modal-overlay fixed inset-0 bg-black/45 flex items-center justify-center z-[200] p-4">
-          <div className="modal bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh] theme-bg-surface">
-            <div className="modal-header border-b border-slate-100 p-4.5 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h3 className="modal-title font-bold text-slate-900 border-none">Nuevo examen</h3>
-              <button onClick={() => setIsModalOpen(false)} className="modal-close hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition">✕</button>
+        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[200] p-4">
+          <div className="modal bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-y-auto max-h-[92vh] border border-slate-200">
+            <div className="modal-header border-b border-slate-100 p-5 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="modal-title font-extrabold text-lg text-slate-900">
+                  Nueva Evaluación / Examen
+                </h3>
+                <p className="text-xs font-medium text-slate-500 mt-0.5">
+                  Organizado en su semestre correspondiente del pensum oficial
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 transition cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleCreateExam} className="modal-body p-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Título <span className="text-red-500">*</span></label>
+            <form onSubmit={handleCreateExam} className="modal-body p-6 space-y-4">
+              {/* Step 1: Select Semestre & Materia */}
+              <div className="p-4 bg-orange-50/60 rounded-2xl border border-orange-200/80 space-y-3.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-orange-950">
+                  <span className="w-5 h-5 rounded-full bg-[#ea580c] text-white flex items-center justify-center text-[10px] font-black">
+                    1
+                  </span>
+                  <span>Ubicación Curricular (Semestre y Materia)</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Semestre Académico <span className="text-[#ea580c]">*</span>
+                    </label>
+                    <select
+                      value={selectedSemestre}
+                      onChange={e => {
+                        const newSem = e.target.value;
+                        setSelectedSemestre(newSem);
+                        // Filter matching subjects and set first
+                        const matchingSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === newSem.toLowerCase().trim());
+                        if (matchingSub) {
+                          setMateria(matchingSub.nombre);
+                          if (!title.trim() || title.startsWith('Examen de ')) {
+                            setTitle(`Examen de ${matchingSub.nombre}`);
+                          }
+                        }
+                      }}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#ea580c]"
+                    >
+                      {SEMESTRES_OFICIALES.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Materia / Asignatura <span className="text-red-500">*</span>
+                    </label>
+                    <SearchableSelect
+                      options={modalSubjectOptions}
+                      value={materia}
+                      placeholder="-- Selecciona materia --"
+                      searchPlaceholder="Buscar materia..."
+                      noResultsText="Sin materias en este semestre"
+                      onChange={selectedMat => {
+                        setMateria(selectedMat);
+                        if (!title.trim() || title.startsWith('Examen de ')) {
+                          setTitle(`Examen de ${selectedMat}`);
+                        }
+                        // Auto-sync semester if subject has it
+                        const foundSub = subjects.find(s => s.nombre === selectedMat);
+                        if (foundSub?.semestre) {
+                          setSelectedSemestre(foundSub.semestre);
+                        }
+                        const matchingParc = foundSub ? parciales.find(p => p.asignatura === foundSub.id) : null;
+                        setParcialId(matchingParc?.id || '');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Parcial Relativo opcional */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Vincular a Parcial / Corte Evaluativo (Opcional)
+                  </label>
+                  <select 
+                    value={parcialId} 
+                    onChange={e => setParcialId(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">-- Sin parcial relativo (Evaluación independiente) --</option>
+                    {(() => {
+                      const matchingSub = subjects.find(s => s.nombre === materia);
+                      const filteredParcs = matchingSub ? parciales.filter(p => p.asignatura === matchingSub.id) : parciales;
+                      return filteredParcs.map(p => {
+                        const sub = subjects.find(s => s.id === p.asignatura);
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre} {sub ? `(${sub.nombre})` : ''}
+                          </option>
+                        );
+                      });
+                    })()}
+                  </select>
+                </div>
+              </div>
+
+              {/* Step 2: Basic Info */}
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Título de la Evaluación <span className="text-red-500">*</span>
+                  </label>
                   <input 
                     type="text" 
                     required 
                     value={title} 
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="Ej: Álgebra lineal" 
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600"
+                    placeholder="Ej: EVALUACIÓN I - TEOLOGÍA" 
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
                   />
                 </div>
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Materia <span className="text-red-500">*</span></label>
-                  <SearchableSelect
-                    options={subjectOptions}
-                    value={materia}
-                    placeholder="-- Selecciona materia --"
-                    searchPlaceholder="Buscar materia/asignatura..."
-                    noResultsText="No se encontraron materias"
-                    onChange={selectedMateria => {
-                      setMateria(selectedMateria);
-                      if (!title.trim()) {
-                        setTitle(`Examen de ${selectedMateria}`);
-                      }
-                      const matchingSub = subjects.find(s => s.nombre === selectedMateria);
-                      const matchingParc = matchingSub ? parciales.find(p => p.asignatura === matchingSub.id) : null;
-                      setParcialId(matchingParc?.id || '');
-                    }}
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Instrucciones generales para el estudiante
+                  </label>
+                  <textarea 
+                    value={description} 
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="Instrucciones para la presentación del examen..." 
+                    rows={2}
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
                   />
                 </div>
               </div>
 
-              <div className="form-group mb-4">
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Parcial Relativo</label>
-                <select 
-                  value={parcialId} 
-                  onChange={e => setParcialId(e.target.value)}
-                  className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600 bg-white"
-                  disabled={!materia}
-                >
-                  <option value="">-- No vincular parcial --</option>
-                  {(() => {
-                    const matchingSub = subjects.find(s => s.nombre === materia);
-                    const filteredParcs = matchingSub ? parciales.filter(p => p.asignatura === matchingSub.id) : [];
-                    return filteredParcs.map(p => {
-                      const sem = semesters.find(s => s.id === p.semestre);
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {p.nombre} {sem ? `· Semestre: ${sem.nombre}` : ''}
-                        </option>
-                      );
-                    });
-                  })()}
-                </select>
-              </div>
-
-              <div className="form-group mb-4">
-                <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Instrucciones / Descripción</label>
-                <textarea 
-                  value={description} 
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Instrucciones del examen..." 
-                  rows={2}
-                  className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Tiempo límite (min, 0=S/L)</label>
+              {/* Step 3: Rules & Limits */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Tiempo (min)</label>
                   <input 
                     type="number" 
                     min={0} 
                     value={tiempo} 
                     onChange={e => setTiempo(Number(e.target.value))}
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
                   />
+                  <span className="text-[10px] text-slate-400">0 = Ilimitado</span>
                 </div>
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Intentos permitidos (0=inf)</label>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Intentos</label>
                   <input 
                     type="number" 
                     min={0} 
                     value={intentos} 
                     onChange={e => setIntentos(Number(e.target.value))}
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
                   />
+                  <span className="text-[10px] text-slate-400">0 = Infinitos</span>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Nota aprobatoria (%)</label>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Aprobación (%)</label>
                   <input 
                     type="number" 
                     min={1} 
                     max={100}
                     value={aprobacion} 
                     onChange={e => setAprobacion(Number(e.target.value))}
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600"
+                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
                   />
+                  <span className="text-[10px] text-slate-400">Min. aprobatorio</span>
                 </div>
-                <div className="form-group mb-4">
-                  <label className="form-label text-xs font-semibold text-slate-700 block mb-1">Publicación</label>
-                  <select 
-                    value={estado} 
-                    onChange={e => setEstado(e.target.value as 'borrador' | 'activo')}
-                    className="form-control w-full p-2 border rounded-lg focus:outline-indigo-600 bg-white"
+              </div>
+
+              {/* Estado y opciones */}
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">Estado inicial:</span>
+                  <select
+                    value={estado}
+                    onChange={e => setEstado(e.target.value as any)}
+                    className="p-1.5 border border-slate-200 rounded-lg text-xs font-bold bg-white text-slate-800"
                   >
-                    <option value="borrador">Guardar como Borrador</option>
-                    <option value="activo">Publicar Activo</option>
+                    <option value="borrador">Borrador (Oculto)</option>
+                    <option value="activo">Activo (Publicado)</option>
                   </select>
                 </div>
+
+                <div className="flex items-center gap-4 text-xs font-semibold text-slate-700">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={aleatorio} 
+                      onChange={e => setAleatorio(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-0"
+                    />
+                    <span>Aleatorio</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={mostrarNota} 
+                      onChange={e => setMostrarNota(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-0"
+                    />
+                    <span>Ver nota al final</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 mt-2 bg-slate-50 p-3 rounded-xl">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={aleatorio} 
-                    onChange={e => setAleatorio(e.target.checked)}
-                    className="w-4 h-4 accent-indigo-600"
-                  />
-                  <span className="text-xs font-semibold text-slate-700">Orden de preguntas aleatorio</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input 
-                    type="checkbox" 
-                    checked={mostrarNota} 
-                    onChange={e => setMostrarNota(e.target.checked)}
-                    className="w-4 h-4 accent-indigo-600"
-                  />
-                  <span className="text-xs font-semibold text-slate-700">Mostrar notas y respuestas finales al estudiante</span>
-                </label>
-              </div>
-
-              <div className="modal-footer border-t border-slate-100 flex justify-end gap-3 pt-4 mt-4">
+              {/* Footer Actions */}
+              <div className="modal-footer pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button 
                   type="button" 
-                  onClick={() => setIsModalOpen(false)}
-                  className="btn btn-secondary px-4 py-2 border rounded-xl hover:bg-slate-50 cursor-pointer text-slate-700"
+                  onClick={() => setIsModalOpen(false)} 
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
-                  className="btn btn-primary px-4.5 py-2 text-white font-semibold rounded-xl cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:scale-[1.02] transition-transform flex items-center gap-1.5 cursor-pointer"
                   style={{ backgroundColor: 'var(--primary)' }}
                 >
-                  Crear y abrir Editor
+                  <span>Crear y Abrir Builder</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </form>
