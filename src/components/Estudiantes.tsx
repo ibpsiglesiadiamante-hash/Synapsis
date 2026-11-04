@@ -4,7 +4,11 @@
  */
 
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet, Sparkles, RefreshCw, Key } from 'lucide-react';
+import { 
+  Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, 
+  ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet, 
+  Sparkles, RefreshCw, Key, ShieldCheck, Lock, CheckSquare, Layers, BookMarked, FileText 
+} from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
 import { deleteDocFromFirestore, saveDocToFirestore, uploadAllStudentsToFirestore } from '../lib/firebase';
@@ -47,6 +51,63 @@ export default function Estudiantes({
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [linkSearchQuery, setLinkSearchQuery] = useState('');
   const [filterBySemesterOnly, setFilterBySemesterOnly] = useState(false);
+
+  // Student Category Permissions modal states
+  const [isPermModalOpen, setIsPermModalOpen] = useState(false);
+  const [permStudent, setPermStudent] = useState<User | null>(null);
+  const [studentPermCategories, setStudentPermCategories] = useState<string[]>([]);
+
+  const handleOpenPermModal = (st: User) => {
+    setPermStudent(st);
+    const existing = st.permisosCategorias && st.permisosCategorias.length > 0
+      ? st.permisosCategorias
+      : ['estudiante', 'recursos']; // Default for student
+    setStudentPermCategories([...existing]);
+    setIsPermModalOpen(true);
+  };
+
+  const handleTogglePermCategory = (catId: string) => {
+    setStudentPermCategories(prev => 
+      prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
+    );
+  };
+
+  const handleApplyPreset = (preset: 'standard' | 'gestion' | 'monitor' | 'all') => {
+    if (preset === 'standard') {
+      setStudentPermCategories(['estudiante', 'recursos']);
+    } else if (preset === 'gestion') {
+      setStudentPermCategories(['estudiante', 'recursos', 'gestion']);
+    } else if (preset === 'monitor') {
+      setStudentPermCategories(['estudiante', 'recursos', 'docente']);
+    } else if (preset === 'all') {
+      setStudentPermCategories(['estudiante', 'recursos', 'gestion', 'docente', 'admin']);
+    }
+  };
+
+  const handleSavePermCategories = () => {
+    if (!permStudent) return;
+    const finalCats = studentPermCategories.length > 0 ? studentPermCategories : ['estudiante', 'recursos'];
+    const updatedUsers = users.map(u => {
+      if (u.id === permStudent.id) {
+        return {
+          ...u,
+          permisosCategorias: finalCats,
+          actualizado: now()
+        };
+      }
+      return u;
+    });
+
+    onUpdateUsers(updatedUsers);
+    const updatedStudent = updatedUsers.find(u => u.id === permStudent.id);
+    if (updatedStudent) {
+      saveDocToFirestore('users', updatedStudent).catch(() => {});
+      saveDocToSupabase('users', updatedStudent).catch(() => {});
+    }
+
+    toast(`Permisos de categorías actualizados para ${permStudent.nombre}`, 'success');
+    setIsPermModalOpen(false);
+  };
 
   const effectiveSubjects = (subjects && subjects.length > 0 ? subjects : (backupAppState.subjects as Subject[])) || [];
   const effectiveSemesters = (semesters && semesters.length > 0 ? semesters : (backupAppState.semesters as Semester[])) || [];
@@ -655,6 +716,14 @@ export default function Estudiantes({
                     <td className="py-4 px-4 text-right">
                       <div className="inline-flex gap-1.5 items-center justify-end">
                         <button
+                          onClick={() => handleOpenPermModal(st)}
+                          className="btn text-xs px-2.5 py-1.5 rounded border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-xs"
+                          title="Configurar categorías y permisos de acceso para este estudiante"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                          <span>Permisos</span>
+                        </button>
+                        <button
                           onClick={() => handleOpenLinkModal(st)}
                           className="btn text-xs px-2.5 py-1.5 rounded border border-violet-205 bg-violet-50 hover:bg-violet-100 text-violet-700 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-sm"
                         >
@@ -1186,6 +1255,278 @@ export default function Estudiantes({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* STUDENT CATEGORY PERMISSIONS MODAL */}
+      {isPermModalOpen && permStudent && (
+        <div className="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[220] p-4 text-left animate-fade-in">
+          <div className="modal bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="modal-header bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="modal-title font-extrabold text-white text-base leading-tight">
+                    Permisos de Categorías del Menú
+                  </h3>
+                  <div className="text-xs text-teal-300 mt-0.5">
+                    Estudiante: <strong>{permStudent.nombre}</strong> {permStudent.codigo ? `(${permStudent.codigo})` : ''}
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsPermModalOpen(false)} 
+                className="hover:bg-white/10 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 max-h-[75vh] overflow-y-auto space-y-4">
+              <div className="bg-teal-50 border border-teal-200 rounded-2xl p-3.5 text-xs text-teal-900 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">Control de Acceso Restringido:</strong>
+                  Selecciona a qué categorías del menú tiene permiso este estudiante. Las categorías desmarcadas quedan completamente ocultas y bloqueadas para su perfil.
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                  Plantillas de Permisos Rápidos:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('standard')}
+                    className="p-2 rounded-xl text-center border border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 text-xs font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    Estándar
+                    <div className="text-[10px] text-slate-400 font-normal">Estudiante + Recursos</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('gestion')}
+                    className="p-2 rounded-xl text-center border border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 text-xs font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    + Gestión
+                    <div className="text-[10px] text-slate-400 font-normal">Agenda y Boletines</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('monitor')}
+                    className="p-2 rounded-xl text-center border border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 text-xs font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    Monitor
+                    <div className="text-[10px] text-slate-400 font-normal">+ Módulos Docente</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('all')}
+                    className="p-2 rounded-xl text-center border border-slate-200 hover:border-teal-400 hover:bg-teal-50/50 text-xs font-bold text-slate-700 transition cursor-pointer"
+                  >
+                    Acceso Total
+                    <div className="text-[10px] text-slate-400 font-normal">Todas (22 mód.)</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Checkboxes Cards */}
+              <div className="space-y-2.5 pt-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Categorías Habilitadas:
+                </label>
+
+                {/* 1. Categoría Estudiante */}
+                <div 
+                  onClick={() => handleTogglePermCategory('estudiante')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    studentPermCategories.includes('estudiante')
+                      ? 'bg-purple-50/80 border-purple-300 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={studentPermCategories.includes('estudiante')}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-purple-600 pointer-events-none"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-purple-600" />
+                        <span>Categoría Estudiante</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-extrabold">3 módulos</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Mis Asignaturas · Exámenes Disponibles · Mi Historial Académico
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-black ${studentPermCategories.includes('estudiante') ? 'text-purple-700' : 'text-slate-400'}`}>
+                    {studentPermCategories.includes('estudiante') ? 'Habilitado ✓' : 'Bloqueado'}
+                  </span>
+                </div>
+
+                {/* 2. Categoría Recursos y Comunidad */}
+                <div 
+                  onClick={() => handleTogglePermCategory('recursos')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    studentPermCategories.includes('recursos')
+                      ? 'bg-emerald-50/80 border-emerald-300 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={studentPermCategories.includes('recursos')}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-emerald-600 pointer-events-none"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <BookMarked className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Categoría Recursos y Comunidad</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold">2 módulos</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Biblioteca de Conocimiento · La Sagrada Biblia
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-black ${studentPermCategories.includes('recursos') ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    {studentPermCategories.includes('recursos') ? 'Habilitado ✓' : 'Bloqueado'}
+                  </span>
+                </div>
+
+                {/* 3. Categoría Gestión Escolar */}
+                <div 
+                  onClick={() => handleTogglePermCategory('gestion')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    studentPermCategories.includes('gestion')
+                      ? 'bg-teal-50/80 border-teal-300 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={studentPermCategories.includes('gestion')}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-teal-600 pointer-events-none"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <CheckSquare className="w-3.5 h-3.5 text-teal-600" />
+                        <span>Categoría Gestión Escolar</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 font-extrabold">5 módulos</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Agenda Escolar · Tablón de Anuncios · Boletines Académicos · Asistencia · Finanzas
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-black ${studentPermCategories.includes('gestion') ? 'text-teal-700' : 'text-slate-400'}`}>
+                    {studentPermCategories.includes('gestion') ? 'Habilitado ✓' : 'Bloqueado'}
+                  </span>
+                </div>
+
+                {/* 4. Categoría Docente */}
+                <div 
+                  onClick={() => handleTogglePermCategory('docente')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    studentPermCategories.includes('docente')
+                      ? 'bg-cyan-50/80 border-cyan-300 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={studentPermCategories.includes('docente')}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-cyan-600 pointer-events-none"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-cyan-600" />
+                        <span>Categoría Docente</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-800 font-extrabold">3 módulos</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Mis Exámenes (Banco) · Mis Parciales y Cortes · Calificación de Resultados
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-black ${studentPermCategories.includes('docente') ? 'text-cyan-700' : 'text-slate-400'}`}>
+                    {studentPermCategories.includes('docente') ? 'Habilitado ✓' : 'Bloqueado'}
+                  </span>
+                </div>
+
+                {/* 5. Categoría Administrador */}
+                <div 
+                  onClick={() => handleTogglePermCategory('admin')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    studentPermCategories.includes('admin')
+                      ? 'bg-rose-50/80 border-rose-300 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="checkbox"
+                      checked={studentPermCategories.includes('admin')}
+                      onChange={() => {}}
+                      className="w-4 h-4 rounded text-rose-600 pointer-events-none"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Categoría Administrador</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-extrabold">9 módulos</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Usuarios · Sedes · Asignaturas · Semestres · Libro de Notas · Trabajos · Directorio · Papelera
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-black ${studentPermCategories.includes('admin') ? 'text-rose-700' : 'text-slate-400'}`}>
+                    {studentPermCategories.includes('admin') ? 'Habilitado ✓' : 'Bloqueado'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-600">
+                {studentPermCategories.length} de 5 categorías activas
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPermModalOpen(false)}
+                  className="px-4 py-2 border rounded-xl hover:bg-slate-100 text-slate-700 bg-white cursor-pointer text-xs font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePermCategories}
+                  className="px-5 py-2 text-white font-bold rounded-xl cursor-pointer text-xs bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 shadow-sm"
+                >
+                  Guardar Permisos
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

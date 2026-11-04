@@ -18,6 +18,8 @@ export interface User {
   foto?: string;
   avatarUrl?: string;
   actualizado?: string;
+  permisosCategorias?: string[]; // e.g. ['estudiante', 'recursos', 'gestion']
+  permisosModulos?: string[]; // e.g. ['misMaterias', 'misExamenesTake', 'miHistorial']
 }
 
 export interface Subject {

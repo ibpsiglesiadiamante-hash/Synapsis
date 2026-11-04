@@ -440,12 +440,28 @@ export default function Dashboard({
     }
   ];
 
-  // Total Modules: 5 + 2 + 3 + 3 + 9 = 22
-  const totalModulesCount = categories.reduce((acc, c) => acc + c.badgeCount, 0);
+  // Filter categories and modules strictly based on user role and permitted categories
+  const userRole = currentUser?.rol || 'estudiante';
+  const defaultAllowedCats = userRole === 'admin'
+    ? ['gestion', 'recursos', 'docente', 'estudiante', 'admin']
+    : userRole === 'docente'
+      ? ['docente', 'recursos', 'gestion']
+      : ['estudiante', 'recursos']; // By default, students ONLY have access to Estudiante & Recursos!
 
-  const filteredCategories = selectedCategory === 'todas'
-    ? categories
-    : categories.filter(c => c.id === selectedCategory);
+  const allowedCatIds: string[] = (currentUser?.permisosCategorias && currentUser.permisosCategorias.length > 0)
+    ? currentUser.permisosCategorias
+    : defaultAllowedCats;
+
+  const availableCategories = categories.filter(c => allowedCatIds.includes(c.id));
+  const totalModulesCount = availableCategories.reduce((acc, c) => acc + c.modules.length, 0);
+
+  const activeSelectedCategory = (selectedCategory === 'todas' || allowedCatIds.includes(selectedCategory))
+    ? selectedCategory
+    : 'todas';
+
+  const filteredCategories = activeSelectedCategory === 'todas'
+    ? availableCategories
+    : availableCategories.filter(c => c.id === activeSelectedCategory);
 
   return (
     <div className="page-dashboard animate-fade-in text-white space-y-5">
@@ -464,7 +480,7 @@ export default function Dashboard({
           {/* Left Hero Content */}
           <div className="flex-1 max-w-2xl">
             <span className="text-[11px] font-black uppercase tracking-[0.28em] text-[#22d3ee] font-mono block mb-1">
-              BIENVENIDO A
+              {userRole === 'estudiante' ? 'PORTAL DEL ESTUDIANTE · BIENVENIDO A' : 'BIENVENIDO A'}
             </span>
             
             {/* Title in High-Relief 3D Effect as requested by user */}
@@ -473,7 +489,9 @@ export default function Dashboard({
             </h1>
 
             <p className="text-xs sm:text-sm text-teal-100/80 font-normal leading-relaxed max-w-xl">
-              Control total de tu institución, en un solo lugar. Módulos de gestión organizados por categorías académicas, evaluativas y administrativas.
+              {userRole === 'estudiante'
+                ? `Hola, ${currentUser.nombre}. Accede a tus asignaturas inscritas, evaluaciones disponibles, notas oficiales y recursos de estudio.`
+                : 'Control total de tu institución, en un solo lugar. Módulos de gestión organizados por categorías académicas, evaluativas y administrativas.'}
             </p>
           </div>
 
@@ -562,11 +580,11 @@ export default function Dashboard({
       )}
 
       {/* ========================================================= */}
-      {/* CATEGORY FILTER PILLS BAR (Matching image_d35f7ea1.png)    */}
+      {/* CATEGORY FILTER PILLS BAR                                 */}
       {/* ========================================================= */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2">
         
-        {/* Left: Filter Pills matching the 5 authentic categories */}
+        {/* Left: Filter Pills matching only permitted categories for the current user */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
             type="button"
@@ -576,7 +594,7 @@ export default function Dashboard({
               setCollapsedSections(ALL_COLLAPSED_CATEGORIES);
             }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'todas'
+              activeSelectedCategory === 'todas'
                 ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
                 : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
             }`}
@@ -585,85 +603,28 @@ export default function Dashboard({
             <span>Todas ({totalModulesCount})</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('gestion');
-              setCollapsedSections(prev => ({ ...prev, gestion: false }));
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'gestion'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            <span>Gestión Escolar (5)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('recursos');
-              setCollapsedSections(prev => ({ ...prev, recursos: false }));
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'recursos'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <BookMarked className="w-3.5 h-3.5" />
-            <span>Recursos y Comunidad (2)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('docente');
-              setCollapsedSections(prev => ({ ...prev, docente: false }));
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'docente'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Docente (3)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('estudiante');
-              setCollapsedSections(prev => ({ ...prev, estudiante: false }));
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'estudiante'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Estudiante (3)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('admin');
-              setCollapsedSections(prev => ({ ...prev, admin: false }));
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
-              selectedCategory === 'admin'
-                ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
-                : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Administrador (8)</span>
-          </button>
+          {availableCategories.map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                setCollapsedSections(prev => ({ ...prev, [cat.id]: false }));
+              }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
+                activeSelectedCategory === cat.id
+                  ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'bg-[#072d35] border-[#104b58] text-teal-100 hover:bg-[#0a3842] hover:text-white'
+              }`}
+            >
+              {cat.id === 'gestion' && <CheckSquare className="w-3.5 h-3.5" />}
+              {cat.id === 'recursos' && <BookMarked className="w-3.5 h-3.5" />}
+              {cat.id === 'docente' && <FileText className="w-3.5 h-3.5" />}
+              {cat.id === 'estudiante' && <Users className="w-3.5 h-3.5" />}
+              {cat.id === 'admin' && <ShieldCheck className="w-3.5 h-3.5" />}
+              <span>{cat.name} ({cat.modules.length})</span>
+            </button>
+          ))}
         </div>
 
         {/* Right Controls: Desplegar Todos & Tamaño Mini / Mediana */}

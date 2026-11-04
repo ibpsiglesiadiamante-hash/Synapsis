@@ -53,9 +53,21 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
     }));
   };
 
-  const isDoc = rol === 'docente' || rol === 'admin';
-  const isEst = rol === 'estudiante' || rol === 'admin';
-  const isAdm = rol === 'admin' || rol === 'docente'; // Docente has visibility over some admin tasks too in original
+  const defaultAllowedCats = rol === 'admin'
+    ? ['gestion', 'recursos', 'docente', 'estudiante', 'admin']
+    : rol === 'docente'
+      ? ['docente', 'recursos', 'gestion']
+      : ['estudiante', 'recursos'];
+
+  const allowedCatIds = (currentUser?.permisosCategorias && currentUser.permisosCategorias.length > 0)
+    ? currentUser.permisosCategorias
+    : defaultAllowedCats;
+
+  const isGes = allowedCatIds.includes('gestion') || rol === 'admin';
+  const isRec = allowedCatIds.includes('recursos') || rol === 'admin';
+  const isDoc = allowedCatIds.includes('docente') || rol === 'admin';
+  const isEst = allowedCatIds.includes('estudiante') || rol === 'admin';
+  const isAdm = allowedCatIds.includes('admin') || rol === 'admin';
 
   const navItemClass = (pageId: string) => {
     const isSelected = activePage === pageId;
@@ -93,83 +105,87 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
       </div>
 
       {/* GESTIÓN ESCOLAR */}
-      <div className="nav-group mt-2">
-        <div 
-          onClick={() => toggleGroup('gestion')} 
-          className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
-        >
-          <span>Gestión Escolar</span>
-          {expandedGroups.gestion ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
-        </div>
-        {expandedGroups.gestion && (
-          <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
-            <div 
-              onClick={() => onPageChange('asistencia')} 
-              className={navItemClass('asistencia')}
-            >
-              <CheckSquare className="w-[18px] h-[18px] shrink-0" />
-              <span>Asistencia</span>
-            </div>
-            <div 
-              onClick={() => onPageChange('boletines')} 
-              className={navItemClass('boletines')}
-            >
-              <Award className="w-[18px] h-[18px] shrink-0" />
-              <span>Boletines Acad.</span>
-            </div>
-            <div 
-              onClick={() => onPageChange('agenda')} 
-              className={navItemClass('agenda')}
-            >
-              <Calendar className="w-[18px] h-[18px] shrink-0" />
-              <span>Agenda Escolar</span>
-            </div>
-            <div 
-              onClick={() => onPageChange('tablon')} 
-              className={navItemClass('tablon')}
-            >
-              <Megaphone className="w-[18px] h-[18px] shrink-0" />
-              <span>Tablón de Anunc.</span>
-            </div>
-            <div 
-              onClick={() => onPageChange('finanzas')} 
-              className={navItemClass('finanzas')}
-            >
-              <DollarSign className="w-[18px] h-[18px] shrink-0" />
-              <span>Finanzas / Pagos</span>
-            </div>
+      {isGes && (
+        <div className="nav-group mt-2">
+          <div 
+            onClick={() => toggleGroup('gestion')} 
+            className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
+          >
+            <span>Gestión Escolar</span>
+            {expandedGroups.gestion ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
           </div>
-        )}
-      </div>
+          {expandedGroups.gestion && (
+            <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
+              <div 
+                onClick={() => onPageChange('asistencia')} 
+                className={navItemClass('asistencia')}
+              >
+                <CheckSquare className="w-[18px] h-[18px] shrink-0" />
+                <span>Asistencia</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('boletines')} 
+                className={navItemClass('boletines')}
+              >
+                <Award className="w-[18px] h-[18px] shrink-0" />
+                <span>Boletines Acad.</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('agenda')} 
+                className={navItemClass('agenda')}
+              >
+                <Calendar className="w-[18px] h-[18px] shrink-0" />
+                <span>Agenda Escolar</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('tablon')} 
+                className={navItemClass('tablon')}
+              >
+                <Megaphone className="w-[18px] h-[18px] shrink-0" />
+                <span>Tablón de Anunc.</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('finanzas')} 
+                className={navItemClass('finanzas')}
+              >
+                <DollarSign className="w-[18px] h-[18px] shrink-0" />
+                <span>Finanzas / Pagos</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* RECURSOS Y COMUNIDAD */}
-      <div className="nav-group mt-2">
-        <div 
-          onClick={() => toggleGroup('recursos')} 
-          className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
-        >
-          <span>Recursos y Comunidad</span>
-          {expandedGroups.recursos ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
-        </div>
-        {expandedGroups.recursos && (
-          <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
-            <div 
-              onClick={() => onPageChange('educativo')} 
-              className={navItemClass('educativo')}
-            >
-              <Library className="w-[18px] h-[18px] shrink-0 text-indigo-500" />
-              <span>Biblioteca de Conocimiento</span>
-            </div>
-            <div 
-              onClick={() => onPageChange('biblia')} 
-              className={navItemClass('biblia')}
-            >
-              <BookMarked className="w-[18px] h-[18px] shrink-0 text-amber-600" />
-              <span>La Sagrada Biblia</span>
-            </div>
+      {isRec && (
+        <div className="nav-group mt-2">
+          <div 
+            onClick={() => toggleGroup('recursos')} 
+            className="nav-group-header flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 text-relief-header py-2 px-2.5 rounded-lg cursor-pointer select-none transition-colors hover:bg-teal-50/50"
+          >
+            <span>Recursos y Comunidad</span>
+            {expandedGroups.recursos ? <ChevronDown className="w-3.5 h-3.5 text-teal-500" /> : <ChevronRight className="w-3.5 h-3.5 text-teal-500" />}
           </div>
-        )}
-      </div>
+          {expandedGroups.recursos && (
+            <div className="nav-group-content flex flex-col gap-1 mt-1 pl-1">
+              <div 
+                onClick={() => onPageChange('educativo')} 
+                className={navItemClass('educativo')}
+              >
+                <Library className="w-[18px] h-[18px] shrink-0 text-indigo-500" />
+                <span>Biblioteca de Conocimiento</span>
+              </div>
+              <div 
+                onClick={() => onPageChange('biblia')} 
+                className={navItemClass('biblia')}
+              >
+                <BookMarked className="w-[18px] h-[18px] shrink-0 text-amber-600" />
+                <span>La Sagrada Biblia</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* DOCENTE */}
       {isDoc && (

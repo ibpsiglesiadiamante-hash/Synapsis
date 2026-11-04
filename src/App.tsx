@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  ShieldAlert,
   ArrowRight,
   BookOpen,
   Globe,
@@ -269,8 +270,8 @@ export default function App() {
 
   // Login & Registration form states
   const [loginTab, setLoginTab] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPass, setLoginPass] = useState('');
+  const [loginEmail, setLoginEmail] = useState('quinoneswash70@gmail.com');
+  const [loginPass, setLoginPass] = useState('1234');
   const [showPassword, setShowPassword] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -436,6 +437,36 @@ export default function App() {
     const cleanId = loginEmail.trim().toLowerCase();
     const cleanPass = loginPass.trim();
 
+    // Direct Access for Washington Quiñones (quinoneswash70@gmail.com / ibpsiglesiadiamante@gmail.com)
+    const isSpecialAdminEmail = cleanId === 'quinoneswash70@gmail.com' || cleanId === 'ibpsiglesiadiamante@gmail.com';
+    const isSpecialPassword = cleanPass === '1234' || cleanPass === '053507' || cleanPass === 'admin123';
+
+    if (isSpecialAdminEmail && isSpecialPassword) {
+      let targetAdmin = db.users.find(u => (u.email || '').toLowerCase() === cleanId) ||
+                        db.users.find(u => (u.email || '').toLowerCase() === 'quinoneswash70@gmail.com') ||
+                        db.users.find(u => (u.email || '').toLowerCase() === 'ibpsiglesiadiamante@gmail.com') ||
+                        db.users.find(u => u.rol === 'admin');
+      if (!targetAdmin) {
+        targetAdmin = {
+          id: 'admin-fallback-id',
+          nombre: 'WASHINGTON QUIÑONES',
+          email: 'quinoneswash70@gmail.com',
+          pass: cleanPass,
+          rol: 'admin',
+          creado: new Date().toISOString()
+        };
+        updateUsers([...db.users, targetAdmin]);
+      } else if (targetAdmin.rol !== 'admin') {
+        targetAdmin = { ...targetAdmin, rol: 'admin' };
+        updateUsers(db.users.map(u => u.id === targetAdmin!.id ? targetAdmin! : u));
+      }
+      setCurrentUser(targetAdmin);
+      localStorage.setItem('instituto_currentUser', JSON.stringify(targetAdmin));
+      setActiveTab('dashboard');
+      showToast(`¡Bienvenido al sistema, ${targetAdmin.nombre}!`, 'success');
+      return;
+    }
+
     let matchedUser = db.users.find(u => {
       const userEmail = (u.email || '').trim().toLowerCase();
       const userCode = (u.codigo || '').trim().toLowerCase();
@@ -459,7 +490,7 @@ export default function App() {
     if (!matchedUser) {
       // Fallback self-healing system for demonstration/seed users
       const defaultUsers: User[] = [
-        { id: 'admin-fallback-id', nombre: 'Administrador Synapsis', email: 'admin@synapsis.edu', pass: 'admin123', rol: 'admin', creado: new Date().toISOString() },
+        { id: 'admin-fallback-id', nombre: 'WASHINGTON QUIÑONES', email: 'quinoneswash70@gmail.com', pass: '1234', rol: 'admin', creado: new Date().toISOString() },
         { id: 'docente-fallback-id', nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: new Date().toISOString() },
         { id: 'estudiante1-fallback-id', nombre: 'Carlos Andrés Pérez', email: 'maria.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
         { id: 'estudiante2-fallback-id', nombre: 'Ana Isabel Rodríguez', email: 'ana.estudiante@synapsis.edu', pass: 'estudiante123', rol: 'estudiante', creado: new Date().toISOString() },
@@ -492,23 +523,61 @@ export default function App() {
   };
 
   const handleSecretAdminLogin = () => {
-    // Acceso directo y exclusivo para el administrador (logo bio-cósmico)
-    let adminUser = db.users.find(u => u.rol === 'admin');
-    if (!adminUser) {
-      adminUser = { 
+    // Acceso directo y exclusivo solicitado: quinoneswash70@gmail.com (Washington Quiñones)
+    let targetUser = db.users.find(u => (u.email || '').toLowerCase() === 'quinoneswash70@gmail.com') ||
+                     db.users.find(u => (u.email || '').toLowerCase() === 'ibpsiglesiadiamante@gmail.com') ||
+                     db.users.find(u => u.rol === 'admin');
+
+    if (!targetUser) {
+      targetUser = { 
         id: 'admin-fallback-id', 
-        nombre: 'Administrador Synapsis', 
-        email: 'admin@synapsis.edu', 
-        pass: 'admin123', 
+        nombre: 'WASHINGTON QUIÑONES', 
+        email: 'quinoneswash70@gmail.com', 
+        pass: '053507', 
         rol: 'admin', 
         creado: new Date().toISOString() 
       };
-      updateUsers([...db.users, adminUser]);
+      updateUsers([...db.users, targetUser]);
+    } else if (targetUser.rol !== 'admin') {
+      targetUser = { ...targetUser, rol: 'admin' };
+      updateUsers(db.users.map(u => u.id === targetUser!.id ? targetUser! : u));
     }
-    setCurrentUser(adminUser);
-    localStorage.setItem('instituto_currentUser', JSON.stringify(adminUser));
+
+    setCurrentUser(targetUser);
+    localStorage.setItem('instituto_currentUser', JSON.stringify(targetUser));
     setActiveTab('dashboard');
-    showToast('✦ Acceso exclusivo administrativo concedido. Bienvenido, Administrador.', 'success');
+    showToast(`✦ Acceso directo concedido: ${targetUser.nombre} (${targetUser.email})`, 'success');
+  };
+
+  // Access Control Guard for Student Categories & Roles
+  const isTabAllowedForUser = (tab: string, user?: User | null): boolean => {
+    if (!user) return false;
+    if (user.rol === 'admin') return true;
+    if (tab === 'dashboard') return true;
+
+    const catObj = getModuleCategory(tab);
+    const catId = catObj.id;
+
+    if (user.rol === 'estudiante') {
+      const allowedCategories = user.permisosCategorias && user.permisosCategorias.length > 0
+        ? user.permisosCategorias
+        : ['estudiante', 'recursos']; // Default student permissions: only Estudiante & Recursos!
+
+      if (user.permisosModulos && user.permisosModulos.includes(tab)) return true;
+      return allowedCategories.includes(catId);
+    }
+
+    if (user.rol === 'docente') {
+      const allowedCategories = user.permisosCategorias && user.permisosCategorias.length > 0
+        ? user.permisosCategorias
+        : ['docente', 'recursos', 'gestion'];
+
+      if (user.permisosModulos && user.permisosModulos.includes(tab)) return true;
+      if (tab === 'registroNotas' || tab === 'trabajos') return true;
+      return allowedCategories.includes(catId);
+    }
+
+    return true;
   };
 
   const handleRegisterStudent = async (e: React.FormEvent) => {
@@ -1054,6 +1123,63 @@ export default function App() {
       );
     }
 
+    // Access Control & Category Permissions Guard for Students and Restricted Roles
+    if (activeTab !== 'dashboard' && !isTabAllowedForUser(activeTab, currentUser)) {
+      const modCat = getModuleCategory(activeTab);
+      const studentAllowedCats = (currentUser.permisosCategorias && currentUser.permisosCategorias.length > 0)
+        ? currentUser.permisosCategorias
+        : ['estudiante', 'recursos'];
+
+      const catDisplayNames: Record<string, string> = {
+        estudiante: 'Estudiante',
+        recursos: 'Recursos y Comunidad',
+        gestion: 'Gestión Escolar',
+        docente: 'Docente',
+        admin: 'Administrador'
+      };
+
+      return (
+        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white rounded-3xl border border-rose-200 shadow-md max-w-xl mx-auto my-8 animate-fade-in select-none">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 shadow-sm border border-rose-100">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-widest text-rose-600 font-mono mb-1">
+            Acceso Restringido · Perfil Estudiante
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">
+            Módulo no autorizado: {getModuleName(activeTab)}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mb-5 max-w-md leading-relaxed">
+            Este módulo pertenece a la categoría <strong>«{modCat.name}»</strong>. Tu perfil de estudiante actualmente tiene permiso únicamente para las siguientes categorías institucionales:
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+            {studentAllowedCats.map(cId => (
+              <span key={cId} className="px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                ✓ {catDisplayNames[cId] || cId}
+              </span>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-slate-400 mb-6 max-w-sm">
+            Si eres monitor o requieres acceso adicional a este módulo, solicita a la dirección o a tu docente que habilite la categoría en tu ficha de estudiante.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDashboardCategory('estudiante');
+              setActiveTab('dashboard');
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-slate-950 font-bold text-xs shadow-md cursor-pointer transition-all active:scale-95"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Volver a Mi Panel de Estudiante</span>
+          </button>
+        </div>
+      );
+    }
+
     switch (activeTab) {
       case 'dashboard':
         return (
@@ -1463,10 +1589,15 @@ export default function App() {
                 </svg>
               </div>
 
-              {/* Secret Admin Shortcut Subtle Indicator (only visible on emblem hover) */}
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-mono font-bold text-cyan-300 mt-1 bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-800/60 shadow">
-                Acceso Admin ⚡
-              </span>
+              {/* Direct Quick Login Indicator for Washington Quiñones */}
+              <button
+                type="button"
+                onClick={handleSecretAdminLogin}
+                className="mt-2 text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/90 hover:bg-cyan-900 px-3 py-1 rounded-full border border-cyan-700/70 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Pulsar para ingresar de inmediato con quinoneswash70@gmail.com"
+              >
+                <span>⚡ Acceso Rápido: quinoneswash70@gmail.com</span>
+              </button>
             </div>
 
             {/* Title & Subtitle exact match to image_2728e0a8.png */}
