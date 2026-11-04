@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, Upload, CheckCircle2, Eye, 
   Download, Users, Check, X, File, AlertCircle, ShieldCheck, Lock, Unlock, AlertTriangle 
 } from 'lucide-react';
-import { Assignment, User, Parcial, Subject, AssignmentSubmission } from '../types';
+import { Assignment, User, Parcial, Subject, AssignmentSubmission, GradeRecord } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
 
@@ -23,6 +23,8 @@ interface TrabajosProps {
   onUpdateAssignmentSubmissions?: (updated: AssignmentSubmission[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   users?: User[];
+  gradeRecords?: GradeRecord[];
+  onUpdateGradeRecords?: (updated: GradeRecord[]) => void;
 }
 
 export default function Trabajos({ 
@@ -34,7 +36,9 @@ export default function Trabajos({
   onUpdateAssignments, 
   onUpdateAssignmentSubmissions = () => {},
   toast,
-  users
+  users,
+  gradeRecords = [],
+  onUpdateGradeRecords
 }: TrabajosProps) {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -333,7 +337,63 @@ export default function Trabajos({
       };
 
       onUpdateAssignmentSubmissions(submissionsCopy);
-      toast('Calificación y retroalimentación guardadas', 'success');
+
+      // Sincronizar automáticamente con el Registro Oficial de Notas (Tercera Nota: 33.3%)
+      const maxPts = activeAssignmentToViewSubmissions.puntos || 100;
+      const scaledGrade5 = maxPts > 5 
+        ? Number(((scoreNum / maxPts) * 5).toFixed(2)) 
+        : Number(scoreNum.toFixed(2));
+
+      if (gradeRecords && onUpdateGradeRecords) {
+        const studentId = submissionsCopy[idx].estudianteId;
+        const subId = activeAssignmentToViewSubmissions.asignatura || 
+          (activeAssignmentToViewSubmissions.parcialId ? parciales.find(p => p.id === activeAssignmentToViewSubmissions.parcialId)?.asignatura : '');
+        const parcId = activeAssignmentToViewSubmissions.parcialId || (subId ? parciales.find(p => p.asignatura === subId)?.id : '');
+
+        if (studentId && subId && parcId) {
+          const gradesCopy = [...gradeRecords];
+          const recIdx = gradesCopy.findIndex(g => g.estudianteId === studentId && g.asignaturaId === subId && g.parcialId === parcId);
+
+          if (recIdx > -1) {
+            const existing = gradesCopy[recIdx];
+            const v1 = existing.notaEV1 != null ? Number(existing.notaEV1) : Number(existing.nota || 0);
+            const v2 = existing.notaEV2 != null ? Number(existing.notaEV2) : Number(existing.nota || 0);
+            const finalGrade = Number(((v1 + v2 + scaledGrade5) / 3).toFixed(2));
+            gradesCopy[recIdx] = {
+              ...existing,
+              notaTrabajo: scaledGrade5,
+              nota: finalGrade,
+              aprobado: finalGrade >= 3.0,
+              comentario: teacherFeedback.trim() 
+                ? `${existing.comentario ? `${existing.comentario} | ` : ''}Taller: ${teacherFeedback.trim()}`
+                : existing.comentario,
+              actualizado: now()
+            };
+          } else {
+            const finalGrade = Number(((3.0 + 3.0 + scaledGrade5) / 3).toFixed(2));
+            gradesCopy.push({
+              id: uid(),
+              estudianteId: studentId,
+              asignaturaId: subId,
+              parcialId: parcId,
+              notaEV1: 3.0,
+              notaEV2: 3.0,
+              notaTrabajo: scaledGrade5,
+              nota: finalGrade,
+              aprobado: finalGrade >= 3.0,
+              comentario: teacherFeedback.trim() ? `Trabajo entregado: ${teacherFeedback.trim()}` : 'Taller sincronizado',
+              creado: now()
+            });
+          }
+
+          onUpdateGradeRecords(gradesCopy);
+          toast(`Calificación guardada y sincronizada como 3ª nota (${scaledGrade5}/5.0) en el Registro Oficial de Notas ✓`, 'success');
+        } else {
+          toast('Calificación y retroalimentación guardadas', 'success');
+        }
+      } else {
+        toast('Calificación y retroalimentación guardadas', 'success');
+      }
 
       // Clear grading state
       setGradingSubmissionId(null);
@@ -987,6 +1047,22 @@ export default function Trabajos({
                             placeholder="Ej: 85"
                             className="form-control w-full p-2 border rounded-lg text-sm bg-white font-bold text-indigo-700"
                           />
+                          {gradingScore !== '' && !isNaN(Number(gradingScore)) && (
+                            <div className="mt-2 p-2 rounded-xl bg-indigo-50 border border-indigo-250 text-indigo-900 text-xs font-semibold">
+                              <div className="flex items-center justify-between">
+                                <span>Equivalente en escala 5.0 (Tercera nota):</span>
+                                <span className="font-black text-indigo-700 text-sm">
+                                  {(activeAssignmentToViewSubmissions.puntos > 5 
+                                    ? ((Number(gradingScore) / (activeAssignmentToViewSubmissions.puntos || 100)) * 5)
+                                    : Number(gradingScore)
+                                  ).toFixed(1)} / 5.0
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-indigo-600 mt-1 font-normal">
+                                ✓ Se sincroniza automáticamente al libro oficial como la tercera nota (Trabajo 33.3%).
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         <div className="form-group flex flex-col">

@@ -86,6 +86,7 @@ export interface Trabajo {
   porcentaje?: number;
   valor?: number;
   puntos?: number;
+  puntosMaximos?: number;
   creado: string;
   actualizado?: string;
 }
@@ -96,6 +97,7 @@ export type Assignment = Trabajo;
 export interface AssignmentSubmission {
   id: string;
   assignmentId: string;
+  trabajoId?: string;
   estudianteId: string;
   estudianteNombre: string;
   fechaEntrega: string;
@@ -105,6 +107,7 @@ export interface AssignmentSubmission {
   estado: 'pendiente' | 'entregado' | 'calificado';
   calificacion?: number;
   comentarioDocente?: string;
+  retroalimentacion?: string;
   creado: string;
   actualizado?: string;
 }

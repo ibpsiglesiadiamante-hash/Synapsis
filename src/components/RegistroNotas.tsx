@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { FileSpreadsheet, Plus, Trash2, Edit2, Search, UserCheck, AlertCircle, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
-import { User, Subject, Parcial, GradeRecord } from '../types';
+import { FileSpreadsheet, Plus, Trash2, Edit2, Search, UserCheck, AlertCircle, ChevronLeft, ChevronRight, Printer, Sparkles } from 'lucide-react';
+import { User, Subject, Parcial, GradeRecord, Assignment, AssignmentSubmission } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
 
@@ -15,12 +15,15 @@ interface RegistroNotasProps {
   subjects: Subject[];
   parciales: Parcial[];
   onUpdateGradeRecords: (updated: GradeRecord[]) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   currentUser?: User;
+  assignments?: Assignment[];
+  assignmentSubmissions?: AssignmentSubmission[];
 }
 
 export default function RegistroNotas({ 
-  gradeRecords, users, subjects, parciales, onUpdateGradeRecords, toast, currentUser 
+  gradeRecords, users, subjects, parciales, onUpdateGradeRecords, toast, currentUser,
+  assignments, assignmentSubmissions 
 }: RegistroNotasProps) {
   const isTeacher = currentUser?.rol === 'docente';
   const allMyUserIds = (users && currentUser)
@@ -179,6 +182,84 @@ export default function RegistroNotas({
     toast('Calificación eliminada correctamente', 'success');
   };
 
+  // SYNC ACADEMIC ASSIGNMENTS TO OFFICIAL GRADEBOOK AS 3RD EVALUATION (33.3%)
+  const handleSyncTrabajos = () => {
+    if (!assignments || !assignmentSubmissions || assignmentSubmissions.length === 0) {
+      toast('No hay entregas registradas en Trabajos Académicos para sincronizar', 'warning');
+      return;
+    }
+
+    const gradedSubs = assignmentSubmissions.filter(s => s.estado === 'calificado' && s.calificacion != null);
+    if (gradedSubs.length === 0) {
+      toast('Aún no hay trabajos calificados por el docente para importar', 'warning');
+      return;
+    }
+
+    let updatedCount = 0;
+    const nextRecords = [...gradeRecords];
+
+    gradedSubs.forEach(sub => {
+      const assign = assignments.find(a => a.id === (sub.assignmentId || sub.trabajoId));
+      if (!assign) return;
+
+      // Filter by teacher's assigned subjects if teacher
+      if (isTeacher && !teacherSubjectIds.includes(assign.asignatura)) {
+        return;
+      }
+
+      const maxPts = assign.puntosMaximos || assign.puntos || 100;
+      const scaled5 = maxPts > 5
+        ? Number(((sub.calificacion! / maxPts) * 5).toFixed(2))
+        : Number(sub.calificacion!.toFixed(2));
+
+      const recIdx = nextRecords.findIndex(r => 
+        r.estudianteId === sub.estudianteId &&
+        r.asignaturaId === assign.asignatura &&
+        (!assign.parcialId || r.parcialId === assign.parcialId)
+      );
+
+      if (recIdx >= 0) {
+        const existing = nextRecords[recIdx];
+        const ev1 = typeof existing.notaEV1 === 'number' && !isNaN(existing.notaEV1) ? existing.notaEV1 : (typeof existing.nota === 'number' && !isNaN(existing.nota) ? existing.nota : 3.0);
+        const ev2 = typeof existing.notaEV2 === 'number' && !isNaN(existing.notaEV2) ? existing.notaEV2 : (typeof existing.nota === 'number' && !isNaN(existing.nota) ? existing.nota : 3.0);
+        const def = Number(((ev1 + ev2 + scaled5) / 3).toFixed(2));
+
+        nextRecords[recIdx] = {
+          ...existing,
+          notaTrabajo: scaled5,
+          nota: def,
+          aprobado: def >= 3.0,
+          comentario: existing.comentario ? `${existing.comentario} · [Trabajo sincronizado: ${assign.titulo} (${scaled5}/5.0)]` : `Trabajo: ${assign.titulo} (${scaled5}/5.0)`
+        };
+        updatedCount++;
+      } else {
+        const targetParcId = assign.parcialId || (parciales.find(p => p.asignatura === assign.asignatura)?.id || parciales[0]?.id || '');
+        const def = Number(((3.0 + 3.0 + scaled5) / 3).toFixed(2));
+        nextRecords.push({
+          id: uid(),
+          estudianteId: sub.estudianteId,
+          asignaturaId: assign.asignatura,
+          parcialId: targetParcId,
+          notaEV1: 3.0,
+          notaEV2: 3.0,
+          notaTrabajo: scaled5,
+          nota: def,
+          aprobado: def >= 3.0,
+          comentario: `Sincronizado de Trabajo: ${assign.titulo} (${scaled5}/5.0)`,
+          creado: now()
+        });
+        updatedCount++;
+      }
+    });
+
+    if (updatedCount > 0) {
+      onUpdateGradeRecords(nextRecords);
+      toast(`¡Se sincronizaron con éxito ${updatedCount} notas de trabajos académicos al libro oficial!`, 'success');
+    } else {
+      toast('Las notas de los trabajos ya están al día en el registro oficial', 'info');
+    }
+  };
+
   // EXPORT TO EXCEL COMPLIANT WITH SPANISH REGIONAL KEYWORDS AND COLUMNS
   const exportToExcel = () => {
     let csvContent = "\uFEFF"; // UTF-8 BOM
@@ -193,10 +274,10 @@ export default function RegistroNotas({
       const subName = sub ? sub.nombre : '—';
       const parcName = parc ? parc.nombre : '—';
       
-      const v1 = rec.notaEV1 !== undefined ? rec.notaEV1 : rec.nota;
-      const v2 = rec.notaEV2 !== undefined ? rec.notaEV2 : rec.nota;
-      const vT = rec.notaTrabajo !== undefined ? rec.notaTrabajo : rec.nota;
-      const vF = rec.nota;
+      const v1 = (rec.notaEV1 != null && !isNaN(rec.notaEV1)) ? Number(rec.notaEV1) : (rec.nota != null && !isNaN(rec.nota) ? Number(rec.nota) : 0);
+      const v2 = (rec.notaEV2 != null && !isNaN(rec.notaEV2)) ? Number(rec.notaEV2) : (rec.nota != null && !isNaN(rec.nota) ? Number(rec.nota) : 0);
+      const vT = (rec.notaTrabajo != null && !isNaN(rec.notaTrabajo)) ? Number(rec.notaTrabajo) : (rec.nota != null && !isNaN(rec.nota) ? Number(rec.nota) : 0);
+      const vF = (rec.nota != null && !isNaN(rec.nota)) ? Number(rec.nota) : 0;
       
       const aprStr = rec.aprobado ? "Aprobado" : "Reprobado";
       const obs = (rec.comentario || "").replace(/;/g, ",").replace(/\r?\n|\r/g, " ");
@@ -238,6 +319,16 @@ export default function RegistroNotas({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
+          {/* BOTÓN SINCRONIZAR NOTAS DE TRABAJOS ACADÉMICOS AL LIBRO */}
+          <button
+            onClick={handleSyncTrabajos}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-indigo-700 hover:text-indigo-900 font-bold text-xs bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm transition-all cursor-pointer"
+            title="Importar y sincronizar todas las notas de trabajos y talleres evaluados como la 3ra nota (Trabajos 33.3%)"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
+            <span>Sincronizar Trabajos (33.3%)</span>
+          </button>
+
           <button
             onClick={exportToExcel}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white font-semibold text-xs bg-emerald-600 hover:bg-emerald-700 shadow transition-all cursor-pointer"

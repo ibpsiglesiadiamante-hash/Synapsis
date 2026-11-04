@@ -1134,6 +1134,12 @@ export default function App() {
             currentUser={currentUser}
             exams={db.exams}
             submissions={db.submissions}
+            gradeRecords={db.gradeRecords}
+            subjects={db.subjects}
+            parciales={db.parciales}
+            semesters={db.semesters}
+            assignments={db.assignments}
+            assignmentSubmissions={db.assignmentSubmissions || []}
           />
         );
       case 'docentes':
@@ -1203,6 +1209,8 @@ export default function App() {
             onUpdateGradeRecords={updateGradeRecords}
             toast={showToast}
             currentUser={currentUser}
+            assignments={db.assignments}
+            assignmentSubmissions={db.assignmentSubmissions || []}
           />
         );
       case 'trabajos':
@@ -1217,6 +1225,8 @@ export default function App() {
             onUpdateAssignmentSubmissions={updateAssignmentSubmissions}
             toast={showToast}
             users={db.users}
+            gradeRecords={db.gradeRecords}
+            onUpdateGradeRecords={updateGradeRecords}
           />
         );
       case 'historialAcademico':
