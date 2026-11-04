@@ -97,9 +97,12 @@ export default function RegistroNotas({
     setEstudianteId(rec.estudianteId);
     setAsignaturaId(rec.asignaturaId);
     setParcialId(rec.parcialId);
-    setNotaEV1(rec.notaEV1 !== undefined ? rec.notaEV1 : rec.nota);
-    setNotaEV2(rec.notaEV2 !== undefined ? rec.notaEV2 : rec.nota);
-    setNotaTrabajo(rec.notaTrabajo !== undefined ? rec.notaTrabajo : rec.nota);
+    const nEV1 = rec.notaEV1 != null ? Number(rec.notaEV1) : (rec.nota != null ? Number(rec.nota) : 3.0);
+    const nEV2 = rec.notaEV2 != null ? Number(rec.notaEV2) : (rec.nota != null ? Number(rec.nota) : 3.0);
+    const nTr = rec.notaTrabajo != null ? Number(rec.notaTrabajo) : (rec.nota != null ? Number(rec.nota) : 3.0);
+    setNotaEV1(!isNaN(nEV1) ? nEV1 : 3.0);
+    setNotaEV2(!isNaN(nEV2) ? nEV2 : 3.0);
+    setNotaTrabajo(!isNaN(nTr) ? nTr : 3.0);
     setComentario(rec.comentario || '');
     setIsModalOpen(true);
   };
@@ -310,10 +313,16 @@ export default function RegistroNotas({
                   const stName = student?.nombre || 'Estudiante eliminado';
 
                   // Extract subgrades gracefully with backward compatibility fallbacks
-                  const v1 = rec.notaEV1 !== undefined ? rec.notaEV1 : rec.nota;
-                  const v2 = rec.notaEV2 !== undefined ? rec.notaEV2 : rec.nota;
-                  const vT = rec.notaTrabajo !== undefined ? rec.notaTrabajo : rec.nota;
-                  const vFinal = rec.nota;
+                  const numOrZero = (val: any) => {
+                    if (val === null || val === undefined) return 0;
+                    const parsed = Number(val);
+                    return !isNaN(parsed) ? parsed : 0;
+                  };
+
+                  const v1 = rec.notaEV1 != null ? numOrZero(rec.notaEV1) : numOrZero(rec.nota);
+                  const v2 = rec.notaEV2 != null ? numOrZero(rec.notaEV2) : numOrZero(rec.nota);
+                  const vT = rec.notaTrabajo != null ? numOrZero(rec.notaTrabajo) : numOrZero(rec.nota);
+                  const vFinal = numOrZero(rec.nota);
 
                   return (
                     <tr key={rec.id} className="hover:bg-slate-50/50">

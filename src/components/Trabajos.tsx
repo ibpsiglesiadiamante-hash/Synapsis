@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Trash2, Edit2, Calendar, FileText, Award, Layers, 
   ChevronLeft, ChevronRight, Upload, CheckCircle2, Eye, 
-  Download, Users, Check, X, File, AlertCircle 
+  Download, Users, Check, X, File, AlertCircle, ShieldCheck, Lock, Unlock, AlertTriangle 
 } from 'lucide-react';
 import { Assignment, User, Parcial, Subject, AssignmentSubmission } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
@@ -21,7 +21,7 @@ interface TrabajosProps {
   assignmentSubmissions?: AssignmentSubmission[];
   onUpdateAssignments: (updated: Assignment[]) => void;
   onUpdateAssignmentSubmissions?: (updated: AssignmentSubmission[]) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   users?: User[];
 }
 
@@ -57,6 +57,43 @@ export default function Trabajos({
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [puntos, setPuntos] = useState(100);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Blindaje y Protección de Trabajos contra modificaciones sin previo aviso
+  const [shieldActive, setShieldActive] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('synapsis_trabajos_shield');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+  const [shieldWarningTask, setShieldWarningTask] = useState<Assignment | null>(null);
+  const [shieldWarningDeleteTask, setShieldWarningDeleteTask] = useState<Assignment | null>(null);
+
+  const toggleShield = () => {
+    const next = !shieldActive;
+    setShieldActive(next);
+    try {
+      localStorage.setItem('synapsis_trabajos_shield', String(next));
+    } catch {}
+    toast(next ? 'Blindaje de trabajos activado: se exigirá aviso previo antes de cualquier modificación' : 'Blindaje desactivado temporalmente', 'info');
+  };
+
+  const handleRequestEdit = (task: Assignment) => {
+    if (shieldActive) {
+      setShieldWarningTask(task);
+    } else {
+      handleOpenEditModal(task);
+    }
+  };
+
+  const handleRequestDelete = (task: Assignment) => {
+    if (shieldActive) {
+      setShieldWarningDeleteTask(task);
+    } else {
+      setConfirmDeleteId(task.id);
+    }
+  };
 
   // Student upload forms states
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -307,7 +344,7 @@ export default function Trabajos({
 
   return (
     <div className="page-trabajos animate-fade-in pb-12">
-      <div className="page-header flex items-center justify-between gap-3 mb-6">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="page-title text-2xl font-bold tracking-tight text-slate-900" style={{ color: 'var(--gray-900)' }}>
             Trabajos y tareas académicas
@@ -316,17 +353,57 @@ export default function Trabajos({
             Inspecciona, publica talleres y realiza la entrega virtual de tus guías en PDF
           </div>
         </div>
-        {canManage && (
-          <button
-            onClick={handleOpenCreateModal}
-            className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Publicar trabajo</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <button
+              type="button"
+              onClick={toggleShield}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer border shadow-xs ${
+                shieldActive
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+              }`}
+              title="Alternar blindaje de protección contra modificaciones accidentales"
+            >
+              {shieldActive ? <ShieldCheck className="w-4 h-4 text-emerald-600" /> : <Unlock className="w-4 h-4 text-amber-600" />}
+              <span>{shieldActive ? 'Blindaje Activo' : 'Blindaje Pausado'}</span>
+            </button>
+          )}
+
+          {canManage && (
+            <button
+              onClick={handleOpenCreateModal}
+              className="btn btn-primary flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-white font-semibold shadow hover:scale-[1.02] transition-transform cursor-pointer"
+              style={{ backgroundColor: 'var(--primary)' }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Publicar trabajo</span>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* SHIELD NOTICE BANNER */}
+      {shieldActive && (
+        <div className="mb-6 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-white border border-emerald-200/90 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-emerald-100 rounded-xl text-emerald-800 shrink-0">
+              <ShieldCheck className="w-4 h-4 text-emerald-700" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-emerald-950 block">
+                Trabajos Blindados contra Modificaciones No Notificadas
+              </span>
+              <span className="text-[11px] text-emerald-750 font-medium">
+                Cualquier cambio o eliminación exige confirmación con aviso previo para proteger las entregas de los estudiantes.
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-850 bg-emerald-100/80 px-2.5 py-1 rounded-full border border-emerald-300/80 shrink-0 hidden sm:inline">
+            Protegido 🛡️
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {assignments.length === 0 ? (
@@ -464,9 +541,9 @@ export default function Trabajos({
                     {canManage && (
                       <div className="inline-flex gap-1 items-center ml-1">
                         <button
-                          onClick={() => handleOpenEditModal(task)}
+                          onClick={() => handleRequestEdit(task)}
                           className="p-1 px-1.5 rounded border border-slate-200 hover:bg-slate-100 text-slate-500 cursor-pointer"
-                          title="Editar tarea"
+                          title="Editar tarea (Blindado: requiere aviso previo)"
                         >
                           <Edit2 className="w-3 h-3" />
                         </button>
@@ -490,9 +567,9 @@ export default function Trabajos({
                           </div>
                         ) : (
                           <button
-                            onClick={() => setConfirmDeleteId(task.id)}
+                            onClick={() => handleRequestDelete(task)}
                             className="p-1 px-1.5 rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 cursor-pointer"
-                            title="Eliminar tarea"
+                            title="Eliminar tarea (Blindado: requiere confirmación)"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -962,6 +1039,112 @@ export default function Trabajos({
                 className="btn btn-secondary px-4.5 py-2 border rounded-xl hover:bg-slate-200 font-bold text-xs text-slate-700 bg-white cursor-pointer"
               >
                 Cerrar listado
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AVISO PREVIO DE MODIFICACIÓN DE TRABAJO BLINDADO */}
+      {shieldWarningTask && (
+        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[250] p-4 text-left">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border border-slate-200 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-3 text-amber-600">
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 shrink-0">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">
+                  Aviso Previo de Modificación
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                  Trabajo Académico Blindado 🛡️
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              El trabajo <strong className="text-slate-900">«{shieldWarningTask.titulo}»</strong> se encuentra actualmente blindado para proteger los archivos PDF entregados por los estudiantes y el libro de calificaciones.
+            </p>
+
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] space-y-1 text-slate-600 font-mono">
+              <div>• Asignatura: {subjects.find(s => s.id === shieldWarningTask.asignatura)?.nombre || 'Asignada'}</div>
+              <div>• Entregas registradas: {assignmentSubmissions.filter(s => s.assignmentId === shieldWarningTask.id).length} estudiantes</div>
+              <div>• Puntaje oficial: {shieldWarningTask.puntos} puntos</div>
+            </div>
+
+            <p className="text-[11px] text-amber-900 font-semibold bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+              ⚠️ Modificar este trabajo alterará los criterios de entrega para todos los estudiantes. ¿Confirmas que tienes el aviso y autorización previa para proceder?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShieldWarningTask(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const t = shieldWarningTask;
+                  setShieldWarningTask(null);
+                  handleOpenEditModal(t);
+                }}
+                className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition cursor-pointer"
+              >
+                Confirmar y Modificar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AVISO PREVIO DE ELIMINACIÓN DE TRABAJO BLINDADO */}
+      {shieldWarningDeleteTask && (
+        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[250] p-4 text-left">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border border-slate-200 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 shrink-0">
+                <AlertCircle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">
+                  Aviso Previo de Eliminación
+                </h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
+                  Trabajo Académico Blindado 🛡️
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              ¿Confirmas con previo aviso la eliminación del trabajo blindado <strong className="text-slate-900">«{shieldWarningDeleteTask.titulo}»</strong>?
+            </p>
+
+            <p className="text-[11px] text-rose-900 font-semibold bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+              ⚠️ Esta acción eliminará permanentemente la actividad blindada y desvinculará las entregas asociadas de los estudiantes.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShieldWarningDeleteTask(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = shieldWarningDeleteTask.id;
+                  setShieldWarningDeleteTask(null);
+                  handleDelete(id);
+                }}
+                className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md transition cursor-pointer"
+              >
+                Sí, Eliminar con Previo Aviso
               </button>
             </div>
           </div>

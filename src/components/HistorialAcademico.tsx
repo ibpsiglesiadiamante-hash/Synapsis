@@ -234,10 +234,10 @@ export default function HistorialAcademico({
                               {grade.comentario && <div className="text-[10px] text-slate-450 italic mt-1.5 truncate">"{grade.comentario}"</div>}
                             </div>
                             <div className="text-right shrink-0">
-                              <span className={`block font-extrabold text-sm ${grade.aprobado ? 'text-emerald-700' : 'text-rose-600'}`}>{grade.nota.toFixed(2)}</span>
-                              {grade.notaEV1 !== undefined && (
+                              <span className={`block font-extrabold text-sm ${grade.aprobado ? 'text-emerald-700' : 'text-rose-600'}`}>{(Number(grade.nota) || 0).toFixed(2)}</span>
+                              {(grade.notaEV1 != null || grade.notaEV2 != null || grade.notaTrabajo != null) && (
                                 <span className="text-[9px] text-slate-500 font-mono block">
-                                  EV: {grade.notaEV1.toFixed(1)} / {grade.notaEV2?.toFixed(1)} / {grade.notaTrabajo?.toFixed(1)}
+                                  EV: {(Number(grade.notaEV1) || 0).toFixed(1)} / {(Number(grade.notaEV2) || 0).toFixed(1)} / {(Number(grade.notaTrabajo) || 0).toFixed(1)}
                                 </span>
                               )}
                               <span className="text-[9px] text-slate-400 block mt-0.5">{fmtDate(grade.creado)}</span>

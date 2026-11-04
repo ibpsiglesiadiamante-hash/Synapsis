@@ -64,34 +64,34 @@ export default function Dashboard({
   const [subsPage, setSubsPage] = useState(1);
   const [examsPage, setExamsPage] = useState(1);
 
-  // Layout & Category States matching image_c1e3123d.png (screenshot 2)
-  // Selected category defaults to the module's category or the current user's role
-  const getDefaultCategory = () => {
-    if (initialCategory && initialCategory !== 'todas' && initialCategory !== 'recogido') {
-      return initialCategory;
-    }
-    if (currentUser.rol === 'estudiante') return 'estudiante';
-    if (currentUser.rol === 'docente') return 'docente';
-    return 'admin';
+  // Las categorías siempre se mantienen recogidas por defecto tal como solicita el usuario
+  const ALL_COLLAPSED_CATEGORIES: Record<string, boolean> = {
+    gestion: true,
+    recursos: true,
+    docente: true,
+    estudiante: true,
+    admin: true
   };
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(getDefaultCategory);
+  const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
-  // Sections are NOT collapsed by default; cards are visible as in screenshot 2
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  // Por requerimiento expreso del usuario, el menú siempre inicia y permanece recogido por defecto
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(ALL_COLLAPSED_CATEGORIES);
 
   // Sync with initialCategory when navigating back from a module
   useEffect(() => {
     if (initialCategory && initialCategory !== 'todas' && initialCategory !== 'recogido') {
       setSelectedCategory(initialCategory);
-    } else if (initialCategory === 'todas') {
-      setSelectedCategory('todas');
+      setCollapsedSections({
+        ...ALL_COLLAPSED_CATEGORIES,
+        [initialCategory]: false
+      });
     } else {
-      setSelectedCategory(getDefaultCategory());
+      setSelectedCategory('todas');
+      // Al volver a menú o seleccionar todas las categorías, siempre permanece recogido
+      setCollapsedSections(ALL_COLLAPSED_CATEGORIES);
     }
-    // Always keep cards expanded and visible
-    setCollapsedSections({});
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [initialCategory]);
 
@@ -572,7 +572,8 @@ export default function Dashboard({
             type="button"
             onClick={() => {
               setSelectedCategory('todas');
-              setCollapsedSections({});
+              // Siempre recogido al hacer clic en Todas las categorías
+              setCollapsedSections(ALL_COLLAPSED_CATEGORIES);
             }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               selectedCategory === 'todas'

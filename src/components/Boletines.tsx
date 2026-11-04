@@ -702,12 +702,13 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
                         {activeParciales.map(p => {
                           const gradeObj = rep.records.find(r => r.parcialId === p.id);
                           if (!gradeObj) return <td key={p.id} className="py-3.5 px-3 text-center text-slate-400 font-mono">—</td>;
-                          const v1 = gradeObj.notaEV1 !== undefined ? gradeObj.notaEV1 : gradeObj.nota;
-                          const v2 = gradeObj.notaEV2 !== undefined ? gradeObj.notaEV2 : gradeObj.nota;
-                          const vT = gradeObj.notaTrabajo !== undefined ? gradeObj.notaTrabajo : gradeObj.nota;
+                          const v1 = gradeObj.notaEV1 != null ? Number(gradeObj.notaEV1) : Number(gradeObj.nota || 0);
+                          const v2 = gradeObj.notaEV2 != null ? Number(gradeObj.notaEV2) : Number(gradeObj.nota || 0);
+                          const vT = gradeObj.notaTrabajo != null ? Number(gradeObj.notaTrabajo) : Number(gradeObj.nota || 0);
+                          const gradeVal = Number(gradeObj.nota || 0);
                           return (
                             <td key={p.id} className="py-3.5 px-3 text-center text-slate-600 font-mono">
-                              <span className="font-extrabold text-xs block">{gradeObj.nota.toFixed(2)}</span>
+                              <span className="font-extrabold text-xs block">{gradeVal.toFixed(2)}</span>
                               <span className="text-[9px] text-slate-400 block font-mono mt-0.5 leading-none">
                                 {v1.toFixed(1)} / {v2.toFixed(1)} / {vT.toFixed(1)}
                               </span>
@@ -717,7 +718,7 @@ export default function Boletines({ gradeRecords, users, subjects, semesters, pa
 
                         {/* Final Definitiva */}
                         <td className="py-3.5 px-4 text-center font-mono font-black" style={{ color: rep.isApproved ? '#047857' : '#be123c' }}>
-                          {rep.finalAverage.toFixed(2)}
+                          {(Number(rep.finalAverage) || 0).toFixed(2)}
                         </td>
 
                         {/* Band Rating Label */}
