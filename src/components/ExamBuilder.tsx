@@ -2070,21 +2070,26 @@ export default function ExamBuilder({
                             </div>
                           )}
 
-                          <div className="flex flex-wrap gap-2 mb-3">
+                          <div className="flex flex-wrap gap-2.5 mb-3">
                             {q.opciones.map((opt, oIdx) => {
                               const optKey = q.opcionIds?.[oIdx] || `${q.id}-tblopt-${oIdx}`;
                               return (
-                                <div key={optKey} className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm dark:bg-slate-950 dark:border-slate-700">
+                                <div key={optKey} className="flex items-center gap-2 bg-white dark:bg-[#1a2f4c] border-2 border-indigo-200 dark:border-cyan-700/80 rounded-xl px-2.5 py-1.5 text-sm shadow-xs hover:border-indigo-400 dark:hover:border-cyan-400 transition-all">
+                                  <span className="text-[10px] font-black text-indigo-700 dark:text-cyan-300 bg-indigo-50 dark:bg-cyan-950/90 px-1.5 py-0.5 rounded">
+                                    #{oIdx + 1}
+                                  </span>
                                   <input
                                     type="text"
                                     value={opt}
+                                    placeholder="Término o palabra..."
                                     onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
-                                    className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 w-24 focus:outline-none border-none outline-none"
+                                    className="bg-transparent text-xs font-bold text-slate-900 dark:text-white min-w-[140px] sm:min-w-[190px] focus:outline-none border-none outline-none"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveOption(q.id, oIdx)}
-                                    className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                    className="text-slate-400 hover:text-red-500 font-black shrink-0 text-xs p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition cursor-pointer"
+                                    title="Eliminar palabra"
                                   >
                                     ✕
                                   </button>
@@ -2103,27 +2108,34 @@ export default function ExamBuilder({
                         </div>
 
                         {/* Column and Row Grid Settings */}
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 dark:bg-slate-900/30 dark:border-slate-800 text-left">
-                          <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block mb-2 dark:text-slate-300">
+                        <div className="bg-slate-50/90 dark:bg-[#132238] p-4.5 rounded-2xl border-2 border-indigo-200 dark:border-cyan-700/80 text-left shadow-xs">
+                          <label className="text-xs font-black text-slate-900 dark:text-cyan-300 uppercase tracking-wide block mb-1">
                             📋 Columnas de la Tabla (Encabezados)
                           </label>
-                          <p className="text-[11px] text-slate-400 mb-3 block">
-                            Define los títulos de cada columna para organizar la tabla.
+                          <p className="text-xs font-bold text-slate-800 dark:text-cyan-100 mb-3.5 block leading-relaxed">
+                            Define los títulos de cada columna para organizar la tabla. El estudiante verá estos encabezados al responder.
                           </p>
-                          <div className="flex flex-wrap gap-2 mb-3">
+                          <div className="flex flex-wrap gap-3 mb-2">
                             {(q.columnas || []).map((col, cIdx) => (
-                              <div key={cIdx} className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg pl-2 pr-1 py-1 text-sm shadow-sm dark:bg-slate-950 dark:border-slate-850">
-                                <span className="text-[10px] font-bold text-slate-400">C{cIdx + 1}</span>
+                              <div 
+                                key={cIdx} 
+                                className="flex items-center gap-2 bg-white dark:bg-[#1a2f4c] border-2 border-slate-300 dark:border-cyan-500/80 rounded-xl px-3 py-2 shadow-sm hover:border-indigo-400 dark:hover:border-cyan-400 transition-all flex-1 min-w-[260px] sm:min-w-[320px] max-w-full"
+                              >
+                                <span className="text-[11px] font-black text-indigo-700 dark:text-cyan-300 bg-indigo-50 dark:bg-cyan-950/90 border border-indigo-200 dark:border-cyan-700 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                                  C{cIdx + 1}
+                                </span>
                                 <input
                                   type="text"
                                   value={col}
+                                  placeholder={`Título columna ${cIdx + 1}...`}
                                   onChange={e => handleUpdateTableColumn(q.id, cIdx, e.target.value)}
-                                  className="bg-transparent text-xs font-semibold text-slate-850 dark:text-slate-100 w-32 focus:outline-none border-none outline-none"
+                                  className="flex-1 bg-slate-50 dark:bg-[#0c182a] text-slate-900 dark:text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-cyan-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-cyan-400 transition"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveTableColumn(q.id, cIdx)}
-                                  className="text-slate-350 hover:text-red-500 font-bold shrink-0 text-xs px-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                  className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 font-black shrink-0 text-xs p-1.5 rounded-lg transition cursor-pointer"
+                                  title="Eliminar columna"
                                 >
                                   ✕
                                 </button>
@@ -2132,7 +2144,7 @@ export default function ExamBuilder({
                             <button
                               type="button"
                               onClick={() => handleAddTableColumn(q.id)}
-                              className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 cursor-pointer transition shadow-sm"
+                              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-cyan-600 dark:hover:bg-cyan-500 text-white dark:text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 cursor-pointer transition shadow-sm shrink-0 self-center"
                             >
                               + Nueva Columna
                             </button>
@@ -2140,13 +2152,13 @@ export default function ExamBuilder({
                         </div>
 
                         {/* Filas de la Tabla */}
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 dark:bg-slate-900/10 dark:border-slate-800 text-left space-y-3">
+                        <div className="bg-slate-50/90 dark:bg-[#132238] p-4.5 rounded-2xl border-2 border-indigo-200 dark:border-cyan-700/80 text-left space-y-3">
                           <div className="flex justify-between items-center">
                             <div>
-                              <label className="text-xs font-bold text-slate-700 uppercase tracking-wide block dark:text-slate-300">
+                              <label className="text-xs font-black text-slate-900 dark:text-cyan-300 uppercase tracking-wide block">
                                 📊 Filas y Configuración de Celdas
                               </label>
-                              <span className="text-[11px] text-slate-400 block dark:text-slate-400">
+                              <span className="text-xs font-bold text-slate-800 dark:text-cyan-100 block">
                                 Escribe textos de referencia fijos o define qué espacios deben ser completados por el estudiante.
                               </span>
                             </div>
@@ -2161,32 +2173,32 @@ export default function ExamBuilder({
 
                           <div className="grid grid-cols-1 gap-4">
                             {(q.tableRows || []).map((row, rIdx) => (
-                              <div key={rIdx} className="bg-white p-3 rounded-xl border border-slate-200 dark:bg-slate-905 dark:border-slate-800 shadow-sm relative">
-                                <div className="flex justify-between items-center mb-2.5 pb-2 border-b border-dashed border-slate-100 dark:border-slate-800">
-                                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Fila {rIdx + 1}</span>
+                              <div key={rIdx} className="bg-white dark:bg-[#1a2f4c] p-4 rounded-xl border-2 border-slate-200 dark:border-cyan-700/80 shadow-xs relative">
+                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-dashed border-slate-200 dark:border-cyan-800">
+                                  <span className="text-[11px] font-black text-indigo-700 dark:text-cyan-300 uppercase tracking-wider">Fila {rIdx + 1}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveTableRow(q.id, rIdx)}
-                                    className="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1 py-1 px-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition shadow-none border-none"
+                                    className="text-red-500 hover:text-red-700 dark:text-red-400 font-bold text-xs flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                                   >
                                     ✕ Eliminar Fila
                                   </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                                   {row.cells.map((cell, cIdx) => {
                                     const colName = (q.columnas || [])[cIdx] || `Columna ${cIdx + 1}`;
                                     return (
-                                      <div key={cIdx} className="bg-slate-50/50 p-2.5 rounded-lg border border-slate-150 dark:bg-slate-900/50 dark:border-slate-800 text-[11px] space-y-2">
-                                        <div className="font-bold text-slate-500 dark:text-slate-400 truncate mb-1">
-                                          Columna: <span className="text-indigo-600 dark:text-cyan-400">{colName}</span>
+                                      <div key={cIdx} className="bg-slate-50 dark:bg-[#12223a] p-3 rounded-xl border border-slate-200 dark:border-cyan-800/80 text-xs space-y-2">
+                                        <div className="font-black text-slate-700 dark:text-cyan-200 truncate mb-1">
+                                          Columna: <span className="text-indigo-600 dark:text-cyan-300">{colName}</span>
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                           <select
                                             value={cell.tipo}
                                             onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { tipo: e.target.value })}
-                                            className="p-1 text-[10px] font-bold border rounded bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-100 cursor-pointer"
+                                            className="p-1.5 text-xs font-bold border rounded-lg bg-white text-slate-800 dark:bg-[#0a182c] dark:text-white dark:border-cyan-700 cursor-pointer"
                                           >
                                             <option value="texto">Texto Fijo / Etiqueta</option>
                                             <option value="blank">Espacio por Llenar</option>
@@ -2199,15 +2211,15 @@ export default function ExamBuilder({
                                             value={cell.valor}
                                             placeholder="Introduce texto o etiqueta..."
                                             onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { valor: e.target.value })}
-                                            className="w-full bg-white border border-slate-150 p-1.5 rounded text-xs focus:outline-none dark:bg-slate-950 dark:border-slate-850 dark:text-slate-100 font-medium"
+                                            className="w-full bg-white border border-slate-300 dark:border-cyan-700 p-2 rounded-lg text-xs font-bold text-slate-900 dark:text-white dark:bg-[#0a182c] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-cyan-400"
                                           />
                                         ) : (
                                           <div className="space-y-1">
-                                            <label className="text-[9px] text-slate-400 block font-bold">Respuesta correcta de la caja:</label>
+                                            <label className="text-[10px] text-slate-600 dark:text-cyan-200 block font-bold">Respuesta correcta de la caja:</label>
                                             <select
                                               value={cell.correctOptionIdx ?? 0}
                                               onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { correctOptionIdx: Number(e.target.value) })}
-                                              className="w-full text-xs p-1.5 font-bold border rounded bg-white text-emerald-700 dark:bg-slate-950 dark:text-emerald-400 cursor-pointer"
+                                              className="w-full text-xs p-2 font-bold border rounded-lg bg-white text-emerald-800 border-emerald-300 dark:bg-[#0a182c] dark:text-emerald-300 dark:border-emerald-600 cursor-pointer"
                                             >
                                               {q.opciones.map((opt, oIdx) => (
                                                 <option key={oIdx} value={oIdx}>{opt}</option>
