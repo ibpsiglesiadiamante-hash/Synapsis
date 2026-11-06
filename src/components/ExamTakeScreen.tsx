@@ -627,13 +627,13 @@ export default function ExamTakeScreen({
               >
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div className="flex items-start">
-                    <span className="text-[#202124] text-[14px] sm:text-[14.5px] font-normal leading-relaxed whitespace-pre-wrap">
-                      <span className="font-semibold mr-1">{idx + 1}.</span> {qItem.texto || (qItem as any).enunciado || 'Pregunta sin texto'}
+                    <span className="text-slate-900 dark:text-slate-100 text-[14px] sm:text-[14.5px] font-semibold leading-relaxed whitespace-pre-wrap">
+                      <span className="font-bold mr-1">{idx + 1}.</span> {qItem.texto || (qItem as any).enunciado || 'Pregunta sin texto'}
                     </span>
                     <span className="text-rose-600 font-bold ml-1" title="Pregunta obligatoria">*</span>
                   </div>
                   
-                  <span className="text-[11px] text-slate-400 font-semibold shrink-0 bg-slate-50 px-2 py-0.5 rounded-md font-mono select-none">
+                  <span className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold shrink-0 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md font-mono select-none">
                     {qItem.puntos} {qItem.puntos === 1 ? 'punto' : 'puntos'}
                   </span>
                 </div>
@@ -651,18 +651,18 @@ export default function ExamTakeScreen({
                             e.stopPropagation();
                             handleSetAnswer(qItem.id, oIdx);
                           }}
-                          className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
+                          className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition duration-150 cursor-pointer group"
                         >
                           <div className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                             isChecked 
                               ? 'border-[#673ab7]' 
-                              : 'border-[#5f6368] group-hover:border-[#202124]'
+                              : 'border-slate-400 dark:border-slate-500 group-hover:border-slate-800 dark:group-hover:border-slate-200'
                           }`}>
                             {isChecked && (
                               <div className="w-2 h-2 rounded-full bg-[#673ab7]" />
                             )}
                           </div>
-                          <span className="text-[#202124] text-[13px] leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
+                          <span className="text-slate-800 dark:text-slate-100 text-[13px] leading-relaxed font-medium whitespace-pre-wrap">{opt}</span>
                         </div>
                       );
                     })
@@ -691,18 +691,18 @@ export default function ExamTakeScreen({
                               e.stopPropagation();
                               handleToggleCheckbox(qItem.id, oIdx);
                             }}
-                            className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 rounded-md transition duration-150 cursor-pointer group"
+                            className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition duration-150 cursor-pointer group"
                           >
                             <div className={`w-[17px] h-[17px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
                               isChecked 
                                 ? 'border-[#673ab7] bg-[#673ab7] text-white' 
-                                : 'border-[#5f6368] bg-transparent group-hover:border-[#202124]'
+                                : 'border-slate-400 dark:border-slate-500 bg-transparent group-hover:border-slate-800 dark:group-hover:border-slate-200'
                             }`}>
                               {isChecked && (
                                 <Check className="w-3.5 h-3.5 stroke-[3px]" />
                               )}
                             </div>
-                            <span className="text-[#202124] text-[13px] leading-relaxed font-normal whitespace-pre-wrap">{opt}</span>
+                            <span className="text-slate-800 dark:text-slate-100 text-[13px] leading-relaxed font-medium whitespace-pre-wrap">{opt}</span>
                           </div>
                         );
                       })}
@@ -795,10 +795,10 @@ export default function ExamTakeScreen({
                                     const nextMap = { ...currentMap, [eIdx]: e.target.value !== '' ? Number(e.target.value) : '' };
                                     handleSetAnswer(qItem.id, nextMap);
                                   }}
-                                  className={`p-2 border rounded-lg bg-white text-xs font-bold text-[#202124] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition dark:bg-slate-950 dark:text-slate-150 dark:border-slate-750 ${
+                                  className={`p-2 border rounded-lg bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition dark:border-slate-700 ${
                                     hasValue 
-                                      ? 'border-indigo-400 text-indigo-755 dark:border-indigo-800 dark:text-indigo-300' 
-                                      : 'border-[#dadce0]'
+                                      ? 'border-indigo-500 text-indigo-700 dark:border-cyan-500 dark:text-cyan-300' 
+                                      : 'border-slate-300 dark:border-slate-700'
                                   }`}
                                   style={{ minWidth: '180px' }}
                                 >
@@ -1068,7 +1068,7 @@ export default function ExamTakeScreen({
                         placeholder="Tu respuesta"
                         rows={1}
                         minHeight={38}
-                        className="w-full bg-transparent border-b border-dashed border-[#dadce0] focus:border-b-2 focus:border-[#673ab7] outline-none py-2 text-sm text-[#202124] placeholder-slate-400 transition-all duration-200"
+                        className="w-full bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 focus:border-b-2 focus:border-indigo-500 outline-none py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 transition-all duration-200"
                       />
                     </div>
                   )}
@@ -1087,10 +1087,10 @@ export default function ExamTakeScreen({
                         return (
                           <div key={iIdx} className="bg-slate-50/80 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                             <div className="flex items-start gap-2.5">
-                              <span className="text-xs font-black px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shrink-0 uppercase tracking-wide">
+                              <span className="text-xs font-black px-2.5 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 shrink-0 uppercase tracking-wide">
                                 {letter})
                               </span>
-                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white leading-relaxed whitespace-pre-wrap">
                                 {inc.texto}
                               </p>
                             </div>
@@ -1110,7 +1110,7 @@ export default function ExamTakeScreen({
                                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
                                     val === 'V'
                                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/30'
-                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
+                                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-400'
                                   }`}
                                 >
                                   <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
@@ -1133,7 +1133,7 @@ export default function ExamTakeScreen({
                                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
                                     val === 'F'
                                       ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-400/30'
-                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
+                                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-400'
                                   }`}
                                 >
                                   <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${

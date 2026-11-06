@@ -322,8 +322,9 @@ export default function App() {
 
   // Adjust theme class on html/body element
   useEffect(() => {
-    document.body.className = `${theme} font-sans min-h-screen transition-all duration-200`;
-    document.documentElement.className = theme;
+    const isDark = theme === 'theme-cyber' || (theme as string) === 'theme-cosmos' || (theme as string) === 'theme-cosmos-contraste';
+    document.body.className = `${theme} ${isDark ? 'dark' : ''} font-sans min-h-screen transition-all duration-200`;
+    document.documentElement.className = `${theme} ${isDark ? 'dark' : ''}`;
   }, [theme]);
 
   // Quick helper toast

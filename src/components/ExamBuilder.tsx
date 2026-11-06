@@ -1652,7 +1652,7 @@ export default function ExamBuilder({
                       value={q.texto || (q as any).enunciado || ''}
                       onChange={e => handleUpdateQText(q.id, e.target.value)}
                       placeholder="Escribe el enunciado de la pregunta aquí..."
-                      className="w-full text-xs sm:text-[13.5px] leading-relaxed font-semibold text-slate-800 border-b border-slate-200 py-1.5 focus:border-indigo-500 outline-none placeholder-slate-400 mb-3 bg-transparent whitespace-pre-wrap font-sans block"
+                      className="w-full text-xs sm:text-[14px] leading-relaxed font-semibold text-slate-900 dark:text-white border-b border-slate-300 dark:border-slate-700 py-1.5 focus:border-indigo-500 outline-none placeholder-slate-400 dark:placeholder-slate-400 mb-3 bg-transparent whitespace-pre-wrap font-sans block"
                       rows={1}
                     />
 
@@ -1660,8 +1660,8 @@ export default function ExamBuilder({
                     {showOpts && (
                       <div className="flex flex-col gap-2 mb-4">
                         {isTF ? (
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-205 theme-bg-surface">
-                            <span className="text-xs font-semibold text-slate-600 block mb-3">
+                          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-205 dark:border-slate-700 theme-bg-surface">
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 block mb-3">
                               ¿Cuál es la respuesta correcta predeterminada para esta afirmación?
                             </span>
                             <div className="flex gap-3">
@@ -1719,7 +1719,7 @@ export default function ExamBuilder({
                                   value={opt}
                                   onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
                                   placeholder={`Opción ${oIdx + 1}`}
-                                  className="flex-1 bg-transparent border-b border-slate-100 text-[12px] sm:text-[13px] py-1 font-medium focus:border-indigo-400 outline-none whitespace-pre-wrap font-sans block"
+                                  className="flex-1 bg-transparent border-b border-slate-200 dark:border-slate-700 text-[12px] sm:text-[13px] py-1 font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-400 focus:border-indigo-400 outline-none whitespace-pre-wrap font-sans block"
                                   rows={1}
                                   onKeyDown={e => {
                                     if (e.key === 'Enter') {
@@ -2338,10 +2338,10 @@ export default function ExamBuilder({
 
                         {/* Column and Row Grid Settings */}
                         <div className="bg-slate-50 dark:bg-slate-900/40 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 text-left shadow-xs">
-                          <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide block mb-1">
+                          <label className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide block mb-1">
                             📋 Columnas de la Tabla (Encabezados)
                           </label>
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 block leading-relaxed">
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2 block leading-relaxed">
                             Define los títulos de cada columna para organizar la tabla. El estudiante verá estos encabezados al responder.
                           </p>
                           <div className="mb-3.5 p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-2">
@@ -2356,7 +2356,7 @@ export default function ExamBuilder({
                                 key={cIdx} 
                                 className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-all flex-1 min-w-[260px] sm:min-w-[320px] max-w-full"
                               >
-                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/80 border border-slate-300 dark:border-slate-600 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-700/80 border border-slate-300 dark:border-slate-600 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
                                   C{cIdx + 1}
                                 </span>
                                 <input
@@ -2364,7 +2364,7 @@ export default function ExamBuilder({
                                   value={col}
                                   placeholder={`Título columna ${cIdx + 1}...`}
                                   onChange={e => handleUpdateTableColumn(q.id, cIdx, e.target.value)}
-                                  className="flex-1 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 transition"
+                                  className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 transition placeholder-slate-400"
                                 />
                                 <button
                                   type="button"
@@ -2575,11 +2575,11 @@ export default function ExamBuilder({
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 uppercase">
+                                      <span className="text-xs font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 uppercase">
                                         Literal {letter}.
                                       </span>
                                       {isVF && (
-                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                                           (Afirmación para calificar V o F)
                                         </span>
                                       )}
@@ -2599,7 +2599,7 @@ export default function ExamBuilder({
                                       value={inc.texto}
                                       onChange={e => handleUpdateIncisoText(q.id, iIdx, e.target.value)}
                                       placeholder={isVF ? `Escribe la afirmación del literal ${letter} para evaluar como Verdadera o Falsa...` : `Enunciado del literal ${letter}...`}
-                                      className="w-full text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 leading-relaxed font-sans block"
+                                      className="w-full text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2.5 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 leading-relaxed font-sans block"
                                       rows={2}
                                     />
                                   </div>
@@ -2608,17 +2608,17 @@ export default function ExamBuilder({
                                   {isVF ? (
                                     <div className="flex items-center justify-between pt-1">
                                       <div className="flex items-center gap-2">
-                                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                                           Respuesta correcta de la afirmación:
                                         </span>
-                                        <div className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                                        <div className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700">
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateIncisoVF(q.id, iIdx, 'V')}
                                             className={`px-3 py-1 rounded-md text-xs font-black transition cursor-pointer flex items-center gap-1 ${
                                               currentVF === 'V'
                                                 ? 'bg-emerald-600 text-white shadow-xs'
-                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                                             }`}
                                           >
                                             <span>✓ V</span>
@@ -2630,7 +2630,7 @@ export default function ExamBuilder({
                                             className={`px-3 py-1 rounded-md text-xs font-black transition cursor-pointer flex items-center gap-1 ${
                                               currentVF === 'F'
                                                 ? 'bg-rose-600 text-white shadow-xs'
-                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                                : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                                             }`}
                                           >
                                             <span>✕ F</span>
@@ -2641,7 +2641,7 @@ export default function ExamBuilder({
                                     </div>
                                   ) : (
                                     <div>
-                                      <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                                         Respuesta esperada o clave de referencia (Opcional, para guía del docente):
                                       </label>
                                       <input
@@ -2649,7 +2649,7 @@ export default function ExamBuilder({
                                         value={inc.respuestaEsperada || ''}
                                         onChange={e => handleUpdateIncisoExpected(q.id, iIdx, e.target.value)}
                                         placeholder="ej: Estado de situación financiera y Estado de resultados integrales..."
-                                        className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 font-sans"
+                                        className="w-full text-xs font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 font-sans"
                                       />
                                     </div>
                                   )}

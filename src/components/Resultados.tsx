@@ -1067,10 +1067,10 @@ export default function Resultados({
                               return (
                                 <div key={iIdx} className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 shadow-2xs">
                                   <div className="flex items-start gap-2">
-                                    <span className="font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded uppercase text-[10.5px]">
+                                    <span className="font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded uppercase text-[10.5px]">
                                       {letter})
                                     </span>
-                                    <span className="font-semibold text-slate-700 dark:text-slate-300 flex-1">{inc.texto}</span>
+                                    <span className="font-semibold text-slate-900 dark:text-slate-100 flex-1">{inc.texto}</span>
                                     {isVF && sVal && (
                                       <span className={`px-2 py-0.5 rounded text-[10.5px] font-black shrink-0 ${
                                         isItemCorrect 

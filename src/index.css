@@ -164,6 +164,15 @@ body.theme-academia .form-control {
   border-color: #cbd5e1 !important;
 }
 
+body.theme-academia textarea.bg-transparent,
+body.theme-academia .auto-expand-textarea.bg-transparent,
+body.theme-cyber textarea.bg-transparent,
+body.theme-cyber .auto-expand-textarea.bg-transparent,
+.dark textarea.bg-transparent,
+.dark .auto-expand-textarea.bg-transparent {
+  background-color: transparent !important;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--gray-50) !important;
@@ -313,17 +322,26 @@ body.theme-cyber input,
 body.theme-cyber select,
 body.theme-cyber textarea,
 body.theme-cyber .form-control,
+body.theme-cyber .auto-expand-textarea,
 body.theme-cosmos input,
 body.theme-cosmos select,
 body.theme-cosmos textarea,
 body.theme-cosmos .form-control,
+body.theme-cosmos .auto-expand-textarea,
 body.theme-cosmos-contraste input,
 body.theme-cosmos-contraste select,
 body.theme-cosmos-contraste textarea,
-body.theme-cosmos-contraste .form-control {
+body.theme-cosmos-contraste .form-control,
+body.theme-cosmos-contraste .auto-expand-textarea,
+.dark input,
+.dark select,
+.dark textarea,
+.dark .form-control,
+.dark .auto-expand-textarea {
   background-color: #030a14 !important;
   border: 1px solid rgba(6, 182, 212, 0.35) !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 body.theme-cyber input::placeholder,
@@ -331,8 +349,11 @@ body.theme-cyber textarea::placeholder,
 body.theme-cosmos input::placeholder,
 body.theme-cosmos textarea::placeholder,
 body.theme-cosmos-contraste input::placeholder,
-body.theme-cosmos-contraste textarea::placeholder {
-  color: #64748b !important;
+body.theme-cosmos-contraste textarea::placeholder,
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(226, 232, 240, 0.72) !important;
+  -webkit-text-fill-color: rgba(226, 232, 240, 0.72) !important;
 }
 
 body.theme-cyber input:focus,
@@ -451,7 +472,7 @@ body.theme-cosmos-contraste .nav-group-header {
   font-weight: 800 !important;
 }
 
-/* High Contrast Text overrides in Cyber Matrix */
+/* High Contrast Text overrides in Cyber Matrix & Dark Mode */
 body.theme-cyber .text-slate-950,
 body.theme-cyber .text-slate-905,
 body.theme-cyber .text-slate-900,
@@ -462,6 +483,7 @@ body.theme-cyber .text-slate-750,
 body.theme-cyber .text-slate-700,
 body.theme-cyber .text-slate-650,
 body.theme-cyber .text-slate-600,
+body.theme-cyber .text-\[\#202124\],
 body.theme-cyber h1,
 body.theme-cyber h2,
 body.theme-cyber h3,
@@ -471,6 +493,7 @@ body.theme-cosmos .text-slate-950,
 body.theme-cosmos .text-slate-900,
 body.theme-cosmos .text-slate-800,
 body.theme-cosmos .text-slate-700,
+body.theme-cosmos .text-\[\#202124\],
 body.theme-cosmos h1,
 body.theme-cosmos h2,
 body.theme-cosmos h3,
@@ -478,9 +501,15 @@ body.theme-cosmos-contraste .text-slate-950,
 body.theme-cosmos-contraste .text-slate-900,
 body.theme-cosmos-contraste .text-slate-800,
 body.theme-cosmos-contraste .text-slate-700,
+body.theme-cosmos-contraste .text-\[\#202124\],
 body.theme-cosmos-contraste h1,
 body.theme-cosmos-contraste h2,
-body.theme-cosmos-contraste h3 {
+body.theme-cosmos-contraste h3,
+.dark .text-slate-950,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-\[\#202124\] {
   color: #ffffff !important;
 }
 
@@ -488,12 +517,34 @@ body.theme-cyber .text-slate-550,
 body.theme-cyber .text-slate-500,
 body.theme-cyber .text-slate-450,
 body.theme-cyber .text-slate-400,
+body.theme-cyber .text-\[\#5f6368\],
 body.theme-cyber .logo-sub,
 body.theme-cosmos .text-slate-500,
 body.theme-cosmos .text-slate-400,
+body.theme-cosmos .text-\[\#5f6368\],
 body.theme-cosmos-contraste .text-slate-500,
-body.theme-cosmos-contraste .text-slate-400 {
+body.theme-cosmos-contraste .text-slate-400,
+body.theme-cosmos-contraste .text-\[\#5f6368\],
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-\[\#5f6368\] {
   color: #94a3b8 !important;
+}
+
+body.theme-cyber .border-\[\#dadce0\],
+body.theme-cosmos .border-\[\#dadce0\],
+body.theme-cosmos-contraste .border-\[\#dadce0\],
+.dark .border-\[\#dadce0\] {
+  border-color: rgba(6, 182, 212, 0.3) !important;
+}
+
+/* High Contrast adjustments for Academia (Light) Theme */
+body.theme-academia .text-slate-400,
+body.theme-academia .text-slate-500 {
+  color: #334155 !important;
+}
+body.theme-academia p.text-slate-600 {
+  color: #1e293b !important;
 }
 
 /* Badges, tags and accent buttons */
