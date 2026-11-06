@@ -1822,18 +1822,18 @@ export default function ExamBuilder({
                     {isTable && (
                       <div className="space-y-4 mb-4">
                         {/* Word bank manager */}
-                        <div className="bg-indigo-55 border border-indigo-110 p-4 rounded-xl text-left dark:bg-slate-900/40 dark:border-slate-800">
-                          <label className="text-xs font-semibold text-indigo-800 block mb-2 dark:text-cyan-400">
+                        <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-left dark:bg-slate-900/40 dark:border-slate-800">
+                          <label className="text-xs font-bold text-slate-800 block mb-1 dark:text-slate-200">
                             📦 Caja de Palabras / Banco de Vocabulario (Listado de Palabras)
                           </label>
-                          <p className="text-[11px] text-slate-500 mb-3 block dark:text-slate-400">
+                          <p className="text-xs text-slate-500 mb-3 block dark:text-slate-400">
                             Estas palabras serán mostradas en la caja para que el estudiante las elija e introduzca en las celdas vacías de la tabla.
                           </p>
 
                           {/* PRESETS BUTTONS AND ASSISTANT FOR EASY TABLE SETUP */}
-                          <div className="flex flex-wrap gap-2 mb-4 bg-white/90 p-3 rounded-xl border border-indigo-100 select-none dark:bg-slate-900/60 dark:border-slate-800 shadow-xs">
-                            <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-indigo-50 dark:border-slate-800">
-                              <span className="text-[10px] font-black text-indigo-900 dark:text-cyan-400 uppercase tracking-wider">
+                          <div className="flex flex-wrap gap-2 mb-4 bg-slate-100/90 p-3 rounded-xl border border-slate-200 select-none dark:bg-slate-800/60 dark:border-slate-700 shadow-xs">
+                            <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-slate-200 dark:border-slate-700">
+                              <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                 ✨ PLANTILLAS RÁPIDAS Y ASISTENTE GENERADOR:
                               </span>
                               <button
@@ -1841,7 +1841,7 @@ export default function ExamBuilder({
                                 onClick={() => {
                                   setTableWizardQId(tableWizardQId === q.id ? null : q.id);
                                 }}
-                                className="text-[11px] font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 py-1 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                                className="text-[11px] font-bold bg-slate-700 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 px-3 py-1 rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
                               >
                                 <span>🪄 {tableWizardQId === q.id ? 'Cerrar Asistente' : 'Asistente Rápido: Crear Tabla en 2 Columnas'}</span>
                               </button>
@@ -1850,7 +1850,7 @@ export default function ExamBuilder({
                             <button
                               type="button"
                               onClick={() => applyAccountingActivosPreset(q.id)}
-                              className="text-[10.5px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700 flex items-center gap-1"
+                              className="text-[10.5px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-600 flex items-center gap-1 shadow-xs"
                               title="Organice los siguientes grupos de activos: Corrientes vs No Corrientes"
                             >
                               <span>📊</span>
@@ -1860,7 +1860,7 @@ export default function ExamBuilder({
                             <button
                               type="button"
                               onClick={() => applyAccountingPasivosPreset(q.id)}
-                              className="text-[10.5px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700 flex items-center gap-1"
+                              className="text-[10.5px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-600 flex items-center gap-1 shadow-xs"
                               title="Organice los siguientes grupos de pasivos: Corrientes vs No Corrientes"
                             >
                               <span>📊</span>
@@ -1870,7 +1870,7 @@ export default function ExamBuilder({
                             <button
                               type="button"
                               onClick={() => applyAccountingCombinedPreset(q.id)}
-                              className="text-[10.5px] font-bold bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-700 flex items-center gap-1"
+                              className="text-[10.5px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-600 flex items-center gap-1 shadow-xs"
                               title="Organice Activos y Pasivos en tabla de 4 columnas"
                             >
                               <span>📑</span>
@@ -1954,21 +1954,21 @@ export default function ExamBuilder({
                                 }));
                                 toast('¡Plantilla de Atributos de Dios cargada!', 'success');
                               }}
-                              className="text-[10.5px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-850 border border-indigo-200 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-605 flex items-center gap-1"
+                              className="text-[10.5px] font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-600 flex items-center gap-1 shadow-xs"
                             >
                               <span>📘</span>
                               <span>Cargar: Atributos de Dios</span>
                             </button>
                           </div>
 
-                          {/* ASISTENTE INTERACTIVO DE CLASIFICACIÓN EN 2 COLUMNAS */}
+                          {/* ASISTENTE INTERACTIVO DE CLASIFICACIÓN EN 2 COLUMNAS (Estilo Gris Neutro) */}
                           {tableWizardQId === q.id && (
-                            <div className="mb-4 p-4 bg-gradient-to-br from-indigo-50/90 via-purple-50/70 to-white rounded-2xl border-2 border-indigo-300 shadow-md text-left dark:bg-slate-900 dark:border-indigo-700 animate-fade-in">
-                              <div className="flex items-center justify-between mb-3 border-b border-indigo-200 pb-2 dark:border-indigo-800">
+                            <div className="mb-4 p-4 bg-slate-100/95 dark:bg-slate-800/90 rounded-2xl border border-slate-300 dark:border-slate-700 shadow-sm text-left animate-fade-in">
+                              <div className="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-slate-700 pb-2">
                                 <div className="flex items-center gap-2">
-                                  <span className="p-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold">🪄</span>
+                                  <span className="p-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold">🪄</span>
                                   <div>
-                                    <h4 className="text-xs font-extrabold text-indigo-900 dark:text-white uppercase tracking-wider">
+                                    <h4 className="text-xs font-extrabold text-slate-800 dark:text-slate-100 uppercase tracking-wider">
                                       Generador Rápido de Tabla Clasificatoria en 2 Columnas
                                     </h4>
                                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -1996,14 +1996,14 @@ export default function ExamBuilder({
                                     value={wizardTitle}
                                     onChange={e => setWizardTitle(e.target.value)}
                                     placeholder="ej: Organice los siguientes grupos en las clasificaciones de corrientes y no corrientes:"
-                                    className="w-full text-xs p-2 rounded-lg border border-indigo-200 bg-white font-medium focus:outline-indigo-500 dark:bg-slate-950 dark:border-slate-800 dark:text-white"
+                                    className="w-full text-xs p-2 rounded-lg border border-slate-300 bg-white font-medium focus:outline-slate-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white"
                                   />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {/* Columna 1 */}
-                                  <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-xs dark:bg-slate-950 dark:border-slate-800 space-y-2">
-                                    <label className="text-[10px] font-extrabold text-indigo-700 uppercase block dark:text-cyan-400">
+                                  <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs dark:bg-slate-900 dark:border-slate-700 space-y-2">
+                                    <label className="text-[10px] font-extrabold text-slate-700 uppercase block dark:text-slate-300">
                                       Título Columna 1:
                                     </label>
                                     <input 
@@ -2011,7 +2011,7 @@ export default function ExamBuilder({
                                       value={wizardCol1Name}
                                       onChange={e => setWizardCol1Name(e.target.value)}
                                       placeholder="ej: CORRIENTES"
-                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white"
+                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:text-white"
                                     />
                                     <label className="text-[10px] font-bold text-slate-600 uppercase block dark:text-slate-400">
                                       Elementos de Columna 1 (separados por coma o Enter):
@@ -2021,13 +2021,13 @@ export default function ExamBuilder({
                                       value={wizardCol1Items}
                                       onChange={e => setWizardCol1Items(e.target.value)}
                                       placeholder="Disponible, Inversiones, Cuentas por cobrar a corto plazo, Inventario..."
-                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white font-sans"
+                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:text-white font-sans"
                                     />
                                   </div>
 
                                   {/* Columna 2 */}
-                                  <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-xs dark:bg-slate-950 dark:border-slate-800 space-y-2">
-                                    <label className="text-[10px] font-extrabold text-purple-700 uppercase block dark:text-purple-300">
+                                  <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-xs dark:bg-slate-900 dark:border-slate-700 space-y-2">
+                                    <label className="text-[10px] font-extrabold text-slate-700 uppercase block dark:text-slate-300">
                                       Título Columna 2:
                                     </label>
                                     <input 
@@ -2035,7 +2035,7 @@ export default function ExamBuilder({
                                       value={wizardCol2Name}
                                       onChange={e => setWizardCol2Name(e.target.value)}
                                       placeholder="ej: NO CORRIENTES"
-                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white"
+                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:text-white"
                                     />
                                     <label className="text-[10px] font-bold text-slate-600 uppercase block dark:text-slate-400">
                                       Elementos de Columna 2 (separados por coma o Enter):
@@ -2045,7 +2045,7 @@ export default function ExamBuilder({
                                       value={wizardCol2Items}
                                       onChange={e => setWizardCol2Items(e.target.value)}
                                       placeholder="Propiedades, planta y equipo, Intangibles, Valorización, Cuentas por cobrar a largo plazo..."
-                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white font-sans"
+                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-800 dark:text-white font-sans"
                                     />
                                   </div>
                                 </div>
@@ -2061,7 +2061,7 @@ export default function ExamBuilder({
                                   <button
                                     type="button"
                                     onClick={() => generateTwoColumnClassification(q.id, wizardTitle, wizardCol1Name, wizardCol1Items, wizardCol2Name, wizardCol2Items)}
-                                    className="px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer dark:bg-slate-700 dark:hover:bg-slate-600"
                                   >
                                     <span>🪄 Generar Tabla y Caja de Palabras</span>
                                   </button>
@@ -2070,12 +2070,12 @@ export default function ExamBuilder({
                             </div>
                           )}
 
-                          <div className="flex flex-wrap gap-2.5 mb-3">
+                          <div className="flex flex-wrap gap-2 mb-3">
                             {q.opciones.map((opt, oIdx) => {
                               const optKey = q.opcionIds?.[oIdx] || `${q.id}-tblopt-${oIdx}`;
                               return (
-                                <div key={optKey} className="flex items-center gap-2 bg-white dark:bg-[#1a2f4c] border-2 border-indigo-200 dark:border-cyan-700/80 rounded-xl px-2.5 py-1.5 text-sm shadow-xs hover:border-indigo-400 dark:hover:border-cyan-400 transition-all">
-                                  <span className="text-[10px] font-black text-indigo-700 dark:text-cyan-300 bg-indigo-50 dark:bg-cyan-950/90 px-1.5 py-0.5 rounded">
+                                <div key={optKey} className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs shadow-xs hover:border-slate-400 transition-all">
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                                     #{oIdx + 1}
                                   </span>
                                   <input
@@ -2083,12 +2083,12 @@ export default function ExamBuilder({
                                     value={opt}
                                     placeholder="Término o palabra..."
                                     onChange={e => handleUpdateOptionText(q.id, oIdx, e.target.value)}
-                                    className="bg-transparent text-xs font-bold text-slate-900 dark:text-white min-w-[140px] sm:min-w-[190px] focus:outline-none border-none outline-none"
+                                    className="bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 min-w-[130px] sm:min-w-[180px] focus:outline-none border-none outline-none"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveOption(q.id, oIdx)}
-                                    className="text-slate-400 hover:text-red-500 font-black shrink-0 text-xs p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition cursor-pointer"
+                                    className="text-slate-400 hover:text-red-500 font-bold shrink-0 text-xs p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition cursor-pointer"
                                     title="Eliminar palabra"
                                   >
                                     ✕
@@ -2100,28 +2100,33 @@ export default function ExamBuilder({
                           <button
                             type="button"
                             onClick={() => handleAddOption(q.id)}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 cursor-pointer transition shadow-sm border border-transparent"
-                            style={{ backgroundColor: 'var(--primary, #673ab7)' }}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 cursor-pointer transition shadow-xs"
                           >
                             + Agregar Palabra a la Caja
                           </button>
                         </div>
 
                         {/* Column and Row Grid Settings */}
-                        <div className="bg-slate-50/90 dark:bg-[#132238] p-4.5 rounded-2xl border-2 border-indigo-200 dark:border-cyan-700/80 text-left shadow-xs">
-                          <label className="text-xs font-black text-slate-900 dark:text-cyan-300 uppercase tracking-wide block mb-1">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 text-left shadow-xs">
+                          <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide block mb-1">
                             📋 Columnas de la Tabla (Encabezados)
                           </label>
-                          <p className="text-xs font-bold text-slate-800 dark:text-cyan-100 mb-3.5 block leading-relaxed">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 block leading-relaxed">
                             Define los títulos de cada columna para organizar la tabla. El estudiante verá estos encabezados al responder.
                           </p>
+                          <div className="mb-3.5 p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 text-xs font-medium flex items-center gap-2">
+                            <span className="text-base shrink-0">💡</span>
+                            <span>
+                              <strong>Calificación Automática y Flexible:</strong> No importa en cuál fila coloque el estudiante la palabra. Mientras la ubique en la columna correspondiente (por ejemplo en <em>CORRIENTES</em>), el sistema se la calificará automáticamente como correcta.
+                            </span>
+                          </div>
                           <div className="flex flex-wrap gap-3 mb-2">
                             {(q.columnas || []).map((col, cIdx) => (
                               <div 
                                 key={cIdx} 
-                                className="flex items-center gap-2 bg-white dark:bg-[#1a2f4c] border-2 border-slate-300 dark:border-cyan-500/80 rounded-xl px-3 py-2 shadow-sm hover:border-indigo-400 dark:hover:border-cyan-400 transition-all flex-1 min-w-[260px] sm:min-w-[320px] max-w-full"
+                                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 shadow-xs hover:border-slate-400 dark:hover:border-slate-600 transition-all flex-1 min-w-[260px] sm:min-w-[320px] max-w-full"
                               >
-                                <span className="text-[11px] font-black text-indigo-700 dark:text-cyan-300 bg-indigo-50 dark:bg-cyan-950/90 border border-indigo-200 dark:border-cyan-700 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/80 border border-slate-300 dark:border-slate-600 px-2 py-0.5 rounded-md uppercase tracking-wider shrink-0">
                                   C{cIdx + 1}
                                 </span>
                                 <input
@@ -2129,12 +2134,12 @@ export default function ExamBuilder({
                                   value={col}
                                   placeholder={`Título columna ${cIdx + 1}...`}
                                   onChange={e => handleUpdateTableColumn(q.id, cIdx, e.target.value)}
-                                  className="flex-1 bg-slate-50 dark:bg-[#0c182a] text-slate-900 dark:text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-cyan-700/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-cyan-400 transition"
+                                  className="flex-1 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 transition"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveTableColumn(q.id, cIdx)}
-                                  className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 font-black shrink-0 text-xs p-1.5 rounded-lg transition cursor-pointer"
+                                  className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold shrink-0 text-xs p-1.5 rounded-lg transition cursor-pointer"
                                   title="Eliminar columna"
                                 >
                                   ✕
@@ -2144,7 +2149,7 @@ export default function ExamBuilder({
                             <button
                               type="button"
                               onClick={() => handleAddTableColumn(q.id)}
-                              className="bg-indigo-600 hover:bg-indigo-700 dark:bg-cyan-600 dark:hover:bg-cyan-500 text-white dark:text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 cursor-pointer transition shadow-sm shrink-0 self-center"
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 cursor-pointer transition shadow-xs shrink-0 self-center"
                             >
                               + Nueva Columna
                             </button>
@@ -2152,20 +2157,20 @@ export default function ExamBuilder({
                         </div>
 
                         {/* Filas de la Tabla */}
-                        <div className="bg-slate-50/90 dark:bg-[#132238] p-4.5 rounded-2xl border-2 border-indigo-200 dark:border-cyan-700/80 text-left space-y-3">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 text-left space-y-3">
                           <div className="flex justify-between items-center">
                             <div>
-                              <label className="text-xs font-black text-slate-900 dark:text-cyan-300 uppercase tracking-wide block">
+                              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide block">
                                 📊 Filas y Configuración de Celdas
                               </label>
-                              <span className="text-xs font-bold text-slate-800 dark:text-cyan-100 block">
+                              <span className="text-xs text-slate-600 dark:text-slate-400 block">
                                 Escribe textos de referencia fijos o define qué espacios deben ser completados por el estudiante.
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleAddTableRow(q.id)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-sm cursor-pointer"
+                              className="bg-slate-200 hover:bg-slate-300 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition shadow-xs cursor-pointer"
                             >
                               + Agregar Fila
                             </button>
@@ -2173,13 +2178,13 @@ export default function ExamBuilder({
 
                           <div className="grid grid-cols-1 gap-4">
                             {(q.tableRows || []).map((row, rIdx) => (
-                              <div key={rIdx} className="bg-white dark:bg-[#1a2f4c] p-4 rounded-xl border-2 border-slate-200 dark:border-cyan-700/80 shadow-xs relative">
-                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-dashed border-slate-200 dark:border-cyan-800">
-                                  <span className="text-[11px] font-black text-indigo-700 dark:text-cyan-300 uppercase tracking-wider">Fila {rIdx + 1}</span>
+                              <div key={rIdx} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs relative">
+                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-dashed border-slate-200 dark:border-slate-700">
+                                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Fila {rIdx + 1}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveTableRow(q.id, rIdx)}
-                                    className="text-red-500 hover:text-red-700 dark:text-red-400 font-bold text-xs flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                                    className="text-red-500 hover:text-red-700 dark:text-red-400 font-medium text-xs flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                                   >
                                     ✕ Eliminar Fila
                                   </button>
@@ -2189,16 +2194,16 @@ export default function ExamBuilder({
                                   {row.cells.map((cell, cIdx) => {
                                     const colName = (q.columnas || [])[cIdx] || `Columna ${cIdx + 1}`;
                                     return (
-                                      <div key={cIdx} className="bg-slate-50 dark:bg-[#12223a] p-3 rounded-xl border border-slate-200 dark:border-cyan-800/80 text-xs space-y-2">
-                                        <div className="font-black text-slate-700 dark:text-cyan-200 truncate mb-1">
-                                          Columna: <span className="text-indigo-600 dark:text-cyan-300">{colName}</span>
+                                      <div key={cIdx} className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-2">
+                                        <div className="font-bold text-slate-700 dark:text-slate-300 truncate mb-1">
+                                          Columna: <span className="text-slate-900 dark:text-slate-100">{colName}</span>
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                           <select
                                             value={cell.tipo}
                                             onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { tipo: e.target.value })}
-                                            className="p-1.5 text-xs font-bold border rounded-lg bg-white text-slate-800 dark:bg-[#0a182c] dark:text-white dark:border-cyan-700 cursor-pointer"
+                                            className="p-1.5 text-xs font-bold border rounded-lg bg-white text-slate-800 border-slate-300 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 cursor-pointer focus:ring-1 focus:ring-slate-400"
                                           >
                                             <option value="texto">Texto Fijo / Etiqueta</option>
                                             <option value="blank">Espacio por Llenar</option>
@@ -2211,15 +2216,15 @@ export default function ExamBuilder({
                                             value={cell.valor}
                                             placeholder="Introduce texto o etiqueta..."
                                             onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { valor: e.target.value })}
-                                            className="w-full bg-white border border-slate-300 dark:border-cyan-700 p-2 rounded-lg text-xs font-bold text-slate-900 dark:text-white dark:bg-[#0a182c] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-cyan-400"
+                                            className="w-full bg-white border border-slate-300 dark:border-slate-700 p-2 rounded-lg text-xs font-medium text-slate-900 dark:text-slate-100 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-600"
                                           />
                                         ) : (
                                           <div className="space-y-1">
-                                            <label className="text-[10px] text-slate-600 dark:text-cyan-200 block font-bold">Respuesta correcta de la caja:</label>
+                                            <label className="text-[10px] text-slate-600 dark:text-slate-400 block font-semibold">Respuesta correcta de la caja:</label>
                                             <select
                                               value={cell.correctOptionIdx ?? 0}
                                               onChange={e => handleUpdateTableCell(q.id, rIdx, cIdx, { correctOptionIdx: Number(e.target.value) })}
-                                              className="w-full text-xs p-2 font-bold border rounded-lg bg-white text-emerald-800 border-emerald-300 dark:bg-[#0a182c] dark:text-emerald-300 dark:border-emerald-600 cursor-pointer"
+                                              className="w-full text-xs p-2 font-bold border rounded-lg bg-white text-slate-800 border-slate-300 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 cursor-pointer focus:ring-1 focus:ring-slate-400"
                                             >
                                               {q.opciones.map((opt, oIdx) => (
                                                 <option key={oIdx} value={oIdx}>{opt}</option>
@@ -2252,7 +2257,7 @@ export default function ExamBuilder({
                         <option value="abierta">Respuesta libre/Texto</option>
                         <option value="escala">Escala (1 al 5)</option>
                         <option value="matching">Pareo / Relacionar con Caja de Palabras</option>
-                        <option value="table">📊 Clasificación en Tabla con Banco de Palabras (ej: Activos, Pasivos)</option>
+                        <option value="table">📊 Clasificación en Tabla con Banco de Palabras</option>
                       </select>
 
                       <div className="flex-1" />
