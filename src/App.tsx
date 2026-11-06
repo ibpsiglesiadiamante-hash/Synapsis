@@ -270,8 +270,8 @@ export default function App() {
 
   // Login & Registration form states
   const [loginTab, setLoginTab] = useState<'login' | 'register'>('login');
-  const [loginEmail, setLoginEmail] = useState('quinoneswash70@gmail.com');
-  const [loginPass, setLoginPass] = useState('1234');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPass, setLoginPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -441,7 +441,11 @@ export default function App() {
     const isSpecialAdminEmail = cleanId === 'quinoneswash70@gmail.com' || cleanId === 'ibpsiglesiadiamante@gmail.com';
     const isSpecialPassword = cleanPass === '1234' || cleanPass === '053507' || cleanPass === 'admin123';
 
-    if (isSpecialAdminEmail && isSpecialPassword) {
+    if (isSpecialAdminEmail) {
+      if (!isSpecialPassword) {
+        showToast('Contraseña incorrecta para esta cuenta.', 'error');
+        return;
+      }
       let targetAdmin = db.users.find(u => (u.email || '').toLowerCase() === cleanId) ||
                         db.users.find(u => (u.email || '').toLowerCase() === 'quinoneswash70@gmail.com') ||
                         db.users.find(u => (u.email || '').toLowerCase() === 'ibpsiglesiadiamante@gmail.com') ||
@@ -522,31 +526,18 @@ export default function App() {
     showToast(`¡Bienvenido al sistema, ${matchedUser.nombre}!`, 'success');
   };
 
-  const handleSecretAdminLogin = () => {
-    // Acceso directo y exclusivo solicitado: quinoneswash70@gmail.com (Washington Quiñones)
-    let targetUser = db.users.find(u => (u.email || '').toLowerCase() === 'quinoneswash70@gmail.com') ||
-                     db.users.find(u => (u.email || '').toLowerCase() === 'ibpsiglesiadiamante@gmail.com') ||
-                     db.users.find(u => u.rol === 'admin');
-
-    if (!targetUser) {
-      targetUser = { 
-        id: 'admin-fallback-id', 
-        nombre: 'WASHINGTON QUIÑONES', 
-        email: 'quinoneswash70@gmail.com', 
-        pass: '053507', 
-        rol: 'admin', 
-        creado: new Date().toISOString() 
-      };
-      updateUsers([...db.users, targetUser]);
-    } else if (targetUser.rol !== 'admin') {
-      targetUser = { ...targetUser, rol: 'admin' };
-      updateUsers(db.users.map(u => u.id === targetUser!.id ? targetUser! : u));
-    }
-
-    setCurrentUser(targetUser);
-    localStorage.setItem('instituto_currentUser', JSON.stringify(targetUser));
-    setActiveTab('dashboard');
-    showToast(`✦ Acceso directo concedido: ${targetUser.nombre} (${targetUser.email})`, 'success');
+  const handleSecretLogoTouch = () => {
+    // Configuración estratégica y discreta solicitada por el usuario:
+    // Al pulsar el logo/emblema se prepara el correo institucional administrativo pero NUNCA ingresa directo sin contraseña.
+    setLoginEmail('quinoneswash70@gmail.com');
+    setLoginPass('');
+    showToast('Identificador preparado. Ingresa tu contraseña de acceso.', 'info');
+    setTimeout(() => {
+      const passInput = document.getElementById('login-password') as HTMLInputElement | null;
+      if (passInput) {
+        passInput.focus();
+      }
+    }, 120);
   };
 
   // Access Control Guard for Student Categories & Roles
@@ -1501,11 +1492,10 @@ export default function App() {
           {/* Centered Floating Bio-Cosmic Card (Exact match to image_2728e0a8.png) */}
           <div className="w-full max-w-[430px] bg-[#0c1626]/95 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-[#1b2b48]/90 shadow-[0_25px_70px_rgba(0,0,0,0.85)] relative z-10 flex flex-col items-center">
             
-            {/* Top Glowing Emblem (Circle marked in yellow in image_2728e0a8.png) */}
-            {/* EXCLUSIVE ADMIN SHORTCUT: Clicking this emblem immediately authenticates the administrator */}
+            {/* Top Glowing Emblem: Touching it discreetly prepares the admin identifier but NEVER enters without password */}
             <div 
-              onClick={handleSecretAdminLogin}
-              title="Portal Bio-Cósmico (Acceso Directo Exclusivo)"
+              onClick={handleSecretLogoTouch}
+              title="Portal Bio-Cósmico Synapsis"
               className="group relative cursor-pointer flex flex-col items-center justify-center transition-transform hover:scale-105 active:scale-95 select-none"
             >
               {/* Outer soft glowing neon halo */}
@@ -1588,16 +1578,6 @@ export default function App() {
                   </defs>
                 </svg>
               </div>
-
-              {/* Direct Quick Login Indicator for Washington Quiñones */}
-              <button
-                type="button"
-                onClick={handleSecretAdminLogin}
-                className="mt-2 text-[10px] font-mono font-bold text-cyan-300 bg-cyan-950/90 hover:bg-cyan-900 px-3 py-1 rounded-full border border-cyan-700/70 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                title="Pulsar para ingresar de inmediato con quinoneswash70@gmail.com"
-              >
-                <span>⚡ Acceso Rápido: quinoneswash70@gmail.com</span>
-              </button>
             </div>
 
             {/* Title & Subtitle exact match to image_2728e0a8.png */}
@@ -1642,7 +1622,7 @@ export default function App() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => showToast('Para restablecer tu contraseña o consultar tu código, contacta a secretaría o pulsa el logo superior.', 'info')}
+                      onClick={() => showToast('Para restablecer tu contraseña o consultar tu código, contacta a secretaría.', 'info')}
                       className="text-[11px] text-[#22d3ee] hover:text-[#67e8f9] font-medium transition-colors cursor-pointer"
                     >
                       ¿Olvidaste tu contraseña?
@@ -1652,6 +1632,8 @@ export default function App() {
                     <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
                     <input 
                       type={showPassword ? "text" : "password"}
+                      name="password"
+                      id="login-password"
                       required
                       value={loginPass}
                       onChange={e => setLoginPass(e.target.value)}

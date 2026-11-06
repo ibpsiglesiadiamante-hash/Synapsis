@@ -158,6 +158,14 @@ export default function ExamBuilder({
 
   // Auto-save states
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved');
+
+  // Table Classification Wizard states
+  const [tableWizardQId, setTableWizardQId] = useState<string | null>(null);
+  const [wizardTitle, setWizardTitle] = useState('Organice los siguientes grupos en las clasificaciones de corrientes y no corrientes:');
+  const [wizardCol1Name, setWizardCol1Name] = useState('CORRIENTES');
+  const [wizardCol1Items, setWizardCol1Items] = useState('Disponible, Inversiones, Cuentas por cobrar a corto plazo, Inventario');
+  const [wizardCol2Name, setWizardCol2Name] = useState('NO CORRIENTES');
+  const [wizardCol2Items, setWizardCol2Items] = useState('Propiedades, planta y equipo, Intangibles, Valorización, Cuentas por cobrar a largo plazo');
   const isFirstRender = useRef(true);
   const isDirtyRef = useRef(false);
   const lastExamIdRef = useRef(examId);
@@ -655,6 +663,243 @@ export default function ExamBuilder({
       }
       return q;
     }));
+  };
+
+  const applyAccountingActivosPreset = (qid: string) => {
+    notifyUserEdit();
+    const opts = [
+      'Disponible',
+      'Inversiones',
+      'Cuentas por cobrar a corto plazo',
+      'Inventario',
+      'Propiedades, planta y equipo',
+      'Intangibles',
+      'Valorización',
+      'Cuentas por cobrar a largo plazo'
+    ];
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          texto: 'Organice los siguientes grupos de ACTIVOS en las clasificaciones de corrientes y no corrientes:\n\nACTIVOS: Disponible – Inversiones – Cuentas por cobrar a corto plazo – Propiedades, planta y equipo – Intangibles – Valorización – Inventario – Cuentas por cobrar a largo plazo.',
+          opciones: opts,
+          opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+          columnas: ['CORRIENTES', 'NO CORRIENTES'],
+          tableRows: [
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 0 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 4 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 1 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 5 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 2 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 6 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 3 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 7 }
+              ]
+            }
+          ]
+        };
+      }
+      return item;
+    }));
+    toast('¡Plantilla de Activos (Corrientes vs No Corrientes) cargada!', 'success');
+  };
+
+  const applyAccountingPasivosPreset = (qid: string) => {
+    notifyUserEdit();
+    const opts = [
+      'Obligaciones financieras',
+      'Proveedores',
+      'Cuentas por pagar',
+      'Impuestos gravámenes y tasas',
+      'Obligaciones laborales',
+      'Capital social',
+      'Reservas',
+      'Resultado del ejercicio'
+    ];
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          texto: 'Organice los siguientes grupos de PASIVOS en las clasificaciones de corrientes y no corrientes:\n\nPASIVOS: Obligaciones financieras – Capital social – Cuentas por pagar – Reservas – Proveedores – Resultado del ejercicio – Obligaciones laborales – Impuestos gravámenes y tasas.',
+          opciones: opts,
+          opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+          columnas: ['CORRIENTES', 'NO CORRIENTES / PATRIMONIO'],
+          tableRows: [
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 0 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 5 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 1 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 6 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 2 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 7 }
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 3 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 4 }
+              ]
+            }
+          ]
+        };
+      }
+      return item;
+    }));
+    toast('¡Plantilla de Pasivos (Corrientes vs No Corrientes) cargada!', 'success');
+  };
+
+  const applyAccountingCombinedPreset = (qid: string) => {
+    notifyUserEdit();
+    const opts = [
+      'Disponible',
+      'Inversiones',
+      'Cuentas por cobrar a corto plazo',
+      'Inventario',
+      'Propiedades, planta y equipo',
+      'Intangibles',
+      'Valorización',
+      'Cuentas por cobrar a largo plazo',
+      'Obligaciones financieras',
+      'Proveedores',
+      'Cuentas por pagar',
+      'Impuestos gravámenes y tasas',
+      'Obligaciones laborales',
+      'Capital social',
+      'Reservas',
+      'Resultado del ejercicio'
+    ];
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          texto: 'Organice los grupos de ACTIVOS y PASIVOS en sus respectivas clasificaciones de corrientes y no corrientes utilizando el banco de palabras:',
+          opciones: opts,
+          opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+          columnas: ['ACTIVOS CORRIENTES', 'ACTIVOS NO CORRIENTES', 'PASIVOS CORRIENTES', 'PASIVOS NO CORRIENTES / PATRIMONIO'],
+          tableRows: [
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 0 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 4 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 8 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 12 },
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 1 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 5 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 9 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 13 },
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 2 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 6 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 10 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 14 },
+              ]
+            },
+            {
+              cells: [
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 3 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 7 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 11 },
+                { tipo: 'blank' as const, valor: '', correctOptionIdx: 15 },
+              ]
+            }
+          ]
+        };
+      }
+      return item;
+    }));
+    toast('¡Plantilla integral de Activos y Pasivos (4 columnas) cargada!', 'success');
+  };
+
+  const generateTwoColumnClassification = (
+    qid: string,
+    titleText: string,
+    c1Name: string,
+    c1Raw: string,
+    c2Name: string,
+    c2Raw: string
+  ) => {
+    notifyUserEdit();
+    const parseItems = (raw: string) => 
+      raw
+        .split(/[\n,–-]+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+    const items1 = parseItems(c1Raw);
+    const items2 = parseItems(c2Raw);
+
+    if (items1.length === 0 || items2.length === 0) {
+      toast('Debes ingresar al menos 1 elemento para cada columna', 'warning');
+      return;
+    }
+
+    const combinedOpts = [...items1, ...items2];
+    const maxRows = Math.max(items1.length, items2.length);
+
+    const rows = [];
+    for (let r = 0; r < maxRows; r++) {
+      const cells = [];
+      if (r < items1.length) {
+        cells.push({ tipo: 'blank' as const, valor: '', correctOptionIdx: r });
+      } else {
+        cells.push({ tipo: 'texto' as const, valor: '—', correctOptionIdx: undefined });
+      }
+
+      if (r < items2.length) {
+        cells.push({ tipo: 'blank' as const, valor: '', correctOptionIdx: items1.length + r });
+      } else {
+        cells.push({ tipo: 'texto' as const, valor: '—', correctOptionIdx: undefined });
+      }
+
+      rows.push({ cells });
+    }
+
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          texto: titleText.trim() || item.texto,
+          opciones: combinedOpts,
+          opcionIds: combinedOpts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+          columnas: [c1Name.trim() || 'Columna 1', c2Name.trim() || 'Columna 2'],
+          tableRows: rows
+        };
+      }
+      return item;
+    }));
+
+    setTableWizardQId(null);
+    toast(`¡Tabla de clasificación creada (${combinedOpts.length} palabras, ${rows.length} filas)!`, 'success');
   };
 
   const notifyUserEdit = () => {
@@ -1585,9 +1830,53 @@ export default function ExamBuilder({
                             Estas palabras serán mostradas en la caja para que el estudiante las elija e introduzca en las celdas vacías de la tabla.
                           </p>
 
-                          {/* PRESETS BUTTONS FOR EASY TABLE SETUP */}
-                          <div className="flex flex-wrap gap-2 mb-4 bg-white/85 p-2.5 rounded-xl border border-indigo-100 select-none dark:bg-slate-900/60 dark:border-slate-800">
-                            <span className="text-[10px] font-black text-indigo-800 dark:text-cyan-400 block w-full mb-1">✨ CONFIGURACIÓN RÁPIDA DE PLANTILLA:</span>
+                          {/* PRESETS BUTTONS AND ASSISTANT FOR EASY TABLE SETUP */}
+                          <div className="flex flex-wrap gap-2 mb-4 bg-white/90 p-3 rounded-xl border border-indigo-100 select-none dark:bg-slate-900/60 dark:border-slate-800 shadow-xs">
+                            <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-indigo-50 dark:border-slate-800">
+                              <span className="text-[10px] font-black text-indigo-900 dark:text-cyan-400 uppercase tracking-wider">
+                                ✨ PLANTILLAS RÁPIDAS Y ASISTENTE GENERADOR:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTableWizardQId(tableWizardQId === q.id ? null : q.id);
+                                }}
+                                className="text-[11px] font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-3 py-1 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                              >
+                                <span>🪄 {tableWizardQId === q.id ? 'Cerrar Asistente' : 'Asistente Rápido: Crear Tabla en 2 Columnas'}</span>
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => applyAccountingActivosPreset(q.id)}
+                              className="text-[10.5px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-700 flex items-center gap-1"
+                              title="Organice los siguientes grupos de activos: Corrientes vs No Corrientes"
+                            >
+                              <span>📊</span>
+                              <span>Cargar: Activos (Corrientes vs No Corrientes)</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => applyAccountingPasivosPreset(q.id)}
+                              className="text-[10.5px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-700 flex items-center gap-1"
+                              title="Organice los siguientes grupos de pasivos: Corrientes vs No Corrientes"
+                            >
+                              <span>📊</span>
+                              <span>Cargar: Pasivos (Corrientes vs No Corrientes)</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => applyAccountingCombinedPreset(q.id)}
+                              className="text-[10.5px] font-bold bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-cyan-950/40 dark:hover:bg-cyan-900/50 dark:text-cyan-300 dark:border-cyan-700 flex items-center gap-1"
+                              title="Organice Activos y Pasivos en tabla de 4 columnas"
+                            >
+                              <span>📑</span>
+                              <span>Cargar: Activos y Pasivos (4 Columnas)</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => {
@@ -1618,44 +1907,44 @@ export default function ExamBuilder({
                                       tableRows: [
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 1 }, // Dios es inmutable
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 0 }  // Dios es personal
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 1 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 0 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 4 }, // Dios es omnipresente
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 2 }  // Dios es amor
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 4 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 2 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 3 }, // Dios es omnipotente
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 5 }  // Dios es misericordioso
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 3 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 5 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 7 }, // Dios es omnisciente
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 8 }  // Dios es santo
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 7 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 8 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 6 }, // Dios es infinito
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 11 } // Dios es justo
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 6 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 11 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 9 }, // Dios es espíritu
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 12 } // Dios es Fiel
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 9 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 12 }
                                           ]
                                         },
                                         {
                                           cells: [
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 10 }, // Dios es absoluto e independiente
-                                            { tipo: 'blank', valor: '', correctOptionIdx: 13 }  // Dios es bueno
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 10 },
+                                            { tipo: 'blank', valor: '', correctOptionIdx: 13 }
                                           ]
                                         }
                                       ]
@@ -1663,12 +1952,123 @@ export default function ExamBuilder({
                                   }
                                   return item;
                                 }));
+                                toast('¡Plantilla de Atributos de Dios cargada!', 'success');
                               }}
-                              className="text-[10px] uppercase font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-850 border border-indigo-200 rounded px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-605"
+                              className="text-[10.5px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-850 border border-indigo-200 rounded-lg px-2.5 py-1.5 transition cursor-pointer font-sans dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-605 flex items-center gap-1"
                             >
-                              📘 Cargar: Atributos de Dios (screenshot 2)
+                              <span>📘</span>
+                              <span>Cargar: Atributos de Dios</span>
                             </button>
                           </div>
+
+                          {/* ASISTENTE INTERACTIVO DE CLASIFICACIÓN EN 2 COLUMNAS */}
+                          {tableWizardQId === q.id && (
+                            <div className="mb-4 p-4 bg-gradient-to-br from-indigo-50/90 via-purple-50/70 to-white rounded-2xl border-2 border-indigo-300 shadow-md text-left dark:bg-slate-900 dark:border-indigo-700 animate-fade-in">
+                              <div className="flex items-center justify-between mb-3 border-b border-indigo-200 pb-2 dark:border-indigo-800">
+                                <div className="flex items-center gap-2">
+                                  <span className="p-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold">🪄</span>
+                                  <div>
+                                    <h4 className="text-xs font-extrabold text-indigo-900 dark:text-white uppercase tracking-wider">
+                                      Generador Rápido de Tabla Clasificatoria en 2 Columnas
+                                    </h4>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                      Escribe o pega los términos de cada categoría. El sistema arma la tabla, la caja de palabras y enlaza las respuestas automáticamente.
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setTableWizardQId(null)}
+                                  className="text-slate-400 hover:text-red-500 text-xs font-bold p-1 rounded cursor-pointer"
+                                  title="Cerrar asistente"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1 dark:text-slate-300">
+                                    Enunciado / Pregunta:
+                                  </label>
+                                  <input 
+                                    type="text"
+                                    value={wizardTitle}
+                                    onChange={e => setWizardTitle(e.target.value)}
+                                    placeholder="ej: Organice los siguientes grupos en las clasificaciones de corrientes y no corrientes:"
+                                    className="w-full text-xs p-2 rounded-lg border border-indigo-200 bg-white font-medium focus:outline-indigo-500 dark:bg-slate-950 dark:border-slate-800 dark:text-white"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Columna 1 */}
+                                  <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-xs dark:bg-slate-950 dark:border-slate-800 space-y-2">
+                                    <label className="text-[10px] font-extrabold text-indigo-700 uppercase block dark:text-cyan-400">
+                                      Título Columna 1:
+                                    </label>
+                                    <input 
+                                      type="text"
+                                      value={wizardCol1Name}
+                                      onChange={e => setWizardCol1Name(e.target.value)}
+                                      placeholder="ej: CORRIENTES"
+                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <label className="text-[10px] font-bold text-slate-600 uppercase block dark:text-slate-400">
+                                      Elementos de Columna 1 (separados por coma o Enter):
+                                    </label>
+                                    <textarea 
+                                      rows={4}
+                                      value={wizardCol1Items}
+                                      onChange={e => setWizardCol1Items(e.target.value)}
+                                      placeholder="Disponible, Inversiones, Cuentas por cobrar a corto plazo, Inventario..."
+                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white font-sans"
+                                    />
+                                  </div>
+
+                                  {/* Columna 2 */}
+                                  <div className="p-3 bg-white rounded-xl border border-indigo-200 shadow-xs dark:bg-slate-950 dark:border-slate-800 space-y-2">
+                                    <label className="text-[10px] font-extrabold text-purple-700 uppercase block dark:text-purple-300">
+                                      Título Columna 2:
+                                    </label>
+                                    <input 
+                                      type="text"
+                                      value={wizardCol2Name}
+                                      onChange={e => setWizardCol2Name(e.target.value)}
+                                      placeholder="ej: NO CORRIENTES"
+                                      className="w-full text-xs font-bold p-1.5 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <label className="text-[10px] font-bold text-slate-600 uppercase block dark:text-slate-400">
+                                      Elementos de Columna 2 (separados por coma o Enter):
+                                    </label>
+                                    <textarea 
+                                      rows={4}
+                                      value={wizardCol2Items}
+                                      onChange={e => setWizardCol2Items(e.target.value)}
+                                      placeholder="Propiedades, planta y equipo, Intangibles, Valorización, Cuentas por cobrar a largo plazo..."
+                                      className="w-full text-xs p-2 rounded-lg border border-slate-200 bg-slate-50 dark:bg-slate-900 dark:text-white font-sans"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2 pt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTableWizardQId(null)}
+                                    className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 font-bold cursor-pointer"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => generateTwoColumnClassification(q.id, wizardTitle, wizardCol1Name, wizardCol1Items, wizardCol2Name, wizardCol2Items)}
+                                    className="px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <span>🪄 Generar Tabla y Caja de Palabras</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
                           <div className="flex flex-wrap gap-2 mb-3">
                             {q.opciones.map((opt, oIdx) => {
@@ -1840,7 +2240,7 @@ export default function ExamBuilder({
                         <option value="abierta">Respuesta libre/Texto</option>
                         <option value="escala">Escala (1 al 5)</option>
                         <option value="matching">Pareo / Relacionar con Caja de Palabras</option>
-                        <option value="table">Completar Tabla con Caja de Palabras</option>
+                        <option value="table">📊 Clasificación en Tabla con Banco de Palabras (ej: Activos, Pasivos)</option>
                       </select>
 
                       <div className="flex-1" />
