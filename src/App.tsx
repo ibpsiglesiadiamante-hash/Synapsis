@@ -1182,6 +1182,9 @@ export default function App() {
             submissions={db.submissions}
             subjects={db.subjects}
             semesters={db.semesters}
+            assignments={db.assignments}
+            assignmentSubmissions={db.assignmentSubmissions}
+            parciales={db.parciales}
             theme={theme}
             initialCategory={dashboardCategory}
             onNavigate={(page) => {

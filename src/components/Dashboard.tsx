@@ -13,10 +13,29 @@ import {
   School, QrCode, ArrowRight, Activity, Cloud, Settings,
   BarChart3, FileText, CheckCircle2, SlidersHorizontal,
   Milestone, BookMarked, Library, Megaphone, ClipboardList,
-  Scroll, Trash2
+  Scroll, Trash2, Bell, BellRing, AlertTriangle, Check, ExternalLink,
+  Flame, Inbox
 } from 'lucide-react';
-import { User, Exam, Submission, Subject, Semester } from '../types';
+import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
 import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester } from '../lib/db';
+
+export interface AcademicNotification {
+  id: string;
+  type: 'exam' | 'assignment';
+  title: string;
+  subtitle: string;
+  subjectName: string;
+  dueDate?: string;
+  dueLabel?: string;
+  urgency: 'urgent' | 'upcoming' | 'normal';
+  badgeText: string;
+  iconType: 'exam' | 'assignment';
+  actionLabel: string;
+  onAction: () => void;
+  rawDate?: string;
+  timeLimit?: number;
+  attemptsLeft?: number;
+}
 
 interface DashboardProps {
   currentUser: User;
@@ -25,6 +44,9 @@ interface DashboardProps {
   submissions: Submission[];
   subjects?: Subject[];
   semesters?: Semester[];
+  assignments?: Assignment[];
+  assignmentSubmissions?: AssignmentSubmission[];
+  parciales?: Parcial[];
   onNavigate: (pageId: string) => void;
   onTakeExam?: (examId: string) => void;
   theme?: string;
@@ -51,6 +73,9 @@ export default function Dashboard({
   submissions, 
   subjects = [], 
   semesters = [], 
+  assignments = [],
+  assignmentSubmissions = [],
+  parciales = [],
   onNavigate, 
   onTakeExam, 
   theme,
@@ -78,6 +103,19 @@ export default function Dashboard({
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
   // Por requerimiento expreso del usuario, el menú siempre inicia y permanece recogido por defecto
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(ALL_COLLAPSED_CATEGORIES);
+
+  // Estados para el Centro de Notificaciones Académicas (Exámenes y Tareas)
+  const [notifFilter, setNotifFilter] = useState<'todas' | 'exams' | 'tasks'>('todas');
+  const [isNotifCollapsed, setIsNotifCollapsed] = useState<boolean>(false);
+  const [showReadNotifs, setShowReadNotifs] = useState<boolean>(false);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`synapsis_read_notifs_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Sync with initialCategory when navigating back from a module
   useEffect(() => {
@@ -181,6 +219,187 @@ export default function Dashboard({
       return myCount < e.intentos;
     });
   }
+
+  // =========================================================================
+  // MOTOR DE NOTIFICACIONES ACADÉMICAS (Alertas de Exámenes y Tareas)
+  // =========================================================================
+  const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
+  const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
+  const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
+  const studentSubsList = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
+
+  // 1. Notificaciones de Exámenes Próximos / Activos
+  const examNotifications: AcademicNotification[] = (exams || [])
+    .filter(e => {
+      if (e.estado !== 'activo') return false;
+      if (rol === 'estudiante') {
+        if (myAssignedSubjects.length > 0) {
+          if (e.materia && assignedIds.has(e.materia)) return true;
+          const eMat = (e.materia || '').toLowerCase().trim();
+          if (assignedNames.has(eMat)) return true;
+          const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
+          if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
+          return false;
+        }
+        return true;
+      }
+      return true;
+    })
+    .map(exam => {
+      const matchingSubj = (subjects || []).find(s => s.id === exam.materia || s.nombre.toLowerCase().trim() === (exam.materia || '').toLowerCase().trim());
+      const subjName = matchingSubj?.nombre || exam.materia || 'Asignatura';
+      const parc = (parciales || []).find(p => p.id === exam.parcialId);
+      
+      const myAttempts = studentSubsList.filter(s => s.examenId === exam.id).length;
+      const hasRemaining = exam.intentos === 0 || myAttempts < exam.intentos;
+      if (rol === 'estudiante' && !hasRemaining) return null;
+
+      // Check if new (created within 7 days)
+      const isNew = exam.creado ? (Date.now() - new Date(exam.creado).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
+      const urgency: 'urgent' | 'upcoming' | 'normal' = isNew ? 'urgent' : 'upcoming';
+      const badgeText = isNew ? '¡Nuevo Examen!' : (exam.intentos > 0 ? `${exam.intentos - myAttempts} intento(s) disp.` : 'Examen Disponible');
+
+      const subtitle = parc ? `Corte / Parcial: ${parc.nombre}` : (exam.descripcion ? exam.descripcion : 'Evaluación activa en la plataforma');
+
+      return {
+        id: `notif-exam-${exam.id}`,
+        type: 'exam' as const,
+        title: cleanExamTitle(exam.titulo),
+        subtitle,
+        subjectName: subjName,
+        dueLabel: exam.tiempo > 0 ? `Límite: ${exam.tiempo} Minutos` : 'Sin límite de tiempo',
+        urgency,
+        badgeText,
+        iconType: 'exam' as const,
+        actionLabel: rol === 'estudiante' ? 'Presentar Examen' : 'Gestionar Examen',
+        onAction: () => {
+          if (rol === 'estudiante' && onTakeExam) {
+            onTakeExam(exam.id);
+          } else {
+            onNavigate(rol === 'estudiante' ? 'misExamenesTake' : 'misExamenes');
+          }
+        },
+        timeLimit: exam.tiempo,
+        attemptsLeft: exam.intentos > 0 ? (exam.intentos - myAttempts) : undefined,
+        rawDate: exam.creado
+      };
+    })
+    .filter(Boolean) as AcademicNotification[];
+
+  // 2. Notificaciones de Tareas Nuevas o Pendientes
+  const taskNotifications: AcademicNotification[] = (assignments || [])
+    .filter(task => {
+      if (rol === 'estudiante') {
+        if (myAssignedSubjects.length > 0) {
+          if (task.asignatura && assignedIds.has(task.asignatura)) return true;
+          const tAsig = (task.asignatura || '').toLowerCase().trim();
+          if (assignedNames.has(tAsig)) return true;
+          const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || s.nombre.toLowerCase().trim() === tAsig);
+          if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
+          if (task.semestre && currentUser.semestre && task.semestre.toLowerCase().trim() === currentUser.semestre.toLowerCase().trim()) return true;
+          return false;
+        }
+        return true;
+      }
+      return true;
+    })
+    .map(task => {
+      const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || s.nombre.toLowerCase().trim() === (task.asignatura || '').toLowerCase().trim());
+      const subjName = matchingSubj?.nombre || task.asignatura || 'Asignatura';
+      
+      // Check if student already submitted
+      const isSubmitted = (assignmentSubmissions || []).some(
+        sub => (sub.assignmentId === task.id || sub.trabajoId === task.id) && sub.estudianteId === currentUser.id
+      );
+      if (rol === 'estudiante' && isSubmitted) return null;
+
+      // Evaluate due date urgency
+      let urgency: 'urgent' | 'upcoming' | 'normal' = 'normal';
+      let dueLabel = 'Sin fecha límite fija';
+      if (task.fechaEntrega) {
+        const due = new Date(task.fechaEntrega);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dueDay = new Date(due);
+        dueDay.setHours(0,0,0,0);
+        const diffTime = dueDay.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+          urgency = 'urgent';
+          dueLabel = `Fecha límite vencida (${fmtDate(task.fechaEntrega)})`;
+        } else if (diffDays === 0) {
+          urgency = 'urgent';
+          dueLabel = '¡Vence Hoy!';
+        } else if (diffDays === 1) {
+          urgency = 'urgent';
+          dueLabel = '¡Vence Mañana!';
+        } else if (diffDays <= 3) {
+          urgency = 'upcoming';
+          dueLabel = `Vence en ${diffDays} días (${fmtDate(task.fechaEntrega)})`;
+        } else {
+          urgency = 'normal';
+          dueLabel = `Entrega: ${fmtDate(task.fechaEntrega)}`;
+        }
+      }
+
+      const isNew = task.creado ? (Date.now() - new Date(task.creado).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
+      const badgeText = isNew ? '¡Nueva Tarea Publicada!' : (urgency === 'urgent' ? '¡Entrega Urgente!' : 'Tarea Pendiente');
+
+      return {
+        id: `notif-task-${task.id}`,
+        type: 'assignment' as const,
+        title: task.titulo,
+        subtitle: task.descripcion || 'Tarea académica asignada para tu curso',
+        subjectName: subjName,
+        dueDate: task.fechaEntrega,
+        dueLabel,
+        urgency: isNew && urgency === 'normal' ? 'upcoming' : urgency,
+        badgeText,
+        iconType: 'assignment' as const,
+        actionLabel: 'Ver Tarea y Entregar',
+        onAction: () => {
+          onNavigate('trabajos');
+        },
+        rawDate: task.fechaEntrega || task.creado
+      };
+    })
+    .filter(Boolean) as AcademicNotification[];
+
+  const allNotifications: AcademicNotification[] = [...examNotifications, ...taskNotifications].sort((a, b) => {
+    const urgencyScore = { urgent: 3, upcoming: 2, normal: 1 };
+    return (urgencyScore[b.urgency] || 1) - (urgencyScore[a.urgency] || 1);
+  });
+
+  const pendingNotifications = allNotifications.filter(n => !readNotifIds.includes(n.id));
+  const unreadCount = pendingNotifications.length;
+  const examsPendingCount = pendingNotifications.filter(n => n.type === 'exam').length;
+  const tasksPendingCount = pendingNotifications.filter(n => n.type === 'assignment').length;
+
+  const displayedNotifications = (showReadNotifs ? allNotifications : pendingNotifications).filter(n => {
+    if (notifFilter === 'exams') return n.type === 'exam';
+    if (notifFilter === 'tasks') return n.type === 'assignment';
+    return true;
+  });
+
+  const handleMarkAsRead = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setReadNotifIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      try {
+        localStorage.setItem(`synapsis_read_notifs_${currentUser.id}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleMarkAllAsRead = () => {
+    const allIds = allNotifications.map(n => n.id);
+    setReadNotifIds(allIds);
+    try {
+      localStorage.setItem(`synapsis_read_notifs_${currentUser.id}`, JSON.stringify(allIds));
+    } catch {}
+  };
 
   const totalSubsPages = Math.ceil(sortedSubs.length / 8) || 1;
   const currentSubsPage = Math.min(subsPage, totalSubsPages);
@@ -493,6 +712,29 @@ export default function Dashboard({
                 ? `Hola, ${currentUser.nombre}. Accede a tus asignaturas inscritas, evaluaciones disponibles, notas oficiales y recursos de estudio.`
                 : 'Control total de tu institución, en un solo lugar. Módulos de gestión organizados por categorías académicas, evaluativas y administrativas.'}
             </p>
+
+            {/* Quick Alert Indicator Pill */}
+            {allNotifications.length > 0 && (
+              <div 
+                onClick={() => {
+                  const el = document.getElementById('centro-notificaciones');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                  setIsNotifCollapsed(false);
+                }}
+                className="inline-flex items-center gap-2.5 mt-3.5 px-3.5 py-1.5 rounded-full bg-cyan-950/90 border border-cyan-400/60 text-cyan-200 text-xs font-bold cursor-pointer hover:bg-cyan-900 transition-all shadow-[0_0_20px_rgba(6,182,212,0.35)] select-none group"
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
+                </span>
+                <span className="group-hover:text-white transition-colors">
+                  {unreadCount > 0 
+                    ? `🔔 ${unreadCount} ${unreadCount === 1 ? 'alerta académica pendiente' : 'alertas académicas pendientes'} (${examsPendingCount} ${examsPendingCount === 1 ? 'examen' : 'exámenes'} · ${tasksPendingCount} ${tasksPendingCount === 1 ? 'tarea' : 'tareas'})`
+                    : '🔔 Todas las alertas académicas al día'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 text-cyan-300 group-hover:translate-x-1 transition-transform" />
+              </div>
+            )}
           </div>
 
           {/* Right Live Mini-Widget Card ("SYNAPSIS LIVE") */}
@@ -550,6 +792,284 @@ export default function Dashboard({
             <span>{showMetrics ? 'Ocultar tarjetas de métricas' : 'Revelar tarjetas de métricas'}</span>
           </button>
         </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* CENTRO DE NOTIFICACIONES Y ALERTAS ACADÉMICAS             */}
+      {/* Alertas sobre exámenes próximos y nuevas tareas           */}
+      {/* ========================================================= */}
+      <div 
+        id="centro-notificaciones" 
+        className="rounded-3xl bg-gradient-to-br from-[#062c34] via-[#07323c] to-[#083a46] border border-[#125868] p-4 sm:p-6 shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all scroll-mt-24"
+      >
+        {/* Top Header of the Notification Center */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#0f4652]">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-400/40 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <BellRing className={`w-5 h-5 ${unreadCount > 0 ? 'text-cyan-300 animate-bounce' : 'text-teal-400'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-black tracking-wide uppercase text-white text-relief-header">
+                  Centro de Notificaciones Académicas
+                </h2>
+                {unreadCount > 0 ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.4)] animate-pulse">
+                    {unreadCount} {unreadCount === 1 ? 'pendiente' : 'pendientes'}
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
+                    ✓ Al día
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] sm:text-xs text-teal-200/70 mt-0.5 leading-relaxed">
+                {userRole === 'estudiante'
+                  ? 'Alertas en tiempo real sobre exámenes programados por presentar y nuevas tareas académicas publicadas.'
+                  : 'Panel de avisos institucionales sobre evaluaciones vigentes y asignaciones de cursos.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Controls: Filter Pills & Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            {/* Filter Pills */}
+            <div className="inline-flex rounded-xl p-1 bg-[#041d22] border border-[#0f4450]">
+              <button
+                type="button"
+                onClick={() => setNotifFilter('todas')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  notifFilter === 'todas'
+                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                    : 'text-teal-200/70 hover:text-white'
+                }`}
+              >
+                Todas ({showReadNotifs ? allNotifications.length : pendingNotifications.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotifFilter('exams')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  notifFilter === 'exams'
+                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                    : 'text-teal-200/70 hover:text-white'
+                }`}
+              >
+                <span>📝 Exámenes</span>
+                <span>({(showReadNotifs ? allNotifications : pendingNotifications).filter(n => n.type === 'exam').length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNotifFilter('tasks')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  notifFilter === 'tasks'
+                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
+                    : 'text-teal-200/70 hover:text-white'
+                }`}
+              >
+                <span>📋 Tareas</span>
+                <span>({(showReadNotifs ? allNotifications : pendingNotifications).filter(n => n.type === 'assignment').length})</span>
+              </button>
+            </div>
+
+            {/* Quick Actions */}
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={handleMarkAllAsRead}
+                className="px-2.5 py-1.5 rounded-xl bg-[#05242a] hover:bg-[#09363e] border border-[#104c5a] text-cyan-300 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 select-none"
+                title="Marcar todas las alertas como leídas"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Marcar leídas</span>
+              </button>
+            )}
+
+            {readNotifIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowReadNotifs(prev => !prev)}
+                className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-colors cursor-pointer select-none ${
+                  showReadNotifs 
+                    ? 'bg-cyan-950/80 border-cyan-500/60 text-cyan-300' 
+                    : 'bg-[#05242a] border-[#104c5a] text-teal-200/70 hover:text-white'
+                }`}
+              >
+                {showReadNotifs ? 'Ocultar leídas' : `Ver leídas (${readNotifIds.length})`}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsNotifCollapsed(prev => !prev)}
+              className="p-1.5 rounded-xl bg-[#05242a] border border-[#104c5a] hover:border-cyan-400 text-cyan-300 cursor-pointer transition-colors"
+              title={isNotifCollapsed ? 'Expandir panel de notificaciones' : 'Plegar panel de notificaciones'}
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${!isNotifCollapsed ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Notification Body */}
+        {!isNotifCollapsed ? (
+          <div className="pt-4">
+            {displayedNotifications.length === 0 ? (
+              <div className="py-8 px-4 rounded-2xl bg-[#041f25]/60 border border-[#0d3f4a] text-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center text-emerald-400 mx-auto">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-bold text-white">
+                  {readNotifIds.length > 0 && !showReadNotifs
+                    ? 'Todas las notificaciones pendientes han sido atendidas o marcadas como leídas'
+                    : '¡Estás al día! No hay exámenes pendientes ni tareas pendientes de entrega'}
+                </h3>
+                <p className="text-xs text-teal-200/70 max-w-md mx-auto">
+                  {readNotifIds.length > 0 && !showReadNotifs
+                    ? 'Puedes activar "Ver leídas" para revisar el historial de alertas académicas.'
+                    : 'Cualquier nueva evaluación o trabajo que publique tu docente aparecerá automáticamente en este panel.'}
+                </p>
+                {readNotifIds.length > 0 && !showReadNotifs && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReadNotifs(true)}
+                    className="mt-2 text-xs font-bold text-cyan-300 hover:underline inline-block cursor-pointer"
+                  >
+                    Mostrar {readNotifIds.length} alertas leídas →
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {displayedNotifications.map(item => {
+                  const isRead = readNotifIds.includes(item.id);
+                  const isExam = item.type === 'exam';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`relative rounded-2xl border p-4 transition-all duration-200 flex flex-col justify-between gap-3 group ${
+                        isRead
+                          ? 'bg-[#041c21]/60 border-[#0e434f] opacity-80'
+                          : item.urgency === 'urgent'
+                            ? 'bg-gradient-to-br from-[#072d35] via-[#093842] to-[#0c4350] border-rose-500/50 shadow-[0_4px_20px_rgba(244,63,94,0.15)] ring-1 ring-rose-500/30'
+                            : 'bg-gradient-to-br from-[#072d35] to-[#093740] border-[#125868] hover:border-cyan-400/80 shadow-md'
+                      }`}
+                    >
+                      <div>
+                        {/* Tags Header Row */}
+                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Type Badge */}
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border flex items-center gap-1 ${
+                              isExam 
+                                ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300' 
+                                : 'bg-purple-950/80 border-purple-500/50 text-purple-300'
+                            }`}>
+                              {isExam ? <GraduationCap className="w-3 h-3" /> : <ClipboardList className="w-3 h-3" />}
+                              <span>{isExam ? 'Examen Evaluativo' : 'Tarea Académica'}</span>
+                            </span>
+
+                            {/* Subject Badge */}
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#041c21] border border-[#11505e] text-teal-200/90 truncate max-w-[170px]" title={item.subjectName}>
+                              📚 {item.subjectName}
+                            </span>
+                          </div>
+
+                          {/* Urgency Badge */}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 border flex items-center gap-1 ${
+                            item.urgency === 'urgent'
+                              ? 'bg-rose-950/90 border-rose-500/60 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.3)] animate-pulse'
+                              : item.urgency === 'upcoming'
+                                ? 'bg-amber-950/90 border-amber-500/60 text-amber-300'
+                                : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-300'
+                          }`}>
+                            {item.urgency === 'urgent' && <Flame className="w-3 h-3 text-rose-400" />}
+                            <span>{item.badgeText}</span>
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-cyan-200 transition-colors line-clamp-2 leading-snug">
+                          {item.title}
+                        </h4>
+
+                        {/* Subtitle / Description */}
+                        {item.subtitle && (
+                          <p className="text-[11px] text-teal-200/70 mt-1 line-clamp-2 leading-relaxed">
+                            {item.subtitle}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Bottom Info & Action CTA */}
+                      <div className="pt-3 border-t border-[#0e4450] flex items-center justify-between gap-3 mt-1">
+                        <div className="flex items-center gap-2 text-[11px] text-teal-200/80 font-medium truncate">
+                          {isExam ? (
+                            <>
+                              <span className="flex items-center gap-1 text-cyan-300">
+                                <Clock className="w-3 h-3 text-cyan-400" />
+                                <span>{item.dueLabel}</span>
+                              </span>
+                              {item.attemptsLeft !== undefined && (
+                                <span className="hidden sm:inline text-teal-400/60">· {item.attemptsLeft} disp.</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-amber-400" />
+                              <span className={item.urgency === 'urgent' ? 'text-rose-300 font-bold' : 'text-teal-200/90'}>
+                                {item.dueLabel}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => handleMarkAsRead(item.id, e)}
+                            className="p-1.5 rounded-lg bg-[#041c21] hover:bg-[#07323b] border border-[#104b58] text-teal-300 hover:text-white transition-colors cursor-pointer"
+                            title={isRead ? 'Marcar como pendiente' : 'Marcar como leída'}
+                          >
+                            <Check className={`w-3.5 h-3.5 ${isRead ? 'text-cyan-400' : 'opacity-60'}`} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={item.onAction}
+                            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 ${
+                              isExam 
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-emerald-500/20'
+                                : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 shadow-cyan-500/20'
+                            }`}
+                          >
+                            <span>{item.actionLabel}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="pt-2 flex items-center justify-between text-xs text-teal-200/80">
+            <span>
+              🔔 Tienes <strong>{unreadCount}</strong> alertas académicas activas ({examsPendingCount} exámenes · {tasksPendingCount} tareas).
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsNotifCollapsed(false)}
+              className="text-xs font-bold text-cyan-300 hover:underline cursor-pointer flex items-center gap-1"
+            >
+              <span>Ver todas las alertas</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================= */}

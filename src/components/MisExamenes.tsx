@@ -7,7 +7,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Plus, BookOpen, Trash2, Edit2, Play, Power, Search, Copy, Download, 
   LayoutGrid, Table as TableIcon, ArrowRight, Layers, Clock, FileQuestion, 
-  CheckCircle2, Sparkles, Filter, ChevronRight
+  CheckCircle2, Sparkles, Filter, ChevronRight, GraduationCap, X, RotateCcw,
+  SlidersHorizontal
 } from 'lucide-react';
 import { User, Exam, Parcial, Subject, Semester } from '../types';
 import { fmtDate, uid, now, cleanExamTitle, resolveExamSemester, SEMESTRES_OFICIALES } from '../lib/db';
@@ -48,6 +49,7 @@ export default function MisExamenes({
   const [viewMode, setViewMode] = useState<'semestres' | 'tabla'>('semestres');
   const [filterNivel, setFilterNivel] = useState<'todos' | 'nivel1' | 'nivel2'>('todos');
   const [filterSemestre, setFilterSemestre] = useState<string>('todos');
+  const [filterMateria, setFilterMateria] = useState<string>('todos');
   const [filterStatus, setFilterStatus] = useState<'all' | 'activo' | 'borrador' | 'cerrado'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +85,7 @@ export default function MisExamenes({
 
   const userAsignaturas = currentUser.asignaturas || [];
 
-  // Filter exams by teacher assignment, status, search query
+  // Filter exams by teacher assignment
   const userFilteredExams = useMemo(() => {
     return exams.filter(e => {
       if (currentUser.rol === 'admin') return true;
@@ -96,30 +98,94 @@ export default function MisExamenes({
     });
   }, [exams, currentUser, allMyUserIds, subjects, userAsignaturas]);
 
-  // Global search and status filtered exams
-  const searchAndStatusFiltered = useMemo(() => {
+  // Distinct subjects available for the teacher to filter by, with exam counts
+  const availableFilterSubjects = useMemo(() => {
+    const map = new Map<string, { id: string; nombre: string; semestre: string; codigo?: string; count: number }>();
+
+    // Seed from teacherSubjects
+    teacherSubjects.forEach(s => {
+      const key = s.nombre.toLowerCase().trim();
+      map.set(key, {
+        id: s.id,
+        nombre: s.nombre,
+        semestre: s.semestre || '',
+        codigo: s.codigo,
+        count: 0
+      });
+    });
+
+    // Count exams and capture any exam whose subject is not in teacherSubjects
+    userFilteredExams.forEach(e => {
+      const sem = resolveExamSemester(e, subjects, semesters, parciales);
+      const subj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+      const rawName = subj ? subj.nombre : (e.materia || 'General');
+      const key = rawName.toLowerCase().trim();
+
+      if (!map.has(key)) {
+        map.set(key, {
+          id: subj ? subj.id : rawName,
+          nombre: rawName,
+          semestre: sem || '',
+          codigo: subj?.codigo,
+          count: 1
+        });
+      } else {
+        const item = map.get(key)!;
+        item.count += 1;
+        if (!item.semestre && sem) item.semestre = sem;
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+  }, [teacherSubjects, userFilteredExams, subjects, semesters, parciales]);
+
+  // Exams filtered simultaneously by status, semester, materia, and search query
+  const fullyFilteredExams = useMemo(() => {
     return userFilteredExams.filter(e => {
+      // 1. Status Filter
       if (filterStatus !== 'all' && e.estado !== filterStatus) return false;
+
+      // 2. Semester Filter
+      const examSem = resolveExamSemester(e, subjects, semesters, parciales);
+      if (filterSemestre !== 'todos') {
+        if (examSem.toLowerCase().trim() !== filterSemestre.toLowerCase().trim()) return false;
+      }
+
+      // 3. Materia Filter
+      if (filterMateria !== 'todos') {
+        const normFilterMateria = filterMateria.toLowerCase().trim();
+        const examSubj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+        const examSubjName = (examSubj ? examSubj.nombre : e.materia || '').toLowerCase().trim();
+        const examSubjId = examSubj ? examSubj.id : e.materia;
+
+        const matches = examSubjName === normFilterMateria ||
+                        examSubjId === filterMateria ||
+                        e.materia === filterMateria;
+
+        if (!matches) return false;
+      }
+
+      // 4. Search Query Filter
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
 
-      const semName = resolveExamSemester(e, subjects, semesters, parciales).toLowerCase();
       const subj = subjects.find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
       const subjName = (subj ? subj.nombre : e.materia || '').toLowerCase();
       const subjCode = (subj?.codigo || '').toLowerCase();
       const examTitle = (e.titulo || '').toLowerCase();
+      const semName = examSem.toLowerCase();
 
       return examTitle.includes(q) || subjName.includes(q) || subjCode.includes(q) || semName.includes(q);
     });
-  }, [userFilteredExams, filterStatus, searchQuery, subjects, semesters, parciales]);
+  }, [userFilteredExams, filterStatus, filterSemestre, filterMateria, searchQuery, subjects, semesters, parciales]);
 
-  // Semesters list with exams grouped
+  // Semesters list with exams grouped (uses fullyFilteredExams)
   const semesterGroups = useMemo(() => {
     const sem1to5 = ['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V'];
     const sem6to9 = ['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX'];
 
     const buildGroup = (semName: string) => {
-      const examsInSem = searchAndStatusFiltered.filter(e => {
+      const examsInSem = fullyFilteredExams.filter(e => {
         const resolved = resolveExamSemester(e, subjects, semesters, parciales);
         return resolved.toLowerCase().trim() === semName.toLowerCase().trim();
       });
@@ -146,30 +212,64 @@ export default function MisExamenes({
         semesters: sem6to9.map(buildGroup)
       }
     };
-  }, [searchAndStatusFiltered, subjects, semesters, parciales]);
+  }, [fullyFilteredExams, subjects, semesters, parciales]);
 
-  // Table pagination
+  // Table pagination based on fullyFilteredExams
   const examsPerPage = 10;
-  const tableFilteredExams = useMemo(() => {
-    if (filterSemestre === 'todos') return searchAndStatusFiltered;
-    return searchAndStatusFiltered.filter(e => {
-      const resolved = resolveExamSemester(e, subjects, semesters, parciales);
-      return resolved.toLowerCase().trim() === filterSemestre.toLowerCase().trim();
-    });
-  }, [searchAndStatusFiltered, filterSemestre, subjects, semesters, parciales]);
+  const tableFilteredExams = fullyFilteredExams;
 
   const totalPages = Math.ceil(tableFilteredExams.length / examsPerPage) || 1;
   const currentActivePage = Math.min(currentPage, totalPages);
   const paginatedTableExams = tableFilteredExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
+
+  const handleSemestreChange = (newSem: string) => {
+    setFilterSemestre(newSem);
+    setCurrentPage(1);
+    if (newSem !== 'todos') {
+      const sem1to5 = ['Semestre I', 'Semestre II', 'Semestre III', 'Semestre IV', 'Semestre V'];
+      const sem6to9 = ['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX'];
+      if (sem1to5.includes(newSem) && filterNivel === 'nivel2') {
+        setFilterNivel('nivel1');
+      } else if (sem6to9.includes(newSem) && filterNivel === 'nivel1') {
+        setFilterNivel('nivel2');
+      }
+    }
+  };
+
+  const handleMateriaChange = (newMat: string) => {
+    setFilterMateria(newMat);
+    setCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilterSemestre('todos');
+    setFilterMateria('todos');
+    setFilterStatus('all');
+    setFilterNivel('todos');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = filterSemestre !== 'todos' || filterMateria !== 'todos' || filterStatus !== 'all' || filterNivel !== 'todos' || !!searchQuery.trim();
 
   const handleOpenModal = (presetSemestre?: string) => {
     setTitle('');
     const targetSem = presetSemestre || (filterSemestre !== 'todos' ? filterSemestre : 'Semestre I');
     setSelectedSemestre(targetSem);
     
-    // Auto-select first subject in that semester if available
-    const firstSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === targetSem.toLowerCase().trim()) || teacherSubjects[0];
-    setMateria(firstSub ? firstSub.nombre : '');
+    // Auto-select materia if filterMateria is active and matches, or first in that semester
+    if (filterMateria !== 'todos') {
+      const matchFilterMat = teacherSubjects.find(s => s.nombre.toLowerCase().trim() === filterMateria.toLowerCase().trim());
+      if (matchFilterMat) {
+        setMateria(matchFilterMat.nombre);
+        if (matchFilterMat.semestre) setSelectedSemestre(matchFilterMat.semestre);
+      } else {
+        setMateria(filterMateria);
+      }
+    } else {
+      const firstSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === targetSem.toLowerCase().trim()) || teacherSubjects[0];
+      setMateria(firstSub ? firstSub.nombre : '');
+    }
     
     setParcialId('');
     setDescription('');
@@ -279,7 +379,12 @@ export default function MisExamenes({
               Mis exámenes y evaluaciones
             </h2>
             <span className="text-xs font-bold px-3 py-1 rounded-full bg-orange-100 text-[#ea580c] border border-orange-200">
-              {searchAndStatusFiltered.length} evaluaciones
+              {fullyFilteredExams.length} {fullyFilteredExams.length === 1 ? 'evaluación' : 'evaluaciones'}
+              {hasActiveFilters && userFilteredExams.length > fullyFilteredExams.length && (
+                <span className="text-[10px] text-slate-500 font-medium ml-1">
+                  (de {userFilteredExams.length} totales)
+                </span>
+              )}
             </span>
           </div>
           <div className="page-sub text-sm font-medium mt-1 text-slate-500">
@@ -393,78 +498,243 @@ export default function MisExamenes({
         </button>
       </div>
 
-      {/* FILTER & SEARCH TOOLBAR */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
-        {/* Status Chips */}
-        <div className="chip-tabs flex gap-2 flex-wrap items-center">
-          <span className="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5" /> Estado:
-          </span>
-          {(['all', 'activo', 'borrador', 'cerrado'] as const).map(tabKey => {
-            const labels = { all: 'Todos', activo: 'Activos', borrador: 'Borradores', cerrado: 'Cerrados' };
-            const isActive = filterStatus === tabKey;
-            return (
-              <button
-                key={tabKey}
-                onClick={() => {
-                  setFilterStatus(tabKey);
+      {/* FILTER & SEARCH TOOLBAR WITH SIMULTANEOUS SEMESTER & MATERIA SELECTORS */}
+      <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col gap-3.5 mb-6">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3.5">
+          {/* DUAL SELECTOR: SEMESTRE & MATERIA SIMULTANEOUSLY */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 flex-1 min-w-0">
+            {/* 1. Selector de Semestre */}
+            <div className="flex-1 min-w-[170px] sm:max-w-[250px]">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#ea580c]" />
+                <span>Semestre:</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={filterSemestre}
+                  onChange={(e) => handleSemestreChange(e.target.value)}
+                  className={`w-full bg-slate-50 border text-xs rounded-xl px-3 py-2 font-semibold transition cursor-pointer appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${
+                    filterSemestre !== 'todos'
+                      ? 'border-[#ea580c] text-orange-950 bg-orange-50/50 ring-1 ring-orange-400/40'
+                      : 'border-slate-200 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <option value="todos">Todos los Semestres ({userFilteredExams.length})</option>
+                  {SEMESTRES_OFICIALES.map(s => {
+                    const countInSem = userFilteredExams.filter(e => {
+                      const sem = resolveExamSemester(e, subjects, semesters, parciales);
+                      return sem.toLowerCase().trim() === s.toLowerCase().trim();
+                    }).length;
+                    return (
+                      <option key={s} value={s}>
+                        {s} ({countInSem})
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                  <ChevronRight className="w-3.5 h-3.5 rotate-90" />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Selector de Materia */}
+            <div className="flex-1 min-w-[210px] sm:max-w-[340px]">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Materia / Asignatura:</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={filterMateria}
+                  onChange={(e) => handleMateriaChange(e.target.value)}
+                  className={`w-full bg-slate-50 border text-xs rounded-xl px-3 py-2 font-semibold transition cursor-pointer appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 truncate ${
+                    filterMateria !== 'todos'
+                      ? 'border-indigo-500 text-indigo-950 bg-indigo-50/50 ring-1 ring-indigo-400/40'
+                      : 'border-slate-200 text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <option value="todos">Todas las Materias ({availableFilterSubjects.length})</option>
+                  {filterSemestre !== 'todos' ? (
+                    <>
+                      <optgroup label={`Materias de ${filterSemestre}`}>
+                        {availableFilterSubjects
+                          .filter(s => (s.semestre || '').toLowerCase().trim() === filterSemestre.toLowerCase().trim())
+                          .map(s => (
+                            <option key={s.id} value={s.nombre}>
+                              {s.codigo ? `[${s.codigo}] ` : ''}{s.nombre} ({s.count} exám.)
+                            </option>
+                          ))}
+                      </optgroup>
+                      <optgroup label="Otras materias">
+                        {availableFilterSubjects
+                          .filter(s => (s.semestre || '').toLowerCase().trim() !== filterSemestre.toLowerCase().trim())
+                          .map(s => (
+                            <option key={s.id} value={s.nombre}>
+                              {s.codigo ? `[${s.codigo}] ` : ''}{s.nombre} {s.semestre ? `· ${s.semestre}` : ''} ({s.count} exám.)
+                            </option>
+                          ))}
+                      </optgroup>
+                    </>
+                  ) : (
+                    availableFilterSubjects.map(s => (
+                      <option key={s.id} value={s.nombre}>
+                        {s.codigo ? `[${s.codigo}] ` : ''}{s.nombre} {s.semestre ? `· ${s.semestre}` : ''} ({s.count} exám.)
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                  <ChevronRight className="w-3.5 h-3.5 rotate-90" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Chips & Search Bar */}
+          <div className="flex flex-wrap items-center gap-2.5 self-end lg:self-auto w-full lg:w-auto">
+            {/* Status Chips */}
+            <div className="chip-tabs flex gap-1.5 flex-wrap items-center">
+              {(['all', 'activo', 'borrador', 'cerrado'] as const).map(tabKey => {
+                const labels = { all: 'Todos', activo: 'Activos', borrador: 'Borradores', cerrado: 'Cerrados' };
+                const isActive = filterStatus === tabKey;
+                return (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => {
+                      setFilterStatus(tabKey);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-all ${
+                      isActive 
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {labels[tabKey]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-56 lg:w-60">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                <Search className="w-3.5 h-3.5" />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer border transition-all ${
-                  isActive 
-                    ? 'bg-slate-900 border-slate-900 text-white shadow-xs' 
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {labels[tabKey]}
-              </button>
-            );
-          })}
+                placeholder="Buscar examen o materia..."
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 transition placeholder:text-slate-400 focus:outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Semester Selector Dropdown + Search Input */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-slate-500 font-medium">Semestre:</span>
-            <select
-              value={filterSemestre}
-              onChange={(e) => {
-                setFilterSemestre(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+        {/* ACTIVE FILTERS STRIP & ONE-CLICK RESET */}
+        {hasActiveFilters && (
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-bold text-slate-400 flex items-center gap-1 mr-1 text-[11px]">
+                <Filter className="w-3 h-3 text-[#ea580c]" /> Filtros activos:
+              </span>
+
+              {filterSemestre !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 text-[#ea580c] border border-orange-200 font-bold text-[11px]">
+                  <span>Semestre: {filterSemestre}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSemestreChange('todos')}
+                    className="hover:text-orange-900 cursor-pointer ml-0.5"
+                    title="Quitar filtro de semestre"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {filterMateria !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[11px]">
+                  <span>Materia: {filterMateria}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleMateriaChange('todos')}
+                    className="hover:text-indigo-950 cursor-pointer ml-0.5"
+                    title="Quitar filtro de materia"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {filterStatus !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-300 font-bold text-[11px]">
+                  <span>Estado: {filterStatus}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
+                    className="hover:text-black cursor-pointer ml-0.5"
+                    title="Quitar filtro de estado"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {filterNivel !== 'todos' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 font-bold text-[11px]">
+                  <span>{filterNivel === 'nivel1' ? 'Nivel I (Semestres I-V)' : 'Nivel II (Semestres VI-IX)'}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setFilterNivel('todos'); setCurrentPage(1); }}
+                    className="hover:text-black cursor-pointer ml-0.5"
+                    title="Ver todos los niveles"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {searchQuery && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[11px]">
+                  <span>Buscar: "{searchQuery}"</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="hover:text-black cursor-pointer ml-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-rose-600 transition cursor-pointer px-2 py-1 rounded-lg hover:bg-rose-50"
+              title="Restablecer todos los filtros"
             >
-              <option value="todos">Todos los Semestres</option>
-              {SEMESTRES_OFICIALES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              <RotateCcw className="w-3 h-3" />
+              <span>Limpiar filtros</span>
+            </button>
           </div>
-
-          <div className="relative w-full md:w-64">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <Search className="w-3.5 h-3.5" />
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Buscar por título, materia o código..."
-              className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-xs font-semibold text-slate-800 transition placeholder:text-slate-400 focus:outline-none"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer font-bold text-xs"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ============================================================== */}
@@ -472,6 +742,32 @@ export default function MisExamenes({
       {/* ============================================================== */}
       {viewMode === 'semestres' ? (
         <div className="space-y-8">
+          {/* EMPTY STATE IF FILTERS MATCH 0 EXAMS */}
+          {fullyFilteredExams.length === 0 && (
+            <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 text-[#ea580c] flex items-center justify-center mx-auto mb-3">
+                <Filter className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-slate-800">
+                No se encontraron evaluaciones con los filtros seleccionados
+              </h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                {filterSemestre !== 'todos' && `Semestre: "${filterSemestre}". `}
+                {filterMateria !== 'todos' && `Materia: "${filterMateria}". `}
+                {filterStatus !== 'all' && `Estado: "${filterStatus}". `}
+                {searchQuery && `Búsqueda: "${searchQuery}". `}
+                Ajusta o limpia los filtros para explorar el banco de evaluaciones.
+              </p>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restablecer filtros</span>
+              </button>
+            </div>
+          )}
           {/* SECTION: NIVEL I */}
           {(filterNivel === 'todos' || filterNivel === 'nivel1') && (
             <div className="bg-white rounded-3xl p-5 sm:p-6 border border-amber-200/90 shadow-xs">
@@ -809,7 +1105,21 @@ export default function MisExamenes({
             <div className="empty-state py-12 text-center text-slate-500 flex flex-col items-center">
               <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
               <h4 className="empty-title text-base font-semibold text-slate-700">Sin exámenes en este criterio</h4>
-              <p className="empty-sub text-xs text-slate-400 mt-1">Crea tu primera evaluación organizada por semestre</p>
+              <p className="empty-sub text-xs text-slate-400 mt-1 max-w-sm">
+                {hasActiveFilters 
+                  ? 'No hay evaluaciones que coincidan con la combinación de filtros aplicada.'
+                  : 'Crea tu primera evaluación organizada por semestre.'}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="mt-3.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Restablecer filtros</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto w-full">
