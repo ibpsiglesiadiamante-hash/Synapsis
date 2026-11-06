@@ -1084,6 +1084,31 @@ export default function App() {
     }
   };
 
+  const ALL_MODULE_TABS: Array<{ id: string; name: string; catId: string; catName: string }> = [
+    { id: 'asistencia', name: 'Control de Asistencia', catId: 'gestion', catName: 'Gestión Escolar' },
+    { id: 'boletines', name: 'Boletines Académicos', catId: 'gestion', catName: 'Gestión Escolar' },
+    { id: 'agenda', name: 'Agenda Escolar', catId: 'gestion', catName: 'Gestión Escolar' },
+    { id: 'tablon', name: 'Tablón de Anuncios', catId: 'gestion', catName: 'Gestión Escolar' },
+    { id: 'finanzas', name: 'Finanzas & Tesorería', catId: 'gestion', catName: 'Gestión Escolar' },
+    { id: 'educativo', name: 'Biblioteca de Conocimiento', catId: 'recursos', catName: 'Recursos y Comunidad' },
+    { id: 'biblia', name: 'La Sagrada Biblia', catId: 'recursos', catName: 'Recursos y Comunidad' },
+    { id: 'misExamenes', name: 'Banco de Exámenes', catId: 'docente', catName: 'Docente' },
+    { id: 'parciales', name: 'Mis Parciales', catId: 'docente', catName: 'Docente' },
+    { id: 'resultados', name: 'Resultados & Calificaciones', catId: 'docente', catName: 'Docente' },
+    { id: 'misMaterias', name: 'Mis Asignaturas', catId: 'estudiante', catName: 'Estudiante' },
+    { id: 'misExamenesTake', name: 'Exámenes Disponibles', catId: 'estudiante', catName: 'Estudiante' },
+    { id: 'miHistorial', name: 'Mi Historial de Notas', catId: 'estudiante', catName: 'Estudiante' },
+    { id: 'asignaturas', name: 'Asignaturas & Materias', catId: 'admin', catName: 'Administrador' },
+    { id: 'semestres', name: 'Semestres Académicos', catId: 'admin', catName: 'Administrador' },
+    { id: 'estudiantes', name: 'Gestión de Estudiantes', catId: 'admin', catName: 'Administrador' },
+    { id: 'registroNotas', name: 'Registro Oficial de Notas', catId: 'admin', catName: 'Administrador' },
+    { id: 'trabajos', name: 'Trabajos Académicos', catId: 'admin', catName: 'Administrador' },
+    { id: 'historialAcademico', name: 'Historial Académico Global', catId: 'admin', catName: 'Administrador' },
+    { id: 'usuarios', name: 'Directorio de Usuarios', catId: 'admin', catName: 'Administrador' },
+    { id: 'instituciones', name: 'Sedes e Institutos', catId: 'admin', catName: 'Administrador' },
+    { id: 'papelera', name: 'Papelera de Reciclaje', catId: 'admin', catName: 'Administrador' },
+  ];
+
   // Dynamic panel mapper
   const renderActivePanel = () => {
     if (!currentUser) return null;
@@ -1850,13 +1875,35 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono text-teal-200/70">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[11px] font-mono text-teal-200/70 hidden sm:inline">
                       Módulo actual:
                     </span>
-                    <span className="text-xs font-black text-cyan-300 px-3 py-1 rounded-lg bg-[#041c21] border border-[#115463]">
-                      {getModuleName(activeTab)}
-                    </span>
+                    <div className="relative">
+                      <select
+                        value={activeTab}
+                        onChange={(e) => {
+                          const newTab = e.target.value;
+                          if (newTab !== activeTab) {
+                            setActiveTab(newTab);
+                            setActiveEditExamId(null);
+                          }
+                        }}
+                        className="bg-[#041c21] border border-[#115463] text-cyan-300 text-xs font-bold rounded-xl pl-3 pr-7 py-1.5 focus:outline-none focus:border-cyan-400 cursor-pointer shadow-xs appearance-none truncate max-w-[210px] sm:max-w-[250px]"
+                        title="Cambiar a otro módulo sin tener que salir al menú principal"
+                      >
+                        {ALL_MODULE_TABS
+                          .filter(m => isTabAllowedForUser(m.id, currentUser))
+                          .map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-cyan-400 text-[9px]">
+                        ▼
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

@@ -80,9 +80,13 @@ export default function Header({
       </button>
 
       <div 
-        onClick={() => onNavigate && onNavigate('dashboard')}
-        className="header-logo flex items-center gap-2 cursor-pointer select-none"
-        title="Ir al Menú Principal"
+        onClick={() => {
+          if (activeTab === 'dashboard') {
+            onNavigate && onNavigate('dashboard');
+          }
+        }}
+        className={`header-logo flex items-center gap-2 select-none ${activeTab === 'dashboard' ? 'cursor-pointer' : 'cursor-default'}`}
+        title={activeTab === 'dashboard' ? 'Menú Principal' : 'Synapsis ERP'}
       >
         <div 
           className="logo-icon w-[34px] h-[34px] rounded-lg flex items-center justify-center text-white text-lg font-bold shadow-xs"

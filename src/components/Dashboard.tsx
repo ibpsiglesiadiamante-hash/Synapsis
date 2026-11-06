@@ -89,20 +89,20 @@ export default function Dashboard({
   const [subsPage, setSubsPage] = useState(1);
   const [examsPage, setExamsPage] = useState(1);
 
-  // Las categorías siempre se mantienen recogidas por defecto tal como solicita el usuario
-  const ALL_COLLAPSED_CATEGORIES: Record<string, boolean> = {
-    gestion: true,
-    recursos: true,
-    docente: true,
-    estudiante: true,
-    admin: true
+  // Todas las categorías deben verse normales con sus tarjetas desplegadas por defecto
+  const ALL_EXPANDED_CATEGORIES: Record<string, boolean> = {
+    gestion: false,
+    recursos: false,
+    docente: false,
+    estudiante: false,
+    admin: false
   };
 
   const [selectedCategory, setSelectedCategory] = useState<string>('todas');
   const [showMetrics, setShowMetrics] = useState<boolean>(false);
   const [cardSize, setCardSize] = useState<'mini' | 'mediana'>('mini');
-  // Por requerimiento expreso del usuario, el menú siempre inicia y permanece recogido por defecto
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(ALL_COLLAPSED_CATEGORIES);
+  // Por requerimiento expreso del usuario, el menú muestra normalmente todas sus tarjetas
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(ALL_EXPANDED_CATEGORIES);
 
   // Estados para el Centro de Notificaciones Académicas (Exámenes y Tareas)
   const [notifFilter, setNotifFilter] = useState<'todas' | 'exams' | 'tasks'>('todas');
@@ -122,13 +122,16 @@ export default function Dashboard({
     if (initialCategory && initialCategory !== 'todas' && initialCategory !== 'recogido') {
       setSelectedCategory(initialCategory);
       setCollapsedSections({
-        ...ALL_COLLAPSED_CATEGORIES,
-        [initialCategory]: false
+        gestion: false,
+        recursos: false,
+        docente: false,
+        estudiante: false,
+        admin: false
       });
     } else {
       setSelectedCategory('todas');
-      // Al volver a menú o seleccionar todas las categorías, siempre permanece recogido
-      setCollapsedSections(ALL_COLLAPSED_CATEGORIES);
+      // Al volver a menú o seleccionar todas las categorías, siempre se ven normales con sus tarjetas
+      setCollapsedSections(ALL_EXPANDED_CATEGORIES);
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [initialCategory]);
@@ -1110,8 +1113,8 @@ export default function Dashboard({
             type="button"
             onClick={() => {
               setSelectedCategory('todas');
-              // Siempre recogido al hacer clic en Todas las categorías
-              setCollapsedSections(ALL_COLLAPSED_CATEGORIES);
+              // Mostrar normal con todas sus tarjetas desplegadas y visibles
+              setCollapsedSections(ALL_EXPANDED_CATEGORIES);
             }}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
               activeSelectedCategory === 'todas'

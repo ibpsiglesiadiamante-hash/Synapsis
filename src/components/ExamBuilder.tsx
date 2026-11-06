@@ -1347,13 +1347,10 @@ export default function ExamBuilder({
     setSaveStatus('saved');
     toast(
       estado === 'activo' 
-        ? 'Examen publicado exitosamente ✓' 
+        ? 'Examen publicado exitosamente ✓. Puedes continuar editando o volver cuando lo desees.' 
         : 'Progreso guardado exitosamente en la nube ✓', 
       'success'
     );
-    if (estado === 'activo') {
-      onBack();
-    }
   };
 
   const handleBack = async () => {
