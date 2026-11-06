@@ -145,7 +145,7 @@ export interface Question {
   id: string;
   texto: string;
   enunciado?: string; // Campo histórico compatible
-  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table' | 'table_matching' | 'opcion_multiple';
+  tipo: 'multiple' | 'checkbox' | 'tf' | 'abierta' | 'escala' | 'dropdown' | 'matching' | 'table' | 'table_matching' | 'opcion_multiple' | 'incisos';
   puntos: number;
   opciones: string[]; // Options / Caja de palabras (list of terms to match)
   opcionIds?: string[]; // Stable internal IDs for options to prevent UI collision on deletion
@@ -162,6 +162,8 @@ export interface Question {
   parejas?: any[];
   filas?: any[];
   tableRows?: any[];
+  incisos?: { texto: string; respuestaEsperada?: string }[];
+  incisoIds?: string[];
 }
 
 export interface Exam {

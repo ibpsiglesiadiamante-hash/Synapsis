@@ -204,7 +204,7 @@ export default function ExamTakeScreen({
       maxPtsSum += q.puntos;
       const ans = answers[q.id];
 
-      if (q.tipo === 'abierta' || q.tipo === 'escala') {
+      if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
         pendingGrading = true;
       } else if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'tf' || q.tipo === 'dropdown') {
         const selected = Number(ans);
@@ -693,14 +693,14 @@ export default function ExamTakeScreen({
 
                   {/* Dropdown menu */}
                   {qItem.tipo === 'dropdown' && (
-                    <div className="max-w-xs mt-1 relative">
+                    <div className="max-w-md mt-2 relative">
                       <select
                         value={answers[qItem.id] !== undefined ? answers[qItem.id] : ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={e => handleSetAnswer(qItem.id, e.target.value !== '' ? Number(e.target.value) : '')}
-                        className="w-full p-2 border border-[#dadce0] rounded-md bg-white text-xs text-[#202124] focus:outline-none focus:border-[#673ab7] focus:ring-1 focus:ring-[#673ab7]/30 transition-all cursor-pointer"
+                        className="w-full p-2.5 border-2 border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-xs"
                       >
-                        <option value="">Elegir</option>
+                        <option value="">-- Selecciona una opción del menú desplegable --</option>
                         {qItem.opciones.map((opt, oIdx) => (
                           <option key={oIdx} value={oIdx}>{opt}</option>
                         ))}
@@ -1052,6 +1052,48 @@ export default function ExamTakeScreen({
                         minHeight={38}
                         className="w-full bg-transparent border-b border-dashed border-[#dadce0] focus:border-b-2 focus:border-[#673ab7] outline-none py-2 text-sm text-[#202124] placeholder-slate-400 transition-all duration-200"
                       />
+                    </div>
+                  )}
+
+                  {/* Incisos multi-part question with free text per statement */}
+                  {qItem.tipo === 'incisos' && (
+                    <div className="space-y-4 mt-3 text-left">
+                      {(qItem.incisos || []).map((inc, iIdx) => {
+                        const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
+                        const currentAnswers = answers[qItem.id] || {};
+                        const val = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                          ? (currentAnswers[iIdx] || '') 
+                          : '';
+
+                        return (
+                          <div key={iIdx} className="bg-slate-50/80 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                            <div className="flex items-start gap-2.5">
+                              <span className="text-xs font-black px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shrink-0 uppercase tracking-wide">
+                                {letter})
+                              </span>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-wrap">
+                                {inc.texto}
+                              </p>
+                            </div>
+                            <div className="pl-0 sm:pl-7">
+                              <AutoExpandingTextarea
+                                value={val}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={e => {
+                                  const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                    ? { ...currentAnswers, [iIdx]: e.target.value } 
+                                    : { [iIdx]: e.target.value };
+                                  handleSetAnswer(qItem.id, nextAnswers);
+                                }}
+                                placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
+                                rows={1}
+                                minHeight={38}
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

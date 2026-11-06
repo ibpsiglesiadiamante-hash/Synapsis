@@ -150,7 +150,7 @@ export default function Resultados({
       totalMax += q.puntos;
       const ans = sub.respuestas[q.id];
 
-      if (q.tipo === 'abierta' || q.tipo === 'escala') {
+      if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
         const score = manualScores[q.id] !== undefined ? Number(manualScores[q.id]) : 0;
         manualSum += score;
         if (score >= q.puntos * 0.6) {
@@ -829,9 +829,11 @@ export default function Resultados({
 
                     isCorrect = totalBlanksCount > 0 && correctBlanksCount === totalBlanksCount;
                     readableAnsText = `${correctBlanksCount} de ${totalBlanksCount} correctas`;
+                  } else if (q.tipo === 'incisos') {
+                    readableAnsText = 'Respuestas por incisos (Texto libre)';
                   }
 
-                  const isTextGraded = q.tipo === 'abierta' || q.tipo === 'escala';
+                  const isTextGraded = q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos';
                   const earnedPoints = isTextGraded 
                     ? (manualScores[q.id] !== undefined ? manualScores[q.id] : 0) 
                     : (q.tipo === 'matching' 
@@ -1005,6 +1007,41 @@ export default function Resultados({
                                 </div>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* If incisos question, present a breakdown of each literal response */}
+                      {q.tipo === 'incisos' && (q.incisos || []).length > 0 && (
+                        <div className="mt-3 space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-900/20 dark:border-slate-800 text-left">
+                          <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide mb-2.5 block">
+                            Respuestas por Incisos:
+                          </div>
+                          <div className="space-y-2">
+                            {(q.incisos || []).map((inc, iIdx) => {
+                              const letter = String.fromCharCode(97 + iIdx);
+                              const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
+                              const sText = userAnsObj[iIdx] || 'Sin responder';
+                              return (
+                                <div key={iIdx} className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 shadow-2xs">
+                                  <div className="flex items-start gap-2">
+                                    <span className="font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded uppercase text-[10.5px]">
+                                      {letter})
+                                    </span>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300 flex-1">{inc.texto}</span>
+                                  </div>
+                                  <div className="pl-6 text-slate-900 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-100 dark:border-slate-800">
+                                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Respuesta del estudiante:</span>
+                                    <p className="whitespace-pre-wrap">{sText}</p>
+                                  </div>
+                                  {inc.respuestaEsperada && (
+                                    <div className="pl-6 text-[11px] text-emerald-700 dark:text-emerald-400">
+                                      <span className="font-bold">Guía / Clave esperada:</span> {inc.respuestaEsperada}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

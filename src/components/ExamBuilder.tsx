@@ -501,6 +501,7 @@ export default function ExamBuilder({
         let matchCorrectos = Array.isArray(q.matchCorrectos) ? [...q.matchCorrectos] : undefined;
         let columnas = Array.isArray(q.columnas) && q.columnas.length > 0 ? [...q.columnas] : undefined;
         let tableRows = Array.isArray(q.tableRows) && q.tableRows.length > 0 ? [...q.tableRows] : undefined;
+        let incisos = Array.isArray(q.incisos) && q.incisos.length > 0 ? [...q.incisos] : undefined;
 
         if (type === 'multiple' || type === 'checkbox' || type === 'dropdown') {
           if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
@@ -508,6 +509,15 @@ export default function ExamBuilder({
           }
         } else if (type === 'tf') {
           options = ['Verdadero', 'Falso'];
+        } else if (type === 'incisos') {
+          options = [];
+          if (!incisos || incisos.length === 0) {
+            incisos = [
+              { texto: 'Según las NIIF existen por lo menos 5 estados financieros establecidos, de los cuales los 2 más importantes son: 1- _______ 2- _______', respuestaEsperada: 'Estado de situación financiera, Estado de resultados' },
+              { texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.', respuestaEsperada: 'situación, principales, saldos, empresa' },
+              { texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización.', respuestaEsperada: 'rendimiento, evaluar, económica' }
+            ];
+          }
         } else if (type === 'matching') {
           if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
             options = ['Papiro', 'Talmud', 'Masoretas'];
@@ -561,10 +571,96 @@ export default function ExamBuilder({
           matchCorrectos: type === 'matching' ? matchCorrectos : undefined,
           columnas: type === 'table' ? columnas : undefined,
           tableRows: type === 'table' ? tableRows : undefined,
+          incisos: type === 'incisos' ? incisos : undefined,
         };
       }
       return q;
     }));
+  };
+
+  const handleAddInciso = (qid: string) => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = [...(q.incisos || [])];
+        const nextLetter = String.fromCharCode(97 + nextIncisos.length);
+        nextIncisos.push({ texto: `Afirmación o pregunta del literal ${nextLetter}...`, respuestaEsperada: '' });
+        return { ...q, incisos: nextIncisos };
+      }
+      return q;
+    }));
+  };
+
+  const handleUpdateIncisoText = (qid: string, idx: number, val: string) => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = [...(q.incisos || [])];
+        if (nextIncisos[idx]) {
+          nextIncisos[idx] = { ...nextIncisos[idx], texto: val };
+        }
+        return { ...q, incisos: nextIncisos };
+      }
+      return q;
+    }));
+  };
+
+  const handleUpdateIncisoExpected = (qid: string, idx: number, val: string) => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = [...(q.incisos || [])];
+        if (nextIncisos[idx]) {
+          nextIncisos[idx] = { ...nextIncisos[idx], respuestaEsperada: val };
+        }
+        return { ...q, incisos: nextIncisos };
+      }
+      return q;
+    }));
+  };
+
+  const handleRemoveInciso = (qid: string, idx: number) => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = (q.incisos || []).filter((_, i) => i !== idx);
+        return { ...q, incisos: nextIncisos };
+      }
+      return q;
+    }));
+  };
+
+  const applyIncisosAccountingPreset = (qid: string) => {
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          tipo: 'incisos' as const,
+          texto: 'Complete cada afirmación con la palabra o término que corresponde:',
+          opciones: [],
+          incisos: [
+            {
+              texto: 'Según las NIIF (Normas Internacionales de Información Financiera) existen por lo menos 5 estados establecidos, de los cuales los 2 más importantes son: 1- ____________________  2- ____________________.',
+              respuestaEsperada: 'Estado de situación financiera, Estado de resultados'
+            },
+            {
+              texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.',
+              respuestaEsperada: 'situación, principales, saldos, empresa'
+            },
+            {
+              texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización, así como una importante guía en el proceso de toma de decisiones gerenciales.',
+              respuestaEsperada: 'rendimiento, evaluar, económica, toma de decisiones'
+            },
+            {
+              texto: 'Las empresas generalmente funcionan con una combinación de recursos propios y préstamos en dinero o bienes.',
+              respuestaEsperada: 'empresas, recursos propios, préstamos'
+            },
+            {
+              texto: 'Las tres formas de financiación estudiadas en el material son: 1- recursos propios  2- préstamos  3- inversiones.',
+              respuestaEsperada: 'recursos propios, préstamos, inversiones'
+            }
+          ]
+        };
+      }
+      return item;
+    }));
+    toast('¡Plantilla de incisos a, b, c, d, e (NIIF y Estados Financieros) cargada con éxito!', 'success');
   };
 
   const handleAddTableColumn = (qid: string) => {
@@ -1439,6 +1535,8 @@ export default function ExamBuilder({
                 const isScale = q.tipo === 'escala';
                 const isMatching = q.tipo === 'matching';
                 const isTable = q.tipo === 'table';
+                const isIncisos = q.tipo === 'incisos';
+                const isDropdown = q.tipo === 'dropdown';
                 const showOpts = q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'checkbox' || q.tipo === 'dropdown' || q.tipo === 'tf';
 
                 return (
@@ -1446,8 +1544,21 @@ export default function ExamBuilder({
                     key={q.id} 
                     className="question-card bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-400 transition shadow-sm relative theme-bg-surface theme-border"
                   >
-                    <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-2.5">
-                      Pregunta {qIndex + 1}
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">
+                        Pregunta {qIndex + 1}
+                      </div>
+                      <span className="text-[10.5px] font-extrabold px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                        {q.tipo === 'multiple' && '🔘 Opción única'}
+                        {q.tipo === 'checkbox' && '☑️ Casillas de verificación'}
+                        {q.tipo === 'dropdown' && '🔽 Menú Desplegable'}
+                        {q.tipo === 'tf' && '⚖️ Verdadero / Falso'}
+                        {q.tipo === 'abierta' && '✍️ Respuesta libre'}
+                        {q.tipo === 'incisos' && '📝 Incisos (a, b, c...)'}
+                        {q.tipo === 'matching' && '🔗 Pareo con Caja'}
+                        {q.tipo === 'table' && '📊 Tabla con Caja'}
+                        {q.tipo === 'escala' && '⭐ Escala 1 a 5'}
+                      </span>
                     </div>
 
                     <AutoExpandingTextarea 
@@ -1510,6 +1621,10 @@ export default function ExamBuilder({
                               <div key={optKey} className="flex items-start gap-2.5 py-1">
                                 {isCheck ? (
                                   <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded shrink-0 bg-slate-50 mt-1" />
+                                ) : isDropdown ? (
+                                  <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 shrink-0 mt-1">
+                                    🔽 {oIdx + 1}
+                                  </span>
                                 ) : (
                                   <div className="w-[18px] h-[18px] border-2 border-slate-300 rounded-full shrink-0 bg-slate-50 mt-1" />
                                 )}
@@ -1583,6 +1698,34 @@ export default function ExamBuilder({
                                 )}
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Live dropdown preview for teacher */}
+                        {isDropdown && (
+                          <div className="mt-3 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-left space-y-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                🔽 Menú Desplegable (Vista Previa en vivo):
+                              </span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                                Haz clic para probar cómo se desplegará para el estudiante
+                              </span>
+                            </div>
+                            <select 
+                              className="w-full max-w-sm p-2.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 cursor-pointer shadow-xs focus:ring-2 focus:ring-slate-400"
+                              defaultValue=""
+                            >
+                              <option value="">-- Seleccionar una opción --</option>
+                              {q.opciones.map((opt, idx) => (
+                                <option key={idx} value={idx}>
+                                  {opt || `(Opción ${idx + 1})`} {q.correctas.includes(idx) ? '✓ [Marcada como Correcta]' : ''}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                              💡 <strong>Cómo funciona:</strong> Agrega o edita las opciones arriba y marca la alternativa correcta con el botón verde <strong>✓</strong>. Al tomar la prueba, el estudiante desplegará este menú y seleccionará su respuesta.
+                            </p>
                           </div>
                         )}
                       </div>
@@ -2243,6 +2386,104 @@ export default function ExamBuilder({
                       </div>
                     )}
 
+                    {/* Incisos question type editor */}
+                    {isIncisos && (
+                      <div className="space-y-3 mb-4 text-left">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                            <div>
+                              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide block">
+                                📝 Sub-preguntas / Incisos (a, b, c, d... de Texto Libre)
+                              </label>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Cada inciso tendrá su propio enunciado y espacio de respuesta abierta para el estudiante (sin necesidad de cajas).
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => applyIncisosAccountingPreset(q.id)}
+                                className="text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
+                                title="Cargar ejemplo de Afirmaciones Contables (NIIF / Estados Financieros)"
+                              >
+                                <span>📋</span>
+                                <span>Cargar Ejemplo NIIF / Estados</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddInciso(q.id)}
+                                className="text-[11px] font-bold bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>+ Agregar Inciso</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 pt-2">
+                            {(q.incisos || []).map((inc, iIdx) => {
+                              const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
+                              return (
+                                <div 
+                                  key={iIdx} 
+                                  className="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-2 hover:border-slate-300 transition"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 uppercase">
+                                      Literal {letter}.
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveInciso(q.id, iIdx)}
+                                      className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-955 p-1 rounded-md text-xs font-bold transition cursor-pointer"
+                                      title="Eliminar este inciso"
+                                    >
+                                      ✕ Eliminar
+                                    </button>
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">
+                                      Enunciado o afirmación del literal {letter}:
+                                    </label>
+                                    <AutoExpandingTextarea
+                                      value={inc.texto}
+                                      onChange={e => handleUpdateIncisoText(q.id, iIdx, e.target.value)}
+                                      placeholder={`ej: Según las NIIF existen por lo menos 5 estados establecidos...`}
+                                      className="w-full text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 leading-relaxed font-sans block"
+                                      rows={2}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                                      Respuesta esperada o clave de referencia (Opcional, para guía del docente):
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={inc.respuestaEsperada || ''}
+                                      onChange={e => handleUpdateIncisoExpected(q.id, iIdx, e.target.value)}
+                                      placeholder="ej: Estado de situación financiera y Estado de resultados integrales..."
+                                      className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 font-sans"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="mt-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAddInciso(q.id)}
+                              className="text-xs font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 px-3.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer border border-slate-300 dark:border-slate-700 shadow-xs"
+                            >
+                              <span>+ Agregar otro literal ({String.fromCharCode(97 + (q.incisos?.length || 0))}.)</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Question Actions footer */}
                     <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
                       <select 
@@ -2255,6 +2496,7 @@ export default function ExamBuilder({
                         <option value="dropdown">Menú desplegable</option>
                         <option value="tf">Verdadero/Falso</option>
                         <option value="abierta">Respuesta libre/Texto</option>
+                        <option value="incisos">📝 Pregunta con Incisos (a, b, c, d... Texto Libre)</option>
                         <option value="escala">Escala (1 al 5)</option>
                         <option value="matching">Pareo / Relacionar con Caja de Palabras</option>
                         <option value="table">📊 Clasificación en Tabla con Banco de Palabras</option>

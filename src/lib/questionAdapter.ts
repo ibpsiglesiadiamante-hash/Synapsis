@@ -181,7 +181,8 @@ export function isAnswerOutOfRange(q: Question, ans: any): boolean {
 
     case 'abierta':
     case 'escala':
-      return typeof ans !== 'string' && typeof ans !== 'number';
+    case 'incisos':
+      return false;
 
     default:
       return false;
