@@ -204,7 +204,25 @@ export default function ExamTakeScreen({
       maxPtsSum += q.puntos;
       const ans = answers[q.id];
 
-      if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
+      if (q.tipo === 'incisos' && (q.modoIncisos === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'))) {
+        const userAnsObj = typeof ans === 'object' && ans !== null && !Array.isArray(ans) ? ans : {};
+        const incisosList = q.incisos || [];
+        let correctVFCount = 0;
+        incisosList.forEach((inc, iIdx) => {
+          const userVal = userAnsObj[iIdx];
+          const expected = inc.respuestaVF || 'V';
+          if (userVal === expected) {
+            correctVFCount++;
+          }
+        });
+        const fraction = incisosList.length > 0 ? (correctVFCount / incisosList.length) : 0;
+        autoEarnedSum += q.puntos * fraction;
+        if (correctVFCount === incisosList.length) {
+          correctCount++;
+        } else {
+          incorrectCount++;
+        }
+      } else if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
         pendingGrading = true;
       } else if (q.tipo === 'multiple' || (q.tipo as string) === 'opcion_multiple' || q.tipo === 'tf' || q.tipo === 'dropdown') {
         const selected = Number(ans);
@@ -1055,11 +1073,12 @@ export default function ExamTakeScreen({
                     </div>
                   )}
 
-                  {/* Incisos multi-part question with free text per statement */}
+                  {/* Incisos multi-part question: V/F or free text */}
                   {qItem.tipo === 'incisos' && (
                     <div className="space-y-4 mt-3 text-left">
                       {(qItem.incisos || []).map((inc, iIdx) => {
                         const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
+                        const isVF = (qItem.modoIncisos || 'vf') === 'vf' || inc.tipo === 'vf';
                         const currentAnswers = answers[qItem.id] || {};
                         const val = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
                           ? (currentAnswers[iIdx] || '') 
@@ -1075,22 +1094,74 @@ export default function ExamTakeScreen({
                                 {inc.texto}
                               </p>
                             </div>
-                            <div className="pl-0 sm:pl-7">
-                              <AutoExpandingTextarea
-                                value={val}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={e => {
-                                  const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
-                                    ? { ...currentAnswers, [iIdx]: e.target.value } 
-                                    : { [iIdx]: e.target.value };
-                                  handleSetAnswer(qItem.id, nextAnswers);
-                                }}
-                                placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
-                                rows={1}
-                                minHeight={38}
-                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
-                              />
-                            </div>
+
+                            {/* Clean V/F Pill Buttons */}
+                            {isVF ? (
+                              <div className="pl-0 sm:pl-7 flex flex-wrap items-center gap-3 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                      ? { ...currentAnswers, [iIdx]: 'V' } 
+                                      : { [iIdx]: 'V' };
+                                    handleSetAnswer(qItem.id, nextAnswers);
+                                  }}
+                                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                                    val === 'V'
+                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/30'
+                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
+                                  }`}
+                                >
+                                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
+                                    val === 'V' ? 'border-white bg-white text-emerald-700' : 'border-slate-400'
+                                  }`}>
+                                    {val === 'V' && '✓'}
+                                  </span>
+                                  <span>Verdadero (V)</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                      ? { ...currentAnswers, [iIdx]: 'F' } 
+                                      : { [iIdx]: 'F' };
+                                    handleSetAnswer(qItem.id, nextAnswers);
+                                  }}
+                                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                                    val === 'F'
+                                      ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-400/30'
+                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400'
+                                  }`}
+                                >
+                                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
+                                    val === 'F' ? 'border-white bg-white text-rose-700' : 'border-slate-400'
+                                  }`}>
+                                    {val === 'F' && '✕'}
+                                  </span>
+                                  <span>Falso (F)</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="pl-0 sm:pl-7">
+                                <AutoExpandingTextarea
+                                  value={val}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={e => {
+                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                      ? { ...currentAnswers, [iIdx]: e.target.value } 
+                                      : { [iIdx]: e.target.value };
+                                    handleSetAnswer(qItem.id, nextAnswers);
+                                  }}
+                                  placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
+                                  rows={1}
+                                  minHeight={38}
+                                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}

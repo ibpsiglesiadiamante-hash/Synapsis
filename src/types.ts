@@ -162,7 +162,8 @@ export interface Question {
   parejas?: any[];
   filas?: any[];
   tableRows?: any[];
-  incisos?: { texto: string; respuestaEsperada?: string }[];
+  modoIncisos?: 'texto' | 'vf';
+  incisos?: { texto: string; tipo?: 'texto' | 'vf'; respuestaVF?: 'V' | 'F'; respuestaEsperada?: string }[];
   incisoIds?: string[];
 }
 

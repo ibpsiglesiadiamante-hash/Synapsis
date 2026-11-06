@@ -571,7 +571,26 @@ export default function ExamBuilder({
           matchCorrectos: type === 'matching' ? matchCorrectos : undefined,
           columnas: type === 'table' ? columnas : undefined,
           tableRows: type === 'table' ? tableRows : undefined,
+          modoIncisos: type === 'incisos' ? (q.modoIncisos || 'vf') : undefined,
           incisos: type === 'incisos' ? incisos : undefined,
+        };
+      }
+      return q;
+    }));
+  };
+
+  const handleToggleModoIncisos = (qid: string, modo: 'texto' | 'vf') => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = (q.incisos || []).map(inc => ({
+          ...inc,
+          tipo: modo,
+          respuestaVF: inc.respuestaVF || 'V'
+        }));
+        return {
+          ...q,
+          modoIncisos: modo,
+          incisos: nextIncisos
         };
       }
       return q;
@@ -583,7 +602,13 @@ export default function ExamBuilder({
       if (q.id === qid) {
         const nextIncisos = [...(q.incisos || [])];
         const nextLetter = String.fromCharCode(97 + nextIncisos.length);
-        nextIncisos.push({ texto: `Afirmación o pregunta del literal ${nextLetter}...`, respuestaEsperada: '' });
+        const modo = q.modoIncisos || 'vf';
+        nextIncisos.push({ 
+          texto: `Afirmación del literal ${nextLetter}...`, 
+          tipo: modo,
+          respuestaVF: 'V',
+          respuestaEsperada: '' 
+        });
         return { ...q, incisos: nextIncisos };
       }
       return q;
@@ -596,6 +621,19 @@ export default function ExamBuilder({
         const nextIncisos = [...(q.incisos || [])];
         if (nextIncisos[idx]) {
           nextIncisos[idx] = { ...nextIncisos[idx], texto: val };
+        }
+        return { ...q, incisos: nextIncisos };
+      }
+      return q;
+    }));
+  };
+
+  const handleUpdateIncisoVF = (qid: string, idx: number, val: 'V' | 'F') => {
+    setQuestions(prev => prev.map(q => {
+      if (q.id === qid) {
+        const nextIncisos = [...(q.incisos || [])];
+        if (nextIncisos[idx]) {
+          nextIncisos[idx] = { ...nextIncisos[idx], respuestaVF: val, tipo: 'vf' };
         }
         return { ...q, incisos: nextIncisos };
       }
@@ -626,33 +664,82 @@ export default function ExamBuilder({
     }));
   };
 
+  const applyIncisosVFPreset = (qid: string) => {
+    setQuestions(prev => prev.map(item => {
+      if (item.id === qid) {
+        return {
+          ...item,
+          tipo: 'incisos' as const,
+          modoIncisos: 'vf' as const,
+          texto: 'Indique si cada una de las siguientes afirmaciones es Verdadera (V) o Falsa (F):',
+          opciones: [],
+          incisos: [
+            {
+              texto: 'Según las NIIF, el Estado de Situación Financiera presenta los activos, pasivos y patrimonio en una fecha determinada.',
+              tipo: 'vf' as const,
+              respuestaVF: 'V' as const
+            },
+            {
+              texto: 'Los activos no corrientes son aquellos que se espera realizar o vender en el ciclo operativo normal (menos de 1 año).',
+              tipo: 'vf' as const,
+              respuestaVF: 'F' as const
+            },
+            {
+              texto: 'El Estado de Resultados Integral refleja los ingresos, gastos y el resultado económico (utilidad o pérdida) del ejercicio.',
+              tipo: 'vf' as const,
+              respuestaVF: 'V' as const
+            },
+            {
+              texto: 'Las obligaciones laborales e impuestos por pagar a corto plazo forman parte del Pasivo Corriente.',
+              tipo: 'vf' as const,
+              respuestaVF: 'V' as const
+            },
+            {
+              texto: 'El patrimonio neto aumenta cuando la organización incurre en pérdidas acumuladas durante el ejercicio contable.',
+              tipo: 'vf' as const,
+              respuestaVF: 'F' as const
+            }
+          ]
+        };
+      }
+      return item;
+    }));
+    toast('¡Plantilla de afirmaciones Verdadero / Falso (V / F) cargada con éxito!', 'success');
+  };
+
   const applyIncisosAccountingPreset = (qid: string) => {
     setQuestions(prev => prev.map(item => {
       if (item.id === qid) {
         return {
           ...item,
           tipo: 'incisos' as const,
+          modoIncisos: 'texto' as const,
           texto: 'Complete cada afirmación con la palabra o término que corresponde:',
           opciones: [],
           incisos: [
             {
               texto: 'Según las NIIF (Normas Internacionales de Información Financiera) existen por lo menos 5 estados establecidos, de los cuales los 2 más importantes son: 1- ____________________  2- ____________________.',
+              tipo: 'texto' as const,
               respuestaEsperada: 'Estado de situación financiera, Estado de resultados'
             },
             {
               texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.',
+              tipo: 'texto' as const,
               respuestaEsperada: 'situación, principales, saldos, empresa'
             },
             {
               texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización, así como una importante guía en el proceso de toma de decisiones gerenciales.',
+              tipo: 'texto' as const,
               respuestaEsperada: 'rendimiento, evaluar, económica, toma de decisiones'
             },
             {
               texto: 'Las empresas generalmente funcionan con una combinación de recursos propios y préstamos en dinero o bienes.',
+              tipo: 'texto' as const,
               respuestaEsperada: 'empresas, recursos propios, préstamos'
             },
             {
               texto: 'Las tres formas de financiación estudiadas en el material son: 1- recursos propios  2- préstamos  3- inversiones.',
+              tipo: 'texto' as const,
               respuestaEsperada: 'recursos propios, préstamos, inversiones'
             }
           ]
@@ -2390,47 +2477,113 @@ export default function ExamBuilder({
                     {isIncisos && (
                       <div className="space-y-3 mb-4 text-left">
                         <div className="bg-slate-50 dark:bg-slate-900/40 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700">
+                          {/* Header and Mode Selector */}
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-200 dark:border-slate-700">
                             <div>
-                              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide block">
-                                📝 Sub-preguntas / Incisos (a, b, c, d... de Texto Libre)
-                              </label>
+                              <div className="flex items-center gap-2 mb-1">
+                                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                                  📝 Sub-preguntas con Incisos (a, b, c, d...)
+                                </label>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                                  {(q.modoIncisos || 'vf') === 'vf' ? '⚖️ Modo V / F' : '✍️ Modo Texto Libre'}
+                                </span>
+                              </div>
                               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                Cada inciso tendrá su propio enunciado y espacio de respuesta abierta para el estudiante (sin necesidad de cajas).
+                                {(q.modoIncisos || 'vf') === 'vf' 
+                                  ? 'Cada afirmación tendrá botones limpios de Verdadero (V) y Falso (F). El sistema calificará automáticamente cada acierto.' 
+                                  : 'Cada inciso tendrá su propio enunciado y espacio de respuesta abierta para el estudiante (sin necesidad de cajas).'}
                               </p>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
+
+                            {/* Clean Mode Switcher */}
+                            <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 dark:bg-slate-800/80 rounded-xl shrink-0 self-start md:self-auto border border-slate-300 dark:border-slate-700">
                               <button
                                 type="button"
-                                onClick={() => applyIncisosAccountingPreset(q.id)}
-                                className="text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
-                                title="Cargar ejemplo de Afirmaciones Contables (NIIF / Estados Financieros)"
+                                onClick={() => handleToggleModoIncisos(q.id, 'vf')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                  (q.modoIncisos || 'vf') === 'vf'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                }`}
                               >
-                                <span>📋</span>
-                                <span>Cargar Ejemplo NIIF / Estados</span>
+                                <span>⚖️</span>
+                                <span>Verdadero / Falso (V/F)</span>
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleModoIncisos(q.id, 'texto')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                  q.modoIncisos === 'texto'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                                }`}
+                              >
+                                <span>✍️</span>
+                                <span>Texto Libre</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Action presets and buttons */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <span className="text-[11px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                              Lista de Afirmaciones ({q.incisos?.length || 0}):
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {(q.modoIncisos || 'vf') === 'vf' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => applyIncisosVFPreset(q.id)}
+                                  className="text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
+                                  title="Cargar ejemplo de afirmaciones contables de Verdadero o Falso"
+                                >
+                                  <span>⚖️</span>
+                                  <span>Cargar Ejemplo V / F</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => applyIncisosAccountingPreset(q.id)}
+                                  className="text-[11px] font-bold bg-white hover:bg-slate-100 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
+                                  title="Cargar ejemplo de Afirmaciones Contables (NIIF / Estados Financieros)"
+                                >
+                                  <span>📋</span>
+                                  <span>Cargar Ejemplo NIIF</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleAddInciso(q.id)}
                                 className="text-[11px] font-bold bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 px-3 py-1.5 rounded-lg shadow-xs transition flex items-center gap-1 cursor-pointer"
                               >
-                                <span>+ Agregar Inciso</span>
+                                <span>+ Agregar Inciso ({String.fromCharCode(97 + (q.incisos?.length || 0))}.)</span>
                               </button>
                             </div>
                           </div>
 
-                          <div className="space-y-3 pt-2">
+                          {/* List of Incisos */}
+                          <div className="space-y-3 pt-1">
                             {(q.incisos || []).map((inc, iIdx) => {
                               const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
+                              const isVF = (q.modoIncisos || 'vf') === 'vf';
+                              const currentVF = inc.respuestaVF || 'V';
+
                               return (
                                 <div 
                                   key={iIdx} 
                                   className="bg-white dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-2 hover:border-slate-300 transition"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-xs font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 uppercase">
-                                      Literal {letter}.
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-black text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-md border border-slate-300 dark:border-slate-600 uppercase">
+                                        Literal {letter}.
+                                      </span>
+                                      {isVF && (
+                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                          (Afirmación para calificar V o F)
+                                        </span>
+                                      )}
+                                    </div>
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveInciso(q.id, iIdx)}
@@ -2442,30 +2595,64 @@ export default function ExamBuilder({
                                   </div>
 
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">
-                                      Enunciado o afirmación del literal {letter}:
-                                    </label>
                                     <AutoExpandingTextarea
                                       value={inc.texto}
                                       onChange={e => handleUpdateIncisoText(q.id, iIdx, e.target.value)}
-                                      placeholder={`ej: Según las NIIF existen por lo menos 5 estados establecidos...`}
+                                      placeholder={isVF ? `Escribe la afirmación del literal ${letter} para evaluar como Verdadera o Falsa...` : `Enunciado del literal ${letter}...`}
                                       className="w-full text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-lg text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 leading-relaxed font-sans block"
                                       rows={2}
                                     />
                                   </div>
 
-                                  <div>
-                                    <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                                      Respuesta esperada o clave de referencia (Opcional, para guía del docente):
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={inc.respuestaEsperada || ''}
-                                      onChange={e => handleUpdateIncisoExpected(q.id, iIdx, e.target.value)}
-                                      placeholder="ej: Estado de situación financiera y Estado de resultados integrales..."
-                                      className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 font-sans"
-                                    />
-                                  </div>
+                                  {/* Clean V/F Pill Selection */}
+                                  {isVF ? (
+                                    <div className="flex items-center justify-between pt-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                          Respuesta correcta de la afirmación:
+                                        </span>
+                                        <div className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateIncisoVF(q.id, iIdx, 'V')}
+                                            className={`px-3 py-1 rounded-md text-xs font-black transition cursor-pointer flex items-center gap-1 ${
+                                              currentVF === 'V'
+                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                          >
+                                            <span>✓ V</span>
+                                            <span className="text-[10px] font-medium opacity-90">(Verdadero)</span>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateIncisoVF(q.id, iIdx, 'F')}
+                                            className={`px-3 py-1 rounded-md text-xs font-black transition cursor-pointer flex items-center gap-1 ${
+                                              currentVF === 'F'
+                                                ? 'bg-rose-600 text-white shadow-xs'
+                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                          >
+                                            <span>✕ F</span>
+                                            <span className="text-[10px] font-medium opacity-90">(Falso)</span>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                                        Respuesta esperada o clave de referencia (Opcional, para guía del docente):
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={inc.respuestaEsperada || ''}
+                                        onChange={e => handleUpdateIncisoExpected(q.id, iIdx, e.target.value)}
+                                        placeholder="ej: Estado de situación financiera y Estado de resultados integrales..."
+                                        className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 font-sans"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}

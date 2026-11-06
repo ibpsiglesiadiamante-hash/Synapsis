@@ -150,7 +150,25 @@ export default function Resultados({
       totalMax += q.puntos;
       const ans = sub.respuestas[q.id];
 
-      if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
+      if (q.tipo === 'incisos' && (q.modoIncisos === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'))) {
+        const userAnsObj = typeof ans === 'object' && ans !== null && !Array.isArray(ans) ? ans : {};
+        const incisosList = q.incisos || [];
+        let correctVFCount = 0;
+        incisosList.forEach((inc, iIdx) => {
+          const userVal = userAnsObj[iIdx];
+          const expected = inc.respuestaVF || 'V';
+          if (userVal === expected) {
+            correctVFCount++;
+          }
+        });
+        const fraction = incisosList.length > 0 ? (correctVFCount / incisosList.length) : 0;
+        autoSum += q.puntos * fraction;
+        if (correctVFCount === incisosList.length) {
+          correctCount++;
+        } else {
+          incorrectCount++;
+        }
+      } else if (q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos') {
         const score = manualScores[q.id] !== undefined ? Number(manualScores[q.id]) : 0;
         manualSum += score;
         if (score >= q.puntos * 0.6) {
@@ -828,76 +846,96 @@ export default function Resultados({
                     });
 
                     isCorrect = totalBlanksCount > 0 && correctBlanksCount === totalBlanksCount;
-                    readableAnsText = `${correctBlanksCount} de ${totalBlanksCount} correctas`;
                   } else if (q.tipo === 'incisos') {
-                    readableAnsText = 'Respuestas por incisos (Texto libre)';
+                    const isVF = (q.modoIncisos || 'vf') === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf');
+                    if (isVF) {
+                      const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
+                      const incisosList = q.incisos || [];
+                      let correctVFCount = 0;
+                      incisosList.forEach((inc, iIdx) => {
+                        const userVal = userAnsObj[iIdx];
+                        const expected = inc.respuestaVF || 'V';
+                        if (userVal === expected) correctVFCount++;
+                      });
+                      isCorrect = incisosList.length > 0 && correctVFCount === incisosList.length;
+                      readableAnsText = `${correctVFCount} de ${incisosList.length} afirmaciones correctas`;
+                    } else {
+                      readableAnsText = 'Respuestas por incisos (Texto libre)';
+                    }
                   }
 
-                  const isTextGraded = q.tipo === 'abierta' || q.tipo === 'escala' || q.tipo === 'incisos';
-                  const earnedPoints = isTextGraded 
-                    ? (manualScores[q.id] !== undefined ? manualScores[q.id] : 0) 
-                    : (q.tipo === 'matching' 
-                        ? (() => {
-                          const userMatchedObj = studentAns || {};
-                          const matchesList = q.matchCorrectos || [];
-                          const enunciadosList = q.enunciados || [];
-                          let matchesCorrectSum = 0;
-                          enunciadosList.forEach((_, eIdx) => {
-                            const userVal = userMatchedObj[eIdx];
-                            const correctVal = matchesList[eIdx];
-                            if (userVal !== undefined && userVal !== '' && Number(userVal) === Number(correctVal)) {
-                              matchesCorrectSum++;
-                            }
-                          });
-                          const fraction = enunciadosList.length > 0 ? (matchesCorrectSum / enunciadosList.length) : 0;
-                          return Math.round(q.puntos * fraction);
-                        })()
-                        : (q.tipo === 'table'
-                            ? (() => {
-                              const userAnswersObj = studentAns || {};
-                              let totalBlanksCount = 0;
-                              let correctBlanksCount = 0;
+                  const isVFIncisos = q.tipo === 'incisos' && ((q.modoIncisos || 'vf') === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'));
+                  const isTextGraded = (q.tipo === 'abierta' || q.tipo === 'escala' || (q.tipo === 'incisos' && !isVFIncisos));
+                  let earnedPoints = 0;
+                  if (isTextGraded) {
+                    earnedPoints = manualScores[q.id] !== undefined ? manualScores[q.id] : 0;
+                  } else if (isVFIncisos) {
+                    const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
+                    const incisosList = q.incisos || [];
+                    let correctVFCount = 0;
+                    incisosList.forEach((inc, iIdx) => {
+                      if (userAnsObj[iIdx] === (inc.respuestaVF || 'V')) correctVFCount++;
+                    });
+                    const fraction = incisosList.length > 0 ? (correctVFCount / incisosList.length) : 0;
+                    earnedPoints = Math.round(q.puntos * fraction);
+                  } else if (q.tipo === 'matching') {
+                    const userMatchedObj = studentAns || {};
+                    const matchesList = q.matchCorrectos || [];
+                    const enunciadosList = q.enunciados || [];
+                    let matchesCorrectSum = 0;
+                    enunciadosList.forEach((_, eIdx) => {
+                      const userVal = userMatchedObj[eIdx];
+                      const correctVal = matchesList[eIdx];
+                      if (userVal !== undefined && userVal !== '' && Number(userVal) === Number(correctVal)) {
+                        matchesCorrectSum++;
+                      }
+                    });
+                    const fraction = enunciadosList.length > 0 ? (matchesCorrectSum / enunciadosList.length) : 0;
+                    earnedPoints = Math.round(q.puntos * fraction);
+                  } else if (q.tipo === 'table') {
+                    const userAnswersObj = studentAns || {};
+                    let totalBlanksCount = 0;
+                    let correctBlanksCount = 0;
 
-                              const colBlanksConfig: Record<number, number[]> = {};
-                              const colBlanksStudentAnswers: Record<number, number[]> = {};
+                    const colBlanksConfig: Record<number, number[]> = {};
+                    const colBlanksStudentAnswers: Record<number, number[]> = {};
 
-                              (q.tableRows || []).forEach((row, rIdx) => {
-                                row.cells.forEach((cell, cIdx) => {
-                                  if (cell.tipo === 'blank') {
-                                    totalBlanksCount++;
-                                    const correctVal = cell.correctOptionIdx ?? 0;
-                                    if (!colBlanksConfig[cIdx]) colBlanksConfig[cIdx] = [];
-                                    colBlanksConfig[cIdx].push(correctVal);
+                    (q.tableRows || []).forEach((row, rIdx) => {
+                      row.cells.forEach((cell, cIdx) => {
+                        if (cell.tipo === 'blank') {
+                          totalBlanksCount++;
+                          const correctVal = cell.correctOptionIdx ?? 0;
+                          if (!colBlanksConfig[cIdx]) colBlanksConfig[cIdx] = [];
+                          colBlanksConfig[cIdx].push(correctVal);
 
-                                    const userVal = userAnswersObj[`${rIdx}-${cIdx}`];
-                                    if (userVal !== undefined && userVal !== '') {
-                                      if (!colBlanksStudentAnswers[cIdx]) colBlanksStudentAnswers[cIdx] = [];
-                                      colBlanksStudentAnswers[cIdx].push(Number(userVal));
-                                    }
-                                  }
-                                });
-                              });
+                          const userVal = userAnswersObj[`${rIdx}-${cIdx}`];
+                          if (userVal !== undefined && userVal !== '') {
+                            if (!colBlanksStudentAnswers[cIdx]) colBlanksStudentAnswers[cIdx] = [];
+                            colBlanksStudentAnswers[cIdx].push(Number(userVal));
+                          }
+                        }
+                      });
+                    });
 
-                              Object.keys(colBlanksConfig).forEach((keyStr) => {
-                                const cIdx = Number(keyStr);
-                                const allowed = [...colBlanksConfig[cIdx]];
-                                const studentAnswers = colBlanksStudentAnswers[cIdx] || [];
+                    Object.keys(colBlanksConfig).forEach((keyStr) => {
+                      const cIdx = Number(keyStr);
+                      const allowed = [...colBlanksConfig[cIdx]];
+                      const studentAnswers = colBlanksStudentAnswers[cIdx] || [];
 
-                                studentAnswers.forEach((val) => {
-                                  const indexInAllowed = allowed.indexOf(val);
-                                  if (indexInAllowed !== -1) {
-                                    correctBlanksCount++;
-                                    allowed.splice(indexInAllowed, 1);
-                                  }
-                                });
-                              });
+                      studentAnswers.forEach((val) => {
+                        const indexInAllowed = allowed.indexOf(val);
+                        if (indexInAllowed !== -1) {
+                          correctBlanksCount++;
+                          allowed.splice(indexInAllowed, 1);
+                        }
+                      });
+                    });
 
-                              const fraction = totalBlanksCount > 0 ? (correctBlanksCount / totalBlanksCount) : 0;
-                              return Math.round(q.puntos * fraction);
-                            })()
-                            : (isCorrect ? q.puntos : 0)
-                          )
-                      );
+                    const fraction = totalBlanksCount > 0 ? (correctBlanksCount / totalBlanksCount) : 0;
+                    earnedPoints = Math.round(q.puntos * fraction);
+                  } else {
+                    earnedPoints = isCorrect ? q.puntos : 0;
+                  }
 
                   const bannerBg = isTextGraded 
                     ? 'bg-slate-50 border-slate-205'
@@ -1020,8 +1058,12 @@ export default function Resultados({
                           <div className="space-y-2">
                             {(q.incisos || []).map((inc, iIdx) => {
                               const letter = String.fromCharCode(97 + iIdx);
+                              const isVF = (q.modoIncisos || 'vf') === 'vf' || inc.tipo === 'vf';
                               const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
-                              const sText = userAnsObj[iIdx] || 'Sin responder';
+                              const sVal = userAnsObj[iIdx];
+                              const expectedVF = inc.respuestaVF || 'V';
+                              const isItemCorrect = isVF && sVal === expectedVF;
+
                               return (
                                 <div key={iIdx} className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 shadow-2xs">
                                   <div className="flex items-start gap-2">
@@ -1029,15 +1071,40 @@ export default function Resultados({
                                       {letter})
                                     </span>
                                     <span className="font-semibold text-slate-700 dark:text-slate-300 flex-1">{inc.texto}</span>
+                                    {isVF && sVal && (
+                                      <span className={`px-2 py-0.5 rounded text-[10.5px] font-black shrink-0 ${
+                                        isItemCorrect 
+                                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' 
+                                          : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
+                                      }`}>
+                                        {isItemCorrect ? '✅ Correcto' : '❌ Incorrecto'}
+                                      </span>
+                                    )}
                                   </div>
-                                  <div className="pl-6 text-slate-900 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-100 dark:border-slate-800">
-                                    <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Respuesta del estudiante:</span>
-                                    <p className="whitespace-pre-wrap">{sText}</p>
-                                  </div>
-                                  {inc.respuestaEsperada && (
-                                    <div className="pl-6 text-[11px] text-emerald-700 dark:text-emerald-400">
-                                      <span className="font-bold">Guía / Clave esperada:</span> {inc.respuestaEsperada}
+
+                                  {isVF ? (
+                                    <div className="pl-6 flex flex-wrap items-center gap-3 text-xs pt-0.5">
+                                      <span className="font-bold text-slate-700 dark:text-slate-300">
+                                        Elegiste: <span className="font-black underline">{sVal ? (sVal === 'V' ? 'Verdadero (V)' : 'Falso (F)') : 'Sin responder'}</span>
+                                      </span>
+                                      {!isItemCorrect && (
+                                        <span className="text-emerald-700 dark:text-emerald-300 font-extrabold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                          Correcta: {expectedVF === 'V' ? 'Verdadero (V)' : 'Falso (F)'}
+                                        </span>
+                                      )}
                                     </div>
+                                  ) : (
+                                    <>
+                                      <div className="pl-6 text-slate-900 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900/60 p-2 rounded border border-slate-100 dark:border-slate-800">
+                                        <span className="text-[10px] text-slate-400 font-bold block mb-0.5">Respuesta del estudiante:</span>
+                                        <p className="whitespace-pre-wrap">{sVal || 'Sin responder'}</p>
+                                      </div>
+                                      {inc.respuestaEsperada && (
+                                        <div className="pl-6 text-[11px] text-emerald-700 dark:text-emerald-400">
+                                          <span className="font-bold">Guía / Clave esperada:</span> {inc.respuestaEsperada}
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               );
