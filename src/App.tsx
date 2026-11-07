@@ -120,6 +120,7 @@ import Finanzas from './components/Finanzas';
 import Educativo from './components/Educativo';
 import Biblia from './components/Biblia';
 import Papelera from './components/Papelera';
+import CentroNotificaciones from './components/CentroNotificaciones';
 import ShareAppModal from './components/ShareAppModal';
 
 export default function App() {
@@ -545,7 +546,7 @@ export default function App() {
   const isTabAllowedForUser = (tab: string, user?: User | null): boolean => {
     if (!user) return false;
     if (user.rol === 'admin') return true;
-    if (tab === 'dashboard') return true;
+    if (tab === 'dashboard' || tab === 'notificaciones') return true;
 
     const catObj = getModuleCategory(tab);
     const catId = catObj.id;
@@ -1034,6 +1035,13 @@ export default function App() {
       case 'miHistorial':
         return { id: 'estudiante', name: 'Estudiante' };
 
+      case 'notificaciones':
+        return currentUser?.rol === 'docente' 
+          ? { id: 'docente', name: 'Docente' }
+          : currentUser?.rol === 'admin'
+            ? { id: 'admin', name: 'Administrador' }
+            : { id: 'estudiante', name: 'Estudiante' };
+
       case 'usuarios':
       case 'docentes':
       case 'instituciones':
@@ -1055,6 +1063,7 @@ export default function App() {
   // Helper to get friendly name of active module
   const getModuleName = (tab: string) => {
     switch (tab) {
+      case 'notificaciones': return 'Centro de Notificaciones';
       case 'asistencia': return 'Control de Asistencia';
       case 'boletines': return 'Boletines Académicos';
       case 'agenda': return 'Agenda Escolar';
@@ -1085,6 +1094,7 @@ export default function App() {
   };
 
   const ALL_MODULE_TABS: Array<{ id: string; name: string; catId: string; catName: string }> = [
+    { id: 'notificaciones', name: 'Centro de Notificaciones', catId: 'estudiante', catName: 'Estudiante' },
     { id: 'asistencia', name: 'Control de Asistencia', catId: 'gestion', catName: 'Gestión Escolar' },
     { id: 'boletines', name: 'Boletines Académicos', catId: 'gestion', catName: 'Gestión Escolar' },
     { id: 'agenda', name: 'Agenda Escolar', catId: 'gestion', catName: 'Gestión Escolar' },
@@ -1457,6 +1467,24 @@ export default function App() {
           <Finanzas
             currentUser={currentUser}
             users={db.users}
+            toast={showToast}
+          />
+        );
+      case 'notificaciones':
+        return (
+          <CentroNotificaciones
+            currentUser={currentUser}
+            exams={db.exams}
+            assignments={db.assignments}
+            assignmentSubmissions={db.assignmentSubmissions || []}
+            submissions={db.submissions}
+            subjects={db.subjects}
+            parciales={db.parciales}
+            onNavigate={(tab) => {
+              setActiveTab(tab);
+              setActiveEditExamId(null);
+            }}
+            onTakeExam={(id) => setActiveTakeExamId(id)}
             toast={showToast}
           />
         );

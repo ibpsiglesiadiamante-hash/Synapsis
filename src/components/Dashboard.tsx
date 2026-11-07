@@ -147,32 +147,13 @@ export default function Dashboard({
     }));
   };
 
-  const isCurrentViewCollapsed = selectedCategory === 'todas'
-    ? ['gestion', 'recursos', 'docente', 'estudiante', 'admin'].every(key => !!collapsedSections[key])
-    : !!collapsedSections[selectedCategory];
+  const isCurrentViewCollapsed = !!collapsedSections[selectedCategory];
 
   const toggleAllSections = () => {
-    if (selectedCategory === 'todas') {
-      if (isCurrentViewCollapsed) {
-        // Desplegar todos los módulos
-        setCollapsedSections({});
-      } else {
-        // Plegar todo el menú
-        setCollapsedSections({
-          gestion: true,
-          recursos: true,
-          docente: true,
-          estudiante: true,
-          admin: true
-        });
-      }
-    } else {
-      // Plegar o desplegar la categoría actual seleccionada
-      setCollapsedSections(prev => ({
-        ...prev,
-        [selectedCategory]: !prev[selectedCategory]
-      }));
-    }
+    setCollapsedSections(prev => ({
+      ...prev,
+      [selectedCategory]: !prev[selectedCategory]
+    }));
   };
 
   // Define unified sorted lists
@@ -447,7 +428,7 @@ export default function Dashboard({
     {
       id: 'gestion',
       name: 'Gestión Escolar',
-      badgeCount: 5,
+      badgeCount: 6,
       accentDot: 'bg-teal-400',
       modules: [
         {
@@ -489,6 +470,14 @@ export default function Dashboard({
           icon: <DollarSign className="w-4 h-4" />,
           pageId: 'finanzas',
           color: 'text-emerald-400'
+        },
+        {
+          id: 'notificaciones',
+          title: 'Notificaciones',
+          desc: 'Alertas institucionales, exámenes y tareas',
+          icon: <BellRing className="w-4 h-4" />,
+          pageId: 'notificaciones',
+          color: 'text-rose-400'
         }
       ]
     },
@@ -519,7 +508,7 @@ export default function Dashboard({
     {
       id: 'docente',
       name: 'Docente',
-      badgeCount: 3,
+      badgeCount: 4,
       accentDot: 'bg-cyan-400',
       modules: [
         {
@@ -545,13 +534,21 @@ export default function Dashboard({
           icon: <BarChart3 className="w-4 h-4" />,
           pageId: 'resultados',
           color: 'text-emerald-300'
+        },
+        {
+          id: 'notificaciones',
+          title: 'Notificaciones',
+          desc: 'Avisos académicos y alertas de cursos',
+          icon: <BellRing className="w-4 h-4" />,
+          pageId: 'notificaciones',
+          color: 'text-rose-400'
         }
       ]
     },
     {
       id: 'estudiante',
       name: 'Estudiante',
-      badgeCount: 3,
+      badgeCount: 4,
       accentDot: 'bg-purple-400',
       modules: [
         {
@@ -577,6 +574,14 @@ export default function Dashboard({
           icon: <Clock className="w-4 h-4" />,
           pageId: 'miHistorial',
           color: 'text-amber-300'
+        },
+        {
+          id: 'notificaciones',
+          title: 'Notificaciones',
+          desc: 'Alertas de exámenes próximos y tareas',
+          icon: <BellRing className="w-4 h-4" />,
+          pageId: 'notificaciones',
+          color: 'text-rose-400'
         }
       ]
     },
@@ -786,293 +791,34 @@ export default function Dashboard({
             <span className="text-[11px] text-teal-200/70 hidden sm:inline">Cifras confidenciales ocultas a terceros</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowMetrics(prev => !prev)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-bold text-xs tracking-wide shadow-md shadow-cyan-500/20 cursor-pointer transition-all active:scale-95"
-          >
-            {showMetrics ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{showMetrics ? 'Ocultar tarjetas de métricas' : 'Revelar tarjetas de métricas'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================= */}
-      {/* CENTRO DE NOTIFICACIONES Y ALERTAS ACADÉMICAS             */}
-      {/* Alertas sobre exámenes próximos y nuevas tareas           */}
-      {/* ========================================================= */}
-      <div 
-        id="centro-notificaciones" 
-        className="rounded-3xl bg-gradient-to-br from-[#062c34] via-[#07323c] to-[#083a46] border border-[#125868] p-4 sm:p-6 shadow-[0_12px_32px_rgba(0,0,0,0.5)] transition-all scroll-mt-24"
-      >
-        {/* Top Header of the Notification Center */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#0f4652]">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-400/40 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-              <BellRing className={`w-5 h-5 ${unreadCount > 0 ? 'text-cyan-300 animate-bounce' : 'text-teal-400'}`} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-sm sm:text-base font-black tracking-wide uppercase text-white text-relief-header">
-                  Centro de Notificaciones Académicas
-                </h2>
-                {unreadCount > 0 ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono bg-rose-500 text-white shadow-[0_0_10px_rgba(244,63,94,0.4)] animate-pulse">
-                    {unreadCount} {unreadCount === 1 ? 'pendiente' : 'pendientes'}
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
-                    ✓ Al día
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] sm:text-xs text-teal-200/70 mt-0.5 leading-relaxed">
-                {userRole === 'estudiante'
-                  ? 'Alertas en tiempo real sobre exámenes programados por presentar y nuevas tareas académicas publicadas.'
-                  : 'Panel de avisos institucionales sobre evaluaciones vigentes y asignaciones de cursos.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Controls: Filter Pills & Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-            {/* Filter Pills */}
-            <div className="inline-flex rounded-xl p-1 bg-[#041d22] border border-[#0f4450]">
-              <button
-                type="button"
-                onClick={() => setNotifFilter('todas')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  notifFilter === 'todas'
-                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
-                    : 'text-teal-200/70 hover:text-white'
-                }`}
-              >
-                Todas ({showReadNotifs ? allNotifications.length : pendingNotifications.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setNotifFilter('exams')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  notifFilter === 'exams'
-                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
-                    : 'text-teal-200/70 hover:text-white'
-                }`}
-              >
-                <span>📝 Exámenes</span>
-                <span>({(showReadNotifs ? allNotifications : pendingNotifications).filter(n => n.type === 'exam').length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setNotifFilter('tasks')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  notifFilter === 'tasks'
-                    ? 'bg-cyan-500 text-slate-950 shadow-xs'
-                    : 'text-teal-200/70 hover:text-white'
-                }`}
-              >
-                <span>📋 Tareas</span>
-                <span>({(showReadNotifs ? allNotifications : pendingNotifications).filter(n => n.type === 'assignment').length})</span>
-              </button>
-            </div>
-
-            {/* Quick Actions */}
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleMarkAllAsRead}
-                className="px-2.5 py-1.5 rounded-xl bg-[#05242a] hover:bg-[#09363e] border border-[#104c5a] text-cyan-300 text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1 select-none"
-                title="Marcar todas las alertas como leídas"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Marcar leídas</span>
-              </button>
-            )}
-
-            {readNotifIds.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowReadNotifs(prev => !prev)}
-                className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-colors cursor-pointer select-none ${
-                  showReadNotifs 
-                    ? 'bg-cyan-950/80 border-cyan-500/60 text-cyan-300' 
-                    : 'bg-[#05242a] border-[#104c5a] text-teal-200/70 hover:text-white'
-                }`}
-              >
-                {showReadNotifs ? 'Ocultar leídas' : `Ver leídas (${readNotifIds.length})`}
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate('notificaciones')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#073038] hover:bg-[#0a3d47] border border-[#104d5b] hover:border-cyan-400 text-teal-100 hover:text-white font-bold text-xs tracking-wide cursor-pointer transition-all shadow-xs"
+              title="Abrir Centro de Notificaciones Académicas"
+            >
+              <BellRing className={`w-3.5 h-3.5 ${unreadCount > 0 ? 'text-cyan-300 animate-bounce' : 'text-teal-400'}`} />
+              <span>Notificaciones</span>
+              {unreadCount > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
+                  {unreadCount}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-emerald-400">✓</span>
+              )}
+            </button>
 
             <button
               type="button"
-              onClick={() => setIsNotifCollapsed(prev => !prev)}
-              className="p-1.5 rounded-xl bg-[#05242a] border border-[#104c5a] hover:border-cyan-400 text-cyan-300 cursor-pointer transition-colors"
-              title={isNotifCollapsed ? 'Expandir panel de notificaciones' : 'Plegar panel de notificaciones'}
+              onClick={() => setShowMetrics(prev => !prev)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-bold text-xs tracking-wide shadow-md shadow-cyan-500/20 cursor-pointer transition-all active:scale-95"
             >
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${!isNotifCollapsed ? 'rotate-180' : ''}`} />
+              {showMetrics ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span>{showMetrics ? 'Ocultar tarjetas de métricas' : 'Revelar tarjetas de métricas'}</span>
             </button>
           </div>
         </div>
-
-        {/* Notification Body */}
-        {!isNotifCollapsed ? (
-          <div className="pt-4">
-            {displayedNotifications.length === 0 ? (
-              <div className="py-8 px-4 rounded-2xl bg-[#041f25]/60 border border-[#0d3f4a] text-center space-y-2">
-                <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center text-emerald-400 mx-auto">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-bold text-white">
-                  {readNotifIds.length > 0 && !showReadNotifs
-                    ? 'Todas las notificaciones pendientes han sido atendidas o marcadas como leídas'
-                    : '¡Estás al día! No hay exámenes pendientes ni tareas pendientes de entrega'}
-                </h3>
-                <p className="text-xs text-teal-200/70 max-w-md mx-auto">
-                  {readNotifIds.length > 0 && !showReadNotifs
-                    ? 'Puedes activar "Ver leídas" para revisar el historial de alertas académicas.'
-                    : 'Cualquier nueva evaluación o trabajo que publique tu docente aparecerá automáticamente en este panel.'}
-                </p>
-                {readNotifIds.length > 0 && !showReadNotifs && (
-                  <button
-                    type="button"
-                    onClick={() => setShowReadNotifs(true)}
-                    className="mt-2 text-xs font-bold text-cyan-300 hover:underline inline-block cursor-pointer"
-                  >
-                    Mostrar {readNotifIds.length} alertas leídas →
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {displayedNotifications.map(item => {
-                  const isRead = readNotifIds.includes(item.id);
-                  const isExam = item.type === 'exam';
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`relative rounded-2xl border p-4 transition-all duration-200 flex flex-col justify-between gap-3 group ${
-                        isRead
-                          ? 'bg-[#041c21]/60 border-[#0e434f] opacity-80'
-                          : item.urgency === 'urgent'
-                            ? 'bg-gradient-to-br from-[#072d35] via-[#093842] to-[#0c4350] border-rose-500/50 shadow-[0_4px_20px_rgba(244,63,94,0.15)] ring-1 ring-rose-500/30'
-                            : 'bg-gradient-to-br from-[#072d35] to-[#093740] border-[#125868] hover:border-cyan-400/80 shadow-md'
-                      }`}
-                    >
-                      <div>
-                        {/* Tags Header Row */}
-                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {/* Type Badge */}
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border flex items-center gap-1 ${
-                              isExam 
-                                ? 'bg-cyan-950/80 border-cyan-500/50 text-cyan-300' 
-                                : 'bg-purple-950/80 border-purple-500/50 text-purple-300'
-                            }`}>
-                              {isExam ? <GraduationCap className="w-3 h-3" /> : <ClipboardList className="w-3 h-3" />}
-                              <span>{isExam ? 'Examen Evaluativo' : 'Tarea Académica'}</span>
-                            </span>
-
-                            {/* Subject Badge */}
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#041c21] border border-[#11505e] text-teal-200/90 truncate max-w-[170px]" title={item.subjectName}>
-                              📚 {item.subjectName}
-                            </span>
-                          </div>
-
-                          {/* Urgency Badge */}
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 border flex items-center gap-1 ${
-                            item.urgency === 'urgent'
-                              ? 'bg-rose-950/90 border-rose-500/60 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.3)] animate-pulse'
-                              : item.urgency === 'upcoming'
-                                ? 'bg-amber-950/90 border-amber-500/60 text-amber-300'
-                                : 'bg-emerald-950/90 border-emerald-500/60 text-emerald-300'
-                          }`}>
-                            {item.urgency === 'urgent' && <Flame className="w-3 h-3 text-rose-400" />}
-                            <span>{item.badgeText}</span>
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-cyan-200 transition-colors line-clamp-2 leading-snug">
-                          {item.title}
-                        </h4>
-
-                        {/* Subtitle / Description */}
-                        {item.subtitle && (
-                          <p className="text-[11px] text-teal-200/70 mt-1 line-clamp-2 leading-relaxed">
-                            {item.subtitle}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Bottom Info & Action CTA */}
-                      <div className="pt-3 border-t border-[#0e4450] flex items-center justify-between gap-3 mt-1">
-                        <div className="flex items-center gap-2 text-[11px] text-teal-200/80 font-medium truncate">
-                          {isExam ? (
-                            <>
-                              <span className="flex items-center gap-1 text-cyan-300">
-                                <Clock className="w-3 h-3 text-cyan-400" />
-                                <span>{item.dueLabel}</span>
-                              </span>
-                              {item.attemptsLeft !== undefined && (
-                                <span className="hidden sm:inline text-teal-400/60">· {item.attemptsLeft} disp.</span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-amber-400" />
-                              <span className={item.urgency === 'urgent' ? 'text-rose-300 font-bold' : 'text-teal-200/90'}>
-                                {item.dueLabel}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={(e) => handleMarkAsRead(item.id, e)}
-                            className="p-1.5 rounded-lg bg-[#041c21] hover:bg-[#07323b] border border-[#104b58] text-teal-300 hover:text-white transition-colors cursor-pointer"
-                            title={isRead ? 'Marcar como pendiente' : 'Marcar como leída'}
-                          >
-                            <Check className={`w-3.5 h-3.5 ${isRead ? 'text-cyan-400' : 'opacity-60'}`} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={item.onAction}
-                            className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 ${
-                              isExam 
-                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-emerald-500/20'
-                                : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 shadow-cyan-500/20'
-                            }`}
-                          >
-                            <span>{item.actionLabel}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="pt-2 flex items-center justify-between text-xs text-teal-200/80">
-            <span>
-              🔔 Tienes <strong>{unreadCount}</strong> alertas académicas activas ({examsPendingCount} exámenes · {tasksPendingCount} tareas).
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsNotifCollapsed(false)}
-              className="text-xs font-bold text-cyan-300 hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span>Ver todas las alertas</span>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ========================================================= */}
@@ -1192,89 +938,150 @@ export default function Dashboard({
       </div>
 
       {/* ========================================================= */}
-      {/* CATEGORY SECTIONS WITH REAL MODULE CARDS                  */}
+      {/* UNIFIED MODULE CARDS SECTION (FinteKia Grid Layout)       */}
       {/* ========================================================= */}
-      <div className="space-y-6 pt-1">
-        {filteredCategories.map(cat => {
-          const isCollapsed = !!collapsedSections[cat.id];
-
-          return (
+      <div className="space-y-4 pt-1">
+        {selectedCategory === 'todas' ? (
+          <div className="space-y-3">
+            {/* Header matching image_6cec748d.png */}
             <div 
-              key={cat.id} 
-              id={`category-${cat.id}`} 
-              className={`space-y-3 scroll-mt-24 transition-all rounded-3xl p-3 sm:p-4 border ${
-                selectedCategory === cat.id 
-                  ? 'bg-[#062c34]/70 border-cyan-500/60 shadow-[0_0_25px_rgba(6,182,212,0.15)] ring-1 ring-cyan-400/40' 
-                  : 'bg-transparent border-transparent'
-              }`}
+              onClick={() => toggleSection('todas')}
+              className="flex items-center justify-between cursor-pointer group select-none py-1"
             >
-              {/* Category Header with 3D Relief and glowing dot */}
-              <div 
-                onClick={() => toggleSection(cat.id)}
-                className="flex items-center justify-between cursor-pointer group select-none py-1"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${cat.accentDot} shadow-[0_0_10px_currentColor]`} />
-                  <h2 className="text-xs sm:text-sm font-black tracking-widest uppercase text-white text-relief-header">
-                    {cat.name}
-                  </h2>
-                  {selectedCategory === cat.id && (
-                    <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-950/90 px-2 py-0.5 rounded-full border border-cyan-600/60 font-semibold shadow-xs hidden sm:inline">
-                      Categoría seleccionada
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#072d35] border border-[#11505e] group-hover:border-cyan-400/60 transition-colors">
-                  <span className="text-[10px] font-bold text-teal-200">
-                    {cat.badgeCount} módulos
-                  </span>
-                  {isCollapsed ? (
-                    <ChevronDown className="w-3 h-3 text-cyan-400" />
-                  ) : (
-                    <ChevronUp className="w-3 h-3 text-cyan-400" />
-                  )}
-                </div>
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_10px_currentColor]" />
+                <h2 className="text-xs sm:text-sm font-black tracking-widest uppercase text-white text-relief-header">
+                  TODAS LAS APLICACIONES
+                </h2>
+                <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-950/90 px-2 py-0.5 rounded-full border border-cyan-600/60 font-semibold shadow-xs hidden sm:inline">
+                  Catálogo general unificado
+                </span>
               </div>
 
-              {/* Module Cards Grid */}
-              {!isCollapsed && (
-                <div className={`grid gap-3 ${
-                  cardSize === 'mini' 
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
-                    : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                }`}>
-                  {cat.modules.map(mod => (
-                    <div
-                      key={mod.id}
-                      onClick={() => onNavigate(mod.pageId)}
-                      className={`bg-gradient-to-br from-[#072d35] to-[#093740] hover:from-[#0a3842] hover:to-[#0d4552] border border-[#115260] hover:border-cyan-400/80 rounded-2xl p-3.5 shadow-md flex items-center gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.98] ${
-                        cardSize === 'mediana' ? 'py-4' : ''
-                      }`}
-                    >
-                      {/* Left icon box */}
-                      <div className="w-11 h-11 rounded-xl bg-[#052127] border border-[#125868] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-cyan-400/60 transition-transform">
-                        <span className={mod.color}>
-                          {mod.icon}
-                        </span>
-                      </div>
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#072d35] border border-[#11505e] group-hover:border-cyan-400/60 transition-colors">
+                <span className="text-[10px] font-bold text-teal-200">
+                  {availableCategories.reduce((acc, c) => acc + c.modules.length, 0)} módulos
+                </span>
+                {collapsedSections['todas'] ? (
+                  <ChevronDown className="w-3 h-3 text-cyan-400" />
+                ) : (
+                  <ChevronUp className="w-3 h-3 text-cyan-400" />
+                )}
+              </div>
+            </div>
 
-                      {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
-                          {mod.title}
-                        </div>
-                        <div className="text-[11px] text-teal-200/70 truncate mt-0.5">
-                          {mod.desc}
-                        </div>
+            {/* Unified Grid without vertical accordion splitting */}
+            {!collapsedSections['todas'] ? (
+              <div className={`grid gap-3 ${
+                cardSize === 'mini' 
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+                  : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              }`}>
+                {availableCategories.flatMap(c => c.modules).map(mod => (
+                  <div
+                    key={mod.id}
+                    onClick={() => onNavigate(mod.pageId)}
+                    className={`bg-gradient-to-br from-[#072d35] to-[#093740] hover:from-[#0a3842] hover:to-[#0d4552] border border-[#115260] hover:border-cyan-400/80 rounded-2xl p-3.5 shadow-md flex items-center gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.98] ${
+                      cardSize === 'mediana' ? 'py-4' : ''
+                    }`}
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-[#052127] border border-[#125868] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-cyan-400/60 transition-transform">
+                      <span className={mod.color}>
+                        {mod.icon}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                        {mod.title}
+                      </div>
+                      <div className="text-[11px] text-teal-200/70 truncate mt-0.5">
+                        {mod.desc}
                       </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 px-4 bg-[#062c34]/40 border border-[#11505e]/60 rounded-2xl text-teal-200/70 text-xs font-semibold">
+                Módulos plegados. Haz clic en Desplegar para ver el catálogo de aplicaciones.
+              </div>
+            )}
+          </div>
+        ) : (
+          (() => {
+            const activeCat = availableCategories.find(c => c.id === selectedCategory) || availableCategories[0];
+            const isCatCollapsed = !!collapsedSections[activeCat.id];
+
+            return (
+              <div className="space-y-3">
+                {/* Category Header matching image_6cec748d.png */}
+                <div 
+                  onClick={() => toggleSection(activeCat.id)}
+                  className="flex items-center justify-between cursor-pointer group select-none py-1"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${activeCat.accentDot} shadow-[0_0_10px_currentColor]`} />
+                    <h2 className="text-xs sm:text-sm font-black tracking-widest uppercase text-white text-relief-header">
+                      {activeCat.name}
+                    </h2>
+                    <span className="text-[9.5px] font-mono text-cyan-300 bg-cyan-950/90 px-2 py-0.5 rounded-full border border-cyan-600/60 font-semibold shadow-xs">
+                      Categoría seleccionada
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#072d35] border border-[#11505e] group-hover:border-cyan-400/60 transition-colors">
+                    <span className="text-[10px] font-bold text-teal-200">
+                      {activeCat.modules.length} módulos
+                    </span>
+                    {isCatCollapsed ? (
+                      <ChevronDown className="w-3 h-3 text-cyan-400" />
+                    ) : (
+                      <ChevronUp className="w-3 h-3 text-cyan-400" />
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
+
+                {!isCatCollapsed ? (
+                  <div className={`grid gap-3 ${
+                    cardSize === 'mini' 
+                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                  }`}>
+                    {activeCat.modules.map(mod => (
+                      <div
+                        key={mod.id}
+                        onClick={() => onNavigate(mod.pageId)}
+                        className={`bg-gradient-to-br from-[#072d35] to-[#093740] hover:from-[#0a3842] hover:to-[#0d4552] border border-[#115260] hover:border-cyan-400/80 rounded-2xl p-3.5 shadow-md flex items-center gap-3 cursor-pointer group transition-all duration-200 active:scale-[0.98] ${
+                          cardSize === 'mediana' ? 'py-4' : ''
+                        }`}
+                      >
+                        <div className="w-11 h-11 rounded-xl bg-[#052127] border border-[#125868] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-cyan-400/60 transition-transform">
+                          <span className={mod.color}>
+                            {mod.icon}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                            {mod.title}
+                          </div>
+                          <div className="text-[11px] text-teal-200/70 truncate mt-0.5">
+                            {mod.desc}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 px-4 bg-[#062c34]/40 border border-[#11505e]/60 rounded-2xl text-teal-200/70 text-xs font-semibold">
+                    Módulos de {activeCat.name} plegados. Haz clic en Desplegar para ver sus tarjetas.
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        )}
       </div>
 
       {/* ========================================================= */}

@@ -38,6 +38,8 @@ export default function Resultados({
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
   const [showDangerZone, setShowDangerZone] = useState(false);
+  const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -47,6 +49,20 @@ export default function Resultados({
   const [isSavingGrading, setIsSavingGrading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [failedSubmissionIds, setFailedSubmissionIds] = useState<string[]>([]);
+
+  const handleDeleteSubmission = async (subId: string, studentName: string) => {
+    try {
+      setIsDeleting(true);
+      const updated = submissions.filter(sub => sub.id !== subId);
+      await onUpdateSubmissions(updated);
+      toast(`Intento de ${studentName} eliminado con éxito`, 'success');
+    } catch {
+      toast('Error al eliminar el intento', 'error');
+    } finally {
+      setIsDeleting(false);
+      setDeletingSubId(null);
+    }
+  };
 
   // Warn if user attempts to close window while grading persistence is in progress
   useEffect(() => {
@@ -610,23 +626,40 @@ export default function Resultados({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button 
                                     onClick={() => handleOpenGradingModal(s.id)}
-                                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-705 text-xs font-bold rounded-lg transition duration-150 cursor-pointer"
+                                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition duration-150 cursor-pointer shadow-2xs"
                                   >
                                     Ver respuestas
                                   </button>
-                                  {currentUser.rol === 'admin' && showDangerZone && (
+
+                                  {deletingSubId === s.id ? (
+                                    <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg shadow-xs animate-fade-in">
+                                      <span className="text-[11px] font-bold text-rose-700">¿Eliminar?</span>
+                                      <button
+                                        type="button"
+                                        disabled={isDeleting}
+                                        onClick={() => handleDeleteSubmission(s.id, stName)}
+                                        className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded transition cursor-pointer disabled:opacity-50"
+                                      >
+                                        {isDeleting ? '...' : 'Sí'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isDeleting}
+                                        onClick={() => setDeletingSubId(null)}
+                                        className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded transition cursor-pointer"
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  ) : (
                                     <button 
-                                      onClick={() => {
-                                        if (window.confirm(`¿Seguro que deseas eliminar el intento de ${stName}? Esta acción no se puede deshacer.`)) {
-                                          const updated = submissions.filter(sub => sub.id !== s.id);
-                                          onUpdateSubmissions(updated);
-                                          toast(`Intento de ${stName} eliminado con éxito`, 'success');
-                                        }
-                                      }}
-                                      className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-transparent hover:border-rose-105 rounded-lg transition cursor-pointer"
-                                      title="Eliminar este intento"
+                                      type="button"
+                                      onClick={() => setDeletingSubId(s.id)}
+                                      className="px-2 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition duration-150 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                      title={`Eliminar este intento de ${stName}`}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Eliminar</span>
                                     </button>
                                   )}
                                 </div>

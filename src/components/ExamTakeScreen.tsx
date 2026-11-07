@@ -627,13 +627,13 @@ export default function ExamTakeScreen({
               >
                 <div className="flex justify-between items-start gap-4 mb-3">
                   <div className="flex items-start">
-                    <span className="text-slate-900 dark:text-slate-100 text-[14px] sm:text-[14.5px] font-semibold leading-relaxed whitespace-pre-wrap">
-                      <span className="font-bold mr-1">{idx + 1}.</span> {qItem.texto || (qItem as any).enunciado || 'Pregunta sin texto'}
+                    <span className="text-slate-900 text-[15px] sm:text-[15.5px] font-bold leading-relaxed whitespace-pre-wrap">
+                      <span className="font-extrabold mr-1 text-slate-950">{idx + 1}.</span> {qItem.texto || (qItem as any).enunciado || 'Pregunta sin texto'}
                     </span>
-                    <span className="text-rose-600 font-bold ml-1" title="Pregunta obligatoria">*</span>
+                    <span className="text-rose-600 font-bold ml-1 text-base leading-none" title="Pregunta obligatoria">*</span>
                   </div>
                   
-                  <span className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold shrink-0 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md font-mono select-none">
+                  <span className="text-[11px] text-slate-700 font-bold shrink-0 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md font-mono select-none shadow-2xs">
                     {qItem.puntos} {qItem.puntos === 1 ? 'punto' : 'puntos'}
                   </span>
                 </div>
@@ -651,18 +651,18 @@ export default function ExamTakeScreen({
                             e.stopPropagation();
                             handleSetAnswer(qItem.id, oIdx);
                           }}
-                          className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition duration-150 cursor-pointer group"
+                          className="flex items-center gap-2.5 py-2 px-2 hover:bg-slate-100/70 rounded-md transition duration-150 cursor-pointer group"
                         >
                           <div className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                             isChecked 
                               ? 'border-[#673ab7]' 
-                              : 'border-slate-400 dark:border-slate-500 group-hover:border-slate-800 dark:group-hover:border-slate-200'
+                              : 'border-slate-400 group-hover:border-slate-800'
                           }`}>
                             {isChecked && (
                               <div className="w-2 h-2 rounded-full bg-[#673ab7]" />
                             )}
                           </div>
-                          <span className="text-slate-800 dark:text-slate-100 text-[13px] leading-relaxed font-medium whitespace-pre-wrap">{opt}</span>
+                          <span className="text-slate-900 text-[13.5px] leading-relaxed font-semibold whitespace-pre-wrap">{opt}</span>
                         </div>
                       );
                     })
@@ -671,7 +671,7 @@ export default function ExamTakeScreen({
                   {/* Checkboxes items list */}
                   {qItem.tipo === 'checkbox' && (
                     <div className="space-y-2">
-                      <div className="text-[12px] font-semibold text-indigo-700 bg-indigo-50/70 border border-indigo-150 px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 mb-1 select-none">
+                      <div className="text-[12px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 mb-1 select-none">
                         <span>ℹ️</span>
                         <span>
                           {qItem.maxRespuestas !== undefined 
@@ -691,18 +691,18 @@ export default function ExamTakeScreen({
                               e.stopPropagation();
                               handleToggleCheckbox(qItem.id, oIdx);
                             }}
-                            className="flex items-center gap-2.5 py-1.5 px-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition duration-150 cursor-pointer group"
+                            className="flex items-center gap-2.5 py-2 px-2 hover:bg-slate-100/70 rounded-md transition duration-150 cursor-pointer group"
                           >
                             <div className={`w-[17px] h-[17px] rounded border-2 flex items-center justify-center transition-all shrink-0 ${
                               isChecked 
                                 ? 'border-[#673ab7] bg-[#673ab7] text-white' 
-                                : 'border-slate-400 dark:border-slate-500 bg-transparent group-hover:border-slate-800 dark:group-hover:border-slate-200'
+                                : 'border-slate-400 bg-transparent group-hover:border-slate-800'
                             }`}>
                               {isChecked && (
                                 <Check className="w-3.5 h-3.5 stroke-[3px]" />
                               )}
                             </div>
-                            <span className="text-slate-800 dark:text-slate-100 text-[13px] leading-relaxed font-medium whitespace-pre-wrap">{opt}</span>
+                            <span className="text-slate-900 text-[13.5px] leading-relaxed font-semibold whitespace-pre-wrap">{opt}</span>
                           </div>
                         );
                       })}
@@ -716,7 +716,7 @@ export default function ExamTakeScreen({
                         value={answers[qItem.id] !== undefined ? answers[qItem.id] : ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={e => handleSetAnswer(qItem.id, e.target.value !== '' ? Number(e.target.value) : '')}
-                        className="w-full p-2.5 border-2 border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-800 dark:text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-xs"
+                        className="w-full p-2.5 border-2 border-slate-300 rounded-xl bg-white text-xs sm:text-sm text-slate-900 font-bold focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-xs"
                       >
                         <option value="">-- Selecciona una opción del menú desplegable --</option>
                         {qItem.opciones.map((opt, oIdx) => (
@@ -730,8 +730,8 @@ export default function ExamTakeScreen({
                   {qItem.tipo === 'matching' && (
                     <div className="space-y-4 mt-2 text-left animate-fade-in">
                       {/* Interactive pill representation of Word Bank */}
-                      <div className="bg-indigo-50/40 border border-indigo-100/80 p-4 rounded-xl text-left shadow-sm dark:bg-slate-900/40 dark:border-slate-800">
-                        <span className="text-[11px] font-extrabold text-indigo-750 dark:text-cyan-400 uppercase tracking-wider block mb-2.5 select-none">
+                      <div className="bg-indigo-50/70 border border-indigo-200/80 p-4 rounded-xl text-left shadow-sm">
+                        <span className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block mb-2.5 select-none">
                           📋 Caja de palabras / Banco de opciones (Se tachan automáticamente cuando las colocas)
                         </span>
                         <div className="flex flex-wrap gap-2">
@@ -741,14 +741,14 @@ export default function ExamTakeScreen({
                             return (
                               <span 
                                 key={oIdx} 
-                                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
                                   isUsed 
-                                    ? 'bg-slate-100/80 border-slate-200 text-slate-400 line-through dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-500' 
-                                    : 'bg-white border-slate-205 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 hover:border-indigo-300'
+                                    ? 'bg-slate-200/80 border-slate-300 text-slate-500 line-through' 
+                                    : 'bg-white border-slate-300 text-slate-900 hover:border-indigo-400'
                                 }`}
                               >
                                 {isUsed && (
-                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
                                 )}
                                 <span>{opt}</span>
                               </span>
@@ -762,7 +762,6 @@ export default function ExamTakeScreen({
                         {(qItem.enunciados || []).map((enun, eIdx) => {
                           const currentMap = answers[qItem.id] || {};
                           const selectedValue = currentMap[eIdx] !== undefined ? currentMap[eIdx] : '';
-
                           const hasValue = selectedValue !== '';
 
                           return (
@@ -770,19 +769,19 @@ export default function ExamTakeScreen({
                               key={eIdx} 
                               className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-xl transition duration-200 text-left shadow-sm ${
                                 hasValue 
-                                  ? 'bg-indigo-50/20 border-indigo-200/70 dark:bg-slate-900/20 dark:border-indigo-950' 
-                                  : 'bg-slate-50/50 border-slate-200/80 hover:border-slate-300 dark:bg-slate-900/10 dark:border-slate-800'
+                                  ? 'bg-indigo-50/40 border-indigo-300' 
+                                  : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                               }`}
                             >
-                              <div className="flex items-start gap-2 flex-1 min-w-0">
-                                <span className={`font-bold select-none shrink-0 w-5.5 h-5.5 flex items-center justify-center rounded-md text-[11px] ${
+                              <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                <span className={`font-black select-none shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs ${
                                   hasValue 
-                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' 
-                                    : 'bg-slate-200 text-slate-505 dark:bg-slate-800 dark:text-slate-400'
+                                    ? 'bg-indigo-600 text-white' 
+                                    : 'bg-slate-200 text-slate-700'
                                 }`}>
                                   {eIdx + 1}
                                 </span>
-                                <span className="text-slate-800 text-[13px] font-semibold leading-relaxed dark:text-slate-105 whitespace-pre-wrap">
+                                <span className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap">
                                   {enun}
                                 </span>
                               </div>
@@ -795,10 +794,10 @@ export default function ExamTakeScreen({
                                     const nextMap = { ...currentMap, [eIdx]: e.target.value !== '' ? Number(e.target.value) : '' };
                                     handleSetAnswer(qItem.id, nextMap);
                                   }}
-                                  className={`p-2 border rounded-lg bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200 transition dark:border-slate-700 ${
+                                  className={`p-2.5 border rounded-lg bg-white text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-300 transition ${
                                     hasValue 
-                                      ? 'border-indigo-500 text-indigo-700 dark:border-cyan-500 dark:text-cyan-300' 
-                                      : 'border-slate-300 dark:border-slate-700'
+                                      ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200' 
+                                      : 'border-slate-300 text-slate-800'
                                   }`}
                                   style={{ minWidth: '180px' }}
                                 >
@@ -817,7 +816,7 @@ export default function ExamTakeScreen({
                                       delete nextMap[eIdx];
                                       handleSetAnswer(qItem.id, nextMap);
                                     }}
-                                    className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-955 rounded-lg border border-rose-200 dark:border-rose-900/45 transition shadow-sm font-bold text-xs shrink-0 cursor-pointer"
+                                    className="p-2 text-rose-600 hover:text-rose-850 hover:bg-rose-50 rounded-lg border border-rose-200 transition shadow-xs font-bold text-xs shrink-0 cursor-pointer"
                                     title="Quitar selección"
                                   >
                                     ✕
@@ -834,8 +833,8 @@ export default function ExamTakeScreen({
                   {qItem.tipo === 'table' && (
                     <div className="space-y-4 mt-2 text-left animate-fade-in">
                       {/* Word bank banner */}
-                      <div className="bg-indigo-50/40 border border-indigo-100/80 p-4 rounded-xl text-left shadow-sm dark:bg-slate-900/40 dark:border-slate-800">
-                        <span className="text-[11px] font-extrabold text-indigo-750 dark:text-cyan-400 uppercase tracking-wider block mb-2 select-none">
+                      <div className="bg-indigo-50/70 border border-indigo-200/80 p-4 rounded-xl text-left shadow-sm">
+                        <span className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block mb-2 select-none">
                           📦 Caja de palabras (Se tachan automáticamente cuando las colocas en la tabla)
                         </span>
                         <div className="flex flex-wrap gap-2">
@@ -845,14 +844,14 @@ export default function ExamTakeScreen({
                             return (
                               <span 
                                 key={oIdx} 
-                                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
                                   isUsed 
-                                    ? 'bg-slate-100/80 border-slate-200 text-slate-400 line-through dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-500' 
-                                    : 'bg-white border-slate-205 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-105 hover:border-indigo-300'
+                                    ? 'bg-slate-200/80 border-slate-300 text-slate-500 line-through' 
+                                    : 'bg-white border-slate-300 text-slate-900 hover:border-indigo-400'
                                 }`}
                               >
                                 {isUsed && (
-                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
                                 )}
                                 <span>{opt}</span>
                               </span>
@@ -862,14 +861,14 @@ export default function ExamTakeScreen({
                       </div>
 
                       {/* Interactive Table Grid */}
-                      <div className="overflow-x-auto rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+                      <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
                         <table className="w-full text-sm border-collapse">
                           <thead>
-                             <tr className="bg-slate-105/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                             <tr className="bg-slate-100 border-b border-slate-300">
                               {(qItem.columnas || []).map((col, colIdx) => (
                                 <th 
                                   key={colIdx} 
-                                  className="p-4.5 text-xs font-black text-slate-600 dark:text-slate-350 uppercase tracking-wider text-left border-r border-slate-150 dark:border-slate-800 last:border-0"
+                                  className="p-4 text-xs font-black text-slate-900 uppercase tracking-wider text-left border-r border-slate-200 last:border-0"
                                 >
                                   {col}
                                 </th>
@@ -880,7 +879,7 @@ export default function ExamTakeScreen({
                             {(qItem.tableRows || []).map((row, rIdx) => {
                               const currentMap = answers[qItem.id] || {};
                               return (
-                                <tr key={rIdx} className="border-b border-slate-150 dark:border-slate-800 last:border-0 hover:bg-slate-50/20 dark:hover:bg-slate-900/10 transition">
+                                <tr key={rIdx} className="border-b border-slate-200 last:border-0 hover:bg-slate-50 transition">
                                   {row.cells.map((cell: any, cIdx: number) => {
                                     const selectedValue = currentMap[`${rIdx}-${cIdx}`] !== undefined ? currentMap[`${rIdx}-${cIdx}`] : '';
                                     const hasValue = selectedValue !== '';
@@ -888,14 +887,12 @@ export default function ExamTakeScreen({
                                     return (
                                       <td 
                                         key={cIdx} 
-                                        className={`p-4 text-slate-850 dark:text-slate-200 border-r border-slate-120 dark:border-slate-800 last:border-0 font-medium whitespace-normal align-middle transition-colors ${
-                                          hasValue 
-                                            ? 'bg-indigo-50/10 dark:bg-indigo-950/5' 
-                                            : ''
+                                        className={`p-4 text-slate-900 border-r border-slate-200 last:border-0 font-medium whitespace-normal align-middle transition-colors ${
+                                          hasValue ? 'bg-indigo-50/30' : ''
                                         }`}
                                       >
                                         {cell.tipo === 'texto' ? (
-                                          <span className="text-slate-700 dark:text-slate-300 font-bold block">{cell.valor}</span>
+                                          <span className="text-slate-900 font-bold block">{cell.valor}</span>
                                         ) : (
                                           <div className="flex items-center gap-1.5 my-1 max-w-xs">
                                             <select
@@ -906,10 +903,10 @@ export default function ExamTakeScreen({
                                                 const nextMap = { ...currentMap, [`${rIdx}-${cIdx}`]: nextValue };
                                                 handleSetAnswer(qItem.id, nextMap);
                                               }}
-                                              className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-sm cursor-pointer focus:outline-none focus:border-indigo-550 dark:bg-slate-900 dark:text-slate-100 ${
+                                              className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 ${
                                                 hasValue 
-                                                  ? 'border-indigo-400 text-indigo-755 dark:border-indigo-805 dark:text-indigo-305' 
-                                                  : 'border-slate-220 dark:border-slate-750 text-slate-600'
+                                                  ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200' 
+                                                  : 'border-slate-300 text-slate-800'
                                               }`}
                                             >
                                               <option value="">-- Elige --</option>
@@ -927,7 +924,7 @@ export default function ExamTakeScreen({
                                                   delete nextMap[`${rIdx}-${cIdx}`];
                                                   handleSetAnswer(qItem.id, nextMap);
                                                 }}
-                                                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-955 rounded-lg border border-rose-200 dark:border-rose-900/40 transition shrink-0 cursor-pointer"
+                                                className="p-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg border border-rose-200 transition shrink-0 cursor-pointer"
                                                 title="Quitar"
                                               >
                                                 ✕
@@ -951,8 +948,8 @@ export default function ExamTakeScreen({
                     <div className="space-y-4 mt-2 text-left animate-fade-in">
                       {/* Word bank banner */}
                       {qItem.tableOptions && qItem.tableOptions.length > 0 && (
-                        <div className="bg-indigo-50/40 border border-indigo-100/80 p-4 rounded-xl text-left shadow-sm dark:bg-slate-900/40 dark:border-slate-800">
-                          <span className="text-[11px] font-extrabold text-indigo-750 dark:text-cyan-400 uppercase tracking-wider block mb-2 select-none">
+                        <div className="bg-indigo-50/70 border border-indigo-200/80 p-4 rounded-xl text-left shadow-sm">
+                          <span className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block mb-2 select-none">
                             📦 Opciones para la tabla (Se tachan al seleccionarlas)
                           </span>
                           <div className="flex flex-wrap gap-2">
@@ -962,14 +959,14 @@ export default function ExamTakeScreen({
                               return (
                                 <span
                                   key={oIdx}
-                                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
+                                  className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
                                     isUsed
-                                      ? 'bg-slate-100/80 border-slate-200 text-slate-400 line-through dark:bg-slate-900/80 dark:border-slate-800 dark:text-slate-500'
-                                      : 'bg-white border-slate-205 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-105 hover:border-indigo-300'
+                                      ? 'bg-slate-200/80 border-slate-300 text-slate-500 line-through'
+                                      : 'bg-white border-slate-300 text-slate-900 hover:border-indigo-400'
                                   }`}
                                 >
                                   {isUsed && (
-                                    <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
+                                    <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
                                   )}
                                   <span>{opt}</span>
                                 </span>
@@ -980,14 +977,14 @@ export default function ExamTakeScreen({
                       )}
 
                       {/* Interactive Table Grid */}
-                      <div className="overflow-x-auto rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+                      <div className="overflow-x-auto rounded-xl border border-slate-300 bg-white shadow-sm">
                         <table className="w-full text-sm border-collapse">
                           <thead>
-                            <tr className="bg-slate-105/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                            <tr className="bg-slate-100 border-b border-slate-300">
                               {(qItem.tableColumns || []).map((col, colIdx) => (
                                 <th
                                   key={colIdx}
-                                  className="p-4.5 text-xs font-black text-slate-600 dark:text-slate-350 uppercase tracking-wider text-left border-r border-slate-150 dark:border-slate-800 last:border-0"
+                                  className="p-4 text-xs font-black text-slate-900 uppercase tracking-wider text-left border-r border-slate-200 last:border-0"
                                 >
                                   {col}
                                 </th>
@@ -1001,13 +998,13 @@ export default function ExamTakeScreen({
                               const hasValue = selectedValue !== '';
 
                               return (
-                                <tr key={rIdx} className="border-b border-slate-150 dark:border-slate-800 last:border-0 hover:bg-slate-50/20 dark:hover:bg-slate-900/10 transition">
+                                <tr key={rIdx} className="border-b border-slate-200 last:border-0 hover:bg-slate-50 transition">
                                   {(row.cells || []).map((cellText: string, cIdx: number) => (
                                     <td
                                       key={cIdx}
-                                      className="p-4 text-slate-850 dark:text-slate-200 border-r border-slate-120 dark:border-slate-800 font-medium whitespace-normal align-middle"
+                                      className="p-4 text-slate-900 border-r border-slate-200 font-bold whitespace-normal align-middle"
                                     >
-                                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{cellText}</span>
+                                      <span className="text-slate-900 font-semibold">{cellText}</span>
                                     </td>
                                   ))}
                                   {/* Final column with the select */}
@@ -1021,10 +1018,10 @@ export default function ExamTakeScreen({
                                           const nextMap = { ...currentMap, [rIdx]: nextValue };
                                           handleSetAnswer(qItem.id, nextMap);
                                         }}
-                                        className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-sm cursor-pointer focus:outline-none focus:border-indigo-550 dark:bg-slate-900 dark:text-slate-100 ${
+                                        className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 ${
                                           hasValue
-                                            ? 'border-indigo-400 text-indigo-755 dark:border-indigo-805 dark:text-indigo-305'
-                                            : 'border-slate-220 dark:border-slate-750 text-slate-600'
+                                            ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200'
+                                            : 'border-slate-300 text-slate-800'
                                         }`}
                                       >
                                         <option value="">-- Seleccionar --</option>
@@ -1041,7 +1038,7 @@ export default function ExamTakeScreen({
                                             delete nextMap[rIdx];
                                             handleSetAnswer(qItem.id, nextMap);
                                           }}
-                                          className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-955 rounded-lg border border-rose-200 dark:border-rose-900/40 transition shrink-0 cursor-pointer"
+                                          className="p-2 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg border border-rose-200 transition shrink-0 cursor-pointer"
                                           title="Quitar selección"
                                         >
                                           ✕
@@ -1068,7 +1065,7 @@ export default function ExamTakeScreen({
                         placeholder="Tu respuesta"
                         rows={1}
                         minHeight={38}
-                        className="w-full bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 focus:border-b-2 focus:border-indigo-500 outline-none py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 transition-all duration-200"
+                        className="w-full bg-transparent border-b border-dashed border-slate-400 focus:border-b-2 focus:border-indigo-600 outline-none py-2 text-sm text-slate-950 font-medium placeholder-slate-400 transition-all duration-200"
                       />
                     </div>
                   )}
@@ -1085,12 +1082,12 @@ export default function ExamTakeScreen({
                           : '';
 
                         return (
-                          <div key={iIdx} className="bg-slate-50/80 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                          <div key={iIdx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
                             <div className="flex items-start gap-2.5">
-                              <span className="text-xs font-black px-2.5 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 shrink-0 uppercase tracking-wide">
+                              <span className="text-xs font-black px-2.5 py-0.5 rounded-md bg-white text-slate-900 border border-slate-300 shrink-0 uppercase tracking-wide shadow-2xs">
                                 {letter})
                               </span>
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white leading-relaxed whitespace-pre-wrap">
+                              <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
                                 {inc.texto}
                               </p>
                             </div>
@@ -1110,7 +1107,7 @@ export default function ExamTakeScreen({
                                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
                                     val === 'V'
                                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/30'
-                                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-400'
+                                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
                                   }`}
                                 >
                                   <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
@@ -1133,7 +1130,7 @@ export default function ExamTakeScreen({
                                   className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
                                     val === 'F'
                                       ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-400/30'
-                                      : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-400'
+                                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
                                   }`}
                                 >
                                   <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
@@ -1158,7 +1155,7 @@ export default function ExamTakeScreen({
                                   placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
                                   rows={1}
                                   minHeight={38}
-                                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
+                                  className="w-full bg-white border border-slate-300 focus:border-indigo-600 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
                                 />
                               </div>
                             )}
