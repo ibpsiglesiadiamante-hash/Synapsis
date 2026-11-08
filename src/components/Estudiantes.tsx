@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { 
   Users, Plus, Trash2, Edit2, Search, BookOpen, GraduationCap, 
   ChevronLeft, ChevronRight, Upload, Download, FileSpreadsheet, 
-  Sparkles, RefreshCw, Key, ShieldCheck, Lock, CheckSquare, Layers, BookMarked, FileText 
+  Sparkles, RefreshCw, Key, ShieldCheck, Lock, CheckSquare, Layers, BookMarked, FileText,
+  Eye, EyeOff, KeyRound, Copy
 } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
@@ -263,11 +264,28 @@ export default function Estudiantes({
 
   const currentEstudiantes = filteredEstudiantes.slice((activePage - 1) * activeItemsPerPage, activePage * activeItemsPerPage);
 
+  const [showEditPass, setShowEditPass] = useState(false);
+
+  const copyStudentCredentials = (st: User) => {
+    const currentPass = st.pass || st.codigo || '123456';
+    const text = `🎓 CREDENCIALES DE ACCESO - SYNAPSIS PORTAL
+Estudiante: ${st.nombre}
+Correo institucional: ${st.email}
+Código de estudiante: ${st.codigo || 'N/A'}
+Cédula: ${st.cedula || 'N/A'}
+Contraseña de acceso: ${currentPass}
+Enlace del portal: ${window.location.origin}`;
+
+    navigator.clipboard.writeText(text);
+    toast(`¡Credenciales de ${st.nombre} copiadas al portapapeles! Contraseña: ${currentPass}`, 'success');
+  };
+
   const handleOpenCreateModal = () => {
     setEditingId(null);
     setNombre('');
     setEmail('');
     setPass('');
+    setShowEditPass(false);
     setCodigo(generateStudentCode(users));
     setCedula('');
     setCelular('');
@@ -278,7 +296,8 @@ export default function Estudiantes({
     setEditingId(st.id);
     setNombre(st.nombre);
     setEmail(st.email || '');
-    setPass('');
+    setPass(st.pass || ''); // Load current password so admin sees what the student has!
+    setShowEditPass(false);
     setCodigo(st.codigo || generateStudentCode(users));
     setCedula(st.cedula || '');
     setCelular(st.celular || '');
@@ -327,12 +346,15 @@ export default function Estudiantes({
           codigo: finalCode,
           cedula: cedula.trim() || undefined,
           celular: celular.trim() || undefined,
-          ...(pass ? { pass: pass.trim() } : {}),
+          actualizado: new Date().toISOString(),
+          ...(pass.trim() ? { pass: pass.trim() } : {}),
         };
         nextUsers[idx] = updatedUser;
-        saveDocToFirestore('users', updatedUser);
+        saveDocToFirestore('users', updatedUser, true).catch(err => {
+          console.error('Error saving updated student to cloud:', err);
+        });
         onUpdateUsers(nextUsers);
-        toast('Ficha del estudiante actualizada correctamente', 'success');
+        toast(`Ficha de ${updatedUser.nombre} actualizada y sincronizada en la nube`, 'success');
       }
     } else {
       if (users.some(u => u.email.toLowerCase() === finalEmail.toLowerCase())) {
@@ -348,13 +370,16 @@ export default function Estudiantes({
         codigo: finalCode,
         rol: 'estudiante',
         creado: now(),
+        actualizado: now(),
         cedula: cedula.trim() || undefined,
         celular: celular.trim() || undefined,
       };
 
-      saveDocToFirestore('users', newSt);
+      saveDocToFirestore('users', newSt, true).catch(err => {
+        console.error('Error saving new student to cloud:', err);
+      });
       onUpdateUsers([...nextUsers, newSt]);
-      toast(`Estudiante registrado. Correo: ${finalEmail} | Código: ${finalCode}`, 'success');
+      toast(`Estudiante registrado y sincronizado. Correo: ${finalEmail} | Código: ${finalCode}`, 'success');
     }
 
     setIsModalOpen(false);
@@ -716,6 +741,15 @@ export default function Estudiantes({
                     <td className="py-4 px-4 text-right">
                       <div className="inline-flex gap-1.5 items-center justify-end">
                         <button
+                          type="button"
+                          onClick={() => copyStudentCredentials(st)}
+                          className="btn text-xs px-2.5 py-1.5 rounded-lg border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-900 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-2xs"
+                          title="Copiar correo, código y contraseña para enviar al estudiante"
+                        >
+                          <KeyRound className="w-3.5 h-3.5 text-cyan-600" />
+                          <span>Credenciales</span>
+                        </button>
+                        <button
                           onClick={() => handleOpenPermModal(st)}
                           className="btn text-xs px-2.5 py-1.5 rounded border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-xs"
                           title="Configurar categorías y permisos de acceso para este estudiante"
@@ -918,16 +952,38 @@ export default function Estudiantes({
 
               {editingId ? (
                 <div className="form-group flex flex-col">
-                  <label className="form-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                    Cambiar contraseña de acceso
-                  </label>
-                  <input
-                    type="password"
-                    value={pass}
-                    onChange={e => setPass(e.target.value)}
-                    placeholder="Dejar en blanco si conservas la anterior"
-                    className="form-control w-full p-2.5 border rounded-xl text-sm focus:outline-indigo-650 bg-white"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="form-label text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Contraseña de acceso del estudiante
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPass('Est' + Math.floor(1000 + Math.random() * 9000))}
+                      className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer"
+                    >
+                      Generar aleatoria
+                    </button>
+                  </div>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showEditPass ? "text" : "password"}
+                      value={pass}
+                      onChange={e => setPass(e.target.value)}
+                      placeholder="Escribe la nueva contraseña"
+                      className="form-control w-full p-2.5 pr-10 border rounded-xl text-sm focus:outline-indigo-600 bg-white font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPass(!showEditPass)}
+                      className="absolute right-2.5 text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer"
+                      title={showEditPass ? "Ocultar" : "Mostrar"}
+                    >
+                      {showEditPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                    Puedes ver la contraseña para enviársela al estudiante o definir una nueva. Se sincronizará inmediatamente en la nube.
+                  </p>
                 </div>
               ) : null}
 

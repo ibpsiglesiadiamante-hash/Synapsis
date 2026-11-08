@@ -31,7 +31,9 @@ service cloud.firestore {
         && (!('telefono' in data) || (data.telefono is string && data.telefono.size() <= 64))
         && (!('actualizado' in data) || (data.actualizado is string && data.actualizado.size() <= 128))
         && (!('foto' in data) || (data.foto is string && data.foto.size() <= 2000000))
-        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048));
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048))
+        && (!('permisosCategorias' in data) || data.permisosCategorias is list)
+        && (!('permisosModulos' in data) || data.permisosModulos is list);
     }
 
     // Validation Blueprint for Institution

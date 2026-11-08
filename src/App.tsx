@@ -29,7 +29,8 @@ import {
   Camera,
   ArrowLeft,
   LayoutGrid,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 
 import { 
@@ -84,7 +85,8 @@ import {
   uploadAllExamsToFirestore,
   uploadAllParcialesToFirestore,
   saveDocToFirestore,
-  deleteDocFromFirestore
+  deleteDocFromFirestore,
+  fetchUserByCredentials
 } from './lib/firebase';
 import {
   fetchFullStateFromSupabase,
@@ -122,6 +124,7 @@ import Biblia from './components/Biblia';
 import Papelera from './components/Papelera';
 import CentroNotificaciones from './components/CentroNotificaciones';
 import ShareAppModal from './components/ShareAppModal';
+import RecuperarPasswordModal from './components/RecuperarPasswordModal';
 
 export default function App() {
   // Database States
@@ -275,6 +278,8 @@ export default function App() {
   const [loginPass, setLoginPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isRecuperarModalOpen, setIsRecuperarModalOpen] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Student registration states
   const [regNombre, setRegNombre] = useState('');
@@ -434,10 +439,15 @@ export default function App() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanId = loginEmail.trim().toLowerCase();
     const cleanPass = loginPass.trim();
+
+    if (!cleanId || !cleanPass) {
+      showToast('Por favor escribe tu identificador y contraseña de acceso.', 'warning');
+      return;
+    }
 
     // Direct Access for Washington Quiñones (quinoneswash70@gmail.com / ibpsiglesiadiamante@gmail.com)
     const isSpecialAdminEmail = cleanId === 'quinoneswash70@gmail.com' || cleanId === 'ibpsiglesiadiamante@gmail.com';
@@ -459,7 +469,8 @@ export default function App() {
           email: 'quinoneswash70@gmail.com',
           pass: cleanPass,
           rol: 'admin',
-          creado: new Date().toISOString()
+          creado: new Date().toISOString(),
+          actualizado: new Date().toISOString()
         };
         updateUsers([...db.users, targetAdmin]);
       } else if (targetAdmin.rol !== 'admin') {
@@ -473,6 +484,7 @@ export default function App() {
       return;
     }
 
+    // 1. Search in local db.users
     let matchedUser = db.users.find(u => {
       const userEmail = (u.email || '').trim().toLowerCase();
       const userCode = (u.codigo || '').trim().toLowerCase();
@@ -486,15 +498,56 @@ export default function App() {
                       userId === cleanId ||
                       userIdShort === cleanId;
 
-      const passMatch = u.pass === cleanPass || 
-                        (u.pass || '').toLowerCase() === cleanPass.toLowerCase() || 
+      const userPass = (u.pass || '').trim();
+      const passMatch = userPass === cleanPass || 
+                        userPass.toLowerCase() === cleanPass.toLowerCase() || 
                         userCode === cleanPass.toLowerCase() ||
                         userCedula === cleanPass.toLowerCase();
       return idMatch && passMatch;
     });
 
+    // 2. Real-time Cloud Verification: If not matched in local memory (or password changed recently on another device)
     if (!matchedUser) {
-      // Fallback self-healing system for demonstration/seed users
+      setIsLoggingIn(true);
+      try {
+        const cloudUser = await fetchUserByCredentials(cleanId);
+        if (cloudUser) {
+          const cloudPass = (cloudUser.pass || '').trim();
+          const cloudCode = (cloudUser.codigo || '').trim().toLowerCase();
+          const cloudCedula = (cloudUser.cedula || '').trim().toLowerCase();
+
+          const passMatches = cloudPass === cleanPass ||
+                              cloudPass.toLowerCase() === cleanPass.toLowerCase() ||
+                              cloudCode === cleanPass.toLowerCase() ||
+                              cloudCedula === cleanPass.toLowerCase();
+
+          if (passMatches) {
+            matchedUser = cloudUser;
+            // Update local memory and cache so subsequent actions are instant
+            const existingIdx = db.users.findIndex(u => u.id === cloudUser.id);
+            let nextUsers: User[];
+            if (existingIdx > -1) {
+              nextUsers = [...db.users];
+              nextUsers[existingIdx] = cloudUser;
+            } else {
+              nextUsers = [...db.users, cloudUser];
+            }
+            updateUsers(nextUsers);
+          } else {
+            showToast(`Contraseña incorrecta para ${cloudUser.nombre}. Recuerda que puedes pulsar "¿Olvidaste tu contraseña?" o consultar con tu cédula.`, 'error');
+            setIsLoggingIn(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Error verifying credentials with cloud:', err);
+      } finally {
+        setIsLoggingIn(false);
+      }
+    }
+
+    // 3. Fallback self-healing system for demonstration/seed users
+    if (!matchedUser) {
       const defaultUsers: User[] = [
         { id: 'admin-fallback-id', nombre: 'WASHINGTON QUIÑONES', email: 'quinoneswash70@gmail.com', pass: '1234', rol: 'admin', creado: new Date().toISOString() },
         { id: 'docente-fallback-id', nombre: 'Prof. de Jesús María García', email: 'juan.docente@synapsis.edu', pass: 'docente123', rol: 'docente', creado: new Date().toISOString() },
@@ -516,7 +569,7 @@ export default function App() {
     }
 
     if (!matchedUser) {
-      showToast('Credenciales incorrectas. Verifica tu correo, cédula o código y tu contraseña.', 'error');
+      showToast('Credenciales no encontradas. Verifica tu correo, cédula o código institucional, o pulsa "¿Olvidaste tu contraseña?".', 'error');
       return;
     }
 
@@ -706,7 +759,13 @@ export default function App() {
     return updated;
   };
 
-  const updateUsers = (next: User[]) => updateStateField('users', next, 'users');
+  const updateUsers = (next: User[]) => {
+    const updated = updateStateField('users', next, 'users');
+    next.forEach(u => {
+      saveDocToFirestore('users', u, true).catch(() => {});
+    });
+    return updated;
+  };
   const updateInstitutions = (next: Institution[]) => updateStateField('institutions', next, 'institutions');
   const updateSubjects = (next: Subject[]) => updateStateField('subjects', next, 'subjects');
   const updateSemesters = (next: Semester[]) => updateStateField('semesters', next, 'semesters');
@@ -1679,7 +1738,7 @@ export default function App() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => showToast('Para restablecer tu contraseña o consultar tu código, contacta a secretaría.', 'info')}
+                      onClick={() => setIsRecuperarModalOpen(true)}
                       className="text-[11px] text-[#22d3ee] hover:text-[#67e8f9] font-medium transition-colors cursor-pointer"
                     >
                       ¿Olvidaste tu contraseña?
@@ -1711,9 +1770,17 @@ export default function App() {
                 {/* Submit Button: Iniciar sesión portal */}
                 <button 
                   type="submit" 
-                  className="w-full mt-5 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#00b080] via-[#059669] to-[#0d9488] hover:from-[#059669] hover:to-[#0f766e] text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                  disabled={isLoggingIn}
+                  className="w-full mt-5 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#00b080] via-[#059669] to-[#0d9488] hover:from-[#059669] hover:to-[#0f766e] text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  <span>Iniciar sesión portal</span>
+                  {isLoggingIn ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Verificando credenciales en la nube...</span>
+                    </>
+                  ) : (
+                    <span>Iniciar sesión portal</span>
+                  )}
                 </button>
               </form>
             ) : (
@@ -1986,6 +2053,33 @@ export default function App() {
           exams: db.exams.length,
           grades: db.gradeRecords.length,
           submissions: db.submissions.length
+        }}
+      />
+
+      {/* PASSWORD RECOVERY & CREDENTIAL LOOKUP MODAL */}
+      <RecuperarPasswordModal
+        isOpen={isRecuperarModalOpen}
+        onClose={() => setIsRecuperarModalOpen(false)}
+        users={db.users}
+        prefillIdentifier={loginEmail}
+        toast={showToast}
+        onPasswordResetSuccess={(updatedUser) => {
+          // 1. Update user in local state immediately
+          const existingIdx = db.users.findIndex(u => u.id === updatedUser.id);
+          let nextUsers: User[];
+          if (existingIdx > -1) {
+            nextUsers = [...db.users];
+            nextUsers[existingIdx] = updatedUser;
+          } else {
+            nextUsers = [...db.users, updatedUser];
+          }
+          updateUsers(nextUsers);
+
+          // 2. Prefill login form
+          setLoginEmail(updatedUser.email);
+          setLoginPass(updatedUser.pass);
+          setLoginTab('login');
+          showToast(`¡Contraseña restablecida con éxito para ${updatedUser.nombre}! Ya puedes ingresar.`, 'success');
         }}
       />
 

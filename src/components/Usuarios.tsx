@@ -4,9 +4,10 @@
  */
 
 import React, { useState } from 'react';
-import { UserPlus, UserCheck, Trash2, Edit2, Shield, Calendar, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { UserPlus, UserCheck, Trash2, Edit2, Shield, Calendar, ChevronLeft, ChevronRight, Search, KeyRound, Eye, EyeOff, Copy } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
+import { saveDocToFirestore } from '../lib/firebase';
 
 interface UsuariosProps {
   currentUser: User;
@@ -25,6 +26,7 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [showModalPass, setShowModalPass] = useState(false);
   const [rol, setRol] = useState<User['rol']>('estudiante');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -63,19 +65,33 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
     setEditingUserId(user.id);
     setNombre(user.nombre);
     setEmail(user.email);
-    setPass(''); // Leave input blank unless changing password
+    setPass(user.pass || ''); // Load current password so admin knows what it is!
+    setShowModalPass(false);
     setRol(user.rol);
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCopyCredentials = (u: User) => {
+    const currentPass = u.pass || u.codigo || '123456';
+    const text = `🎓 CREDENCIALES DE ACCESO - SYNAPSIS PORTAL
+Usuario: ${u.nombre}
+Rol: ${u.rol.toUpperCase()}
+Correo: ${u.email}
+${u.codigo ? `Código: ${u.codigo}\n` : ''}${u.cedula ? `Cédula: ${u.cedula}\n` : ''}Contraseña: ${currentPass}
+Enlace: ${window.location.origin}`;
+
+    navigator.clipboard.writeText(text);
+    toast(`¡Credenciales de ${u.nombre} copiadas al portapapeles! Contraseña: ${currentPass}`, 'success');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim() || !email.trim()) {
       toast('Completa todos los campos obligatorios', 'error');
       return;
     }
 
-    if (!editingUserId && !pass) {
+    if (!editingUserId && !pass.trim()) {
       toast('La contraseña es obligatoria para nuevos usuarios', 'error');
       return;
     }
@@ -87,15 +103,21 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
       const userIdx = nextUsers.findIndex(u => u.id === editingUserId);
       if (userIdx > -1) {
         const existing = nextUsers[userIdx];
-        nextUsers[userIdx] = {
+        const updatedUser: User = {
           ...existing,
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
           rol,
-          ...(pass ? { pass } : {}), // only override if typed
+          actualizado: new Date().toISOString(),
+          ...(pass.trim() ? { pass: pass.trim() } : {}), // only override if typed
         };
+        nextUsers[userIdx] = updatedUser;
+        // Save immediately to Cloud Firestore and Supabase
+        saveDocToFirestore('users', updatedUser, true).catch(err => {
+          console.error('Error saving updated user to cloud:', err);
+        });
         onUpdateUsers(nextUsers);
-        toast('Usuario actualizado correctamente', 'success');
+        toast(`Usuario ${updatedUser.nombre} actualizado en la nube y sincronizado`, 'success');
       }
     } else {
       // Creation Mode
@@ -108,12 +130,16 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
         id: uid(),
         nombre: nombre.trim(),
         email: email.trim().toLowerCase(),
-        pass,
+        pass: pass.trim(),
         rol,
         creado: now(),
+        actualizado: now(),
       };
+      saveDocToFirestore('users', newUser, true).catch(err => {
+        console.error('Error creating user in cloud:', err);
+      });
       onUpdateUsers([...nextUsers, newUser]);
-      toast('Usuario registrado exitosamente', 'success');
+      toast('Usuario registrado y sincronizado en la nube exitosamente', 'success');
     }
 
     setIsModalOpen(false);
@@ -281,8 +307,18 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
                       <td className="py-3.5 px-4 text-right">
                         <div className="inline-flex gap-1.5 justify-end items-center">
                           <button
+                            type="button"
+                            onClick={() => handleCopyCredentials(u)}
+                            className="btn text-xs px-2.5 py-1 rounded-lg border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 flex items-center gap-1 cursor-pointer font-bold shrink-0 shadow-2xs"
+                            title="Copiar correo y contraseña para enviar al usuario"
+                          >
+                            <KeyRound className="w-3.5 h-3.5 text-cyan-600" />
+                            <span>Credenciales</span>
+                          </button>
+                          <button
                             onClick={() => handleOpenEditModal(u)}
-                            className="p-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-500"
+                            className="p-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-500 cursor-pointer"
+                            title="Editar usuario"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -421,18 +457,39 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
               </div>
 
               <div className="form-group flex flex-col">
-                <label className="form-label text-xs font-semibold text-slate-700 mb-1 leading-none">
-                  Contraseña {editingUserId ? '(Opcional cambiar)' : <span className="text-red-500">*</span>}
-                </label>
-                <input
-                  type="password"
-                  value={pass}
-                  onChange={e => setPass(e.target.value)}
-                  placeholder={editingUserId ? "Dejar vacío si no deseas cambiar" : "Mínimo 6 caracteres"}
-                  minLength={editingUserId ? undefined : 6}
-                  required={!editingUserId}
-                  className="form-control p-2 border rounded-lg text-sm bg-white shrink-0 focus:outline-indigo-600"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="form-label text-xs font-semibold text-slate-700 leading-none">
+                    Contraseña {editingUserId ? '(Ver o cambiar)' : <span className="text-red-500">*</span>}
+                  </label>
+                  {editingUserId && (
+                    <button
+                      type="button"
+                      onClick={() => setPass('Est' + Math.floor(1000 + Math.random() * 9000))}
+                      className="text-[11px] text-cyan-600 hover:text-cyan-800 font-bold cursor-pointer"
+                    >
+                      Generar aleatoria
+                    </button>
+                  )}
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type={showModalPass ? "text" : "password"}
+                    value={pass}
+                    onChange={e => setPass(e.target.value)}
+                    placeholder={editingUserId ? "Escribe la nueva contraseña" : "Mínimo 4 caracteres"}
+                    minLength={editingUserId ? undefined : 4}
+                    required={!editingUserId}
+                    className="form-control p-2.5 pr-10 border rounded-lg text-sm bg-white w-full focus:outline-indigo-600 font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowModalPass(!showModalPass)}
+                    className="absolute right-2.5 text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer"
+                    title={showModalPass ? "Ocultar" : "Mostrar"}
+                  >
+                    {showModalPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4 mt-6 bg-slate-50 rounded-b-2xl -mx-5 -mb-5 p-4">

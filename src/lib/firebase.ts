@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDocs, collection, onSnapshot, getDocFromServer, deleteDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDocs, collection, onSnapshot, getDocFromServer, deleteDoc, getDoc, query, where } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase
@@ -903,6 +903,91 @@ export async function fullBidirectionalSync(
       mergedState: currentState
     };
   }
+}
+
+/**
+ * Live search for a user in Cloud Firestore by email, codigo, cedula or id.
+ * Essential for immediate student login after password reset or student registration.
+ */
+export async function fetchUserByCredentials(identifier: string): Promise<User | null> {
+  const clean = (identifier || '').trim();
+  if (!clean) return null;
+  const cleanLower = clean.toLowerCase();
+  const cleanUpper = clean.toUpperCase();
+
+  if (!isFirestoreAvailable) return null;
+
+  try {
+    // 1. Direct document lookup by ID
+    try {
+      const directDoc = await getDoc(doc(db, 'users', clean));
+      if (directDoc.exists()) {
+        return directDoc.data() as User;
+      }
+    } catch (e) {
+      // Continue to query search
+    }
+
+    // 2. Query by email
+    try {
+      const emailQuery = query(collection(db, 'users'), where('email', '==', cleanLower));
+      const emailSnap = await getDocs(emailQuery);
+      if (!emailSnap.empty) {
+        return emailSnap.docs[0].data() as User;
+      }
+    } catch (e) {}
+
+    // 3. Query by student code (uppercase and lowercase)
+    try {
+      const codeQuery = query(collection(db, 'users'), where('codigo', '==', cleanUpper));
+      const codeSnap = await getDocs(codeQuery);
+      if (!codeSnap.empty) {
+        return codeSnap.docs[0].data() as User;
+      }
+    } catch (e) {}
+
+    // 4. Query by cedula
+    try {
+      const cedulaQuery = query(collection(db, 'users'), where('cedula', '==', clean));
+      const cedulaSnap = await getDocs(cedulaQuery);
+      if (!cedulaSnap.empty) {
+        return cedulaSnap.docs[0].data() as User;
+      }
+    } catch (e) {}
+
+    // 5. Fallback: fetch users collection to scan in case fields have mixed case
+    const allUsers = await fetchCollectionFromFirestore<User>('users');
+    const matched = allUsers.find(u => {
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uCode = (u.codigo || '').trim().toLowerCase();
+      const uCedula = (u.cedula || '').trim().toLowerCase();
+      const uId = (u.id || '').trim().toLowerCase();
+      return uEmail === cleanLower || uCode === cleanLower || uCedula === cleanLower || uId === cleanLower;
+    });
+    return matched || null;
+  } catch (err) {
+    console.warn('fetchUserByCredentials failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Direct password reset for a user in Cloud Firestore and Supabase
+ */
+export async function resetUserPasswordInCloud(user: User, newPass: string): Promise<User> {
+  const updatedUser: User = {
+    ...user,
+    pass: newPass.trim(),
+    actualizado: new Date().toISOString()
+  };
+
+  // 1. Save to Cloud Firestore and Supabase
+  await saveDocToFirestore('users', updatedUser, true);
+
+  // 2. Update local sync cache
+  itemSyncCache.set(`users/${updatedUser.id}`, JSON.stringify(updatedUser));
+
+  return updatedUser;
 }
 
 

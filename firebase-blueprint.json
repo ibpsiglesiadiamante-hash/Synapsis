@@ -19,7 +19,9 @@
         "telefono": { "type": "string" },
         "actualizado": { "type": "string" },
         "foto": { "type": "string" },
-        "avatarUrl": { "type": "string" }
+        "avatarUrl": { "type": "string" },
+        "permisosCategorias": { "type": "array" },
+        "permisosModulos": { "type": "array" }
       },
       "required": ["id", "nombre", "email", "pass", "rol", "creado"]
     },
