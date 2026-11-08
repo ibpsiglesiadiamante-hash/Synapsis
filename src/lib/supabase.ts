@@ -298,3 +298,72 @@ export async function pushAllStateToSupabase(state: AppState): Promise<number> {
   }
   return count;
 }
+
+/**
+ * Live search for a user in Supabase by email, codigo, cedula or id.
+ */
+export async function fetchUserByCredentials(identifier: string): Promise<User | null> {
+  const clean = (identifier || '').trim();
+  if (!clean) return null;
+  const cleanLower = clean.toLowerCase();
+
+  try {
+    // 1. Direct match by id
+    const { data: byId } = await supabase.from('users').select('*').eq('id', clean).limit(1);
+    if (byId && byId.length > 0) return byId[0] as User;
+
+    // 2. Match by email (case-insensitive)
+    const { data: byEmail } = await supabase.from('users').select('*').ilike('email', cleanLower).limit(1);
+    if (byEmail && byEmail.length > 0) return byEmail[0] as User;
+
+    // 3. Match by student code (case-insensitive)
+    const { data: byCode } = await supabase.from('users').select('*').ilike('codigo', clean).limit(1);
+    if (byCode && byCode.length > 0) return byCode[0] as User;
+
+    // 4. Match by cedula
+    const { data: byCedula } = await supabase.from('users').select('*').eq('cedula', clean).limit(1);
+    if (byCedula && byCedula.length > 0) return byCedula[0] as User;
+
+    return null;
+  } catch (err) {
+    console.warn('fetchUserByCredentials error in Supabase:', err);
+    return null;
+  }
+}
+
+/**
+ * Direct password reset for a user in Supabase
+ */
+export async function resetUserPasswordInCloud(user: User, newPass: string): Promise<User> {
+  const cleanPass = newPass.trim();
+  const updatedUser: User = {
+    ...user,
+    pass: cleanPass,
+    actualizado: new Date().toISOString()
+  };
+
+  const res = await saveDocToSupabase('users', updatedUser);
+  if (!res.success) {
+    throw new Error(res.error || 'Error al actualizar contraseña en Supabase');
+  }
+
+  return updatedUser;
+}
+
+/**
+ * Fetch an individual collection/table from Supabase
+ */
+export async function fetchCollectionFromSupabase<T>(table: string): Promise<T[]> {
+  try {
+    const { data, error } = await supabase.from(table).select('*');
+    if (error) {
+      console.warn(`Supabase fetch collection warning for "${table}":`, error.message);
+      return [];
+    }
+    return (data || []) as T[];
+  } catch (err) {
+    console.error(`Error fetching "${table}" from Supabase:`, err);
+    return [];
+  }
+}
+

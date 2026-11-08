@@ -146,17 +146,17 @@ export default function Header({
           </button>
         )}
 
-        {/* Firebase & Supabase Cloud Synchronization */}
+        {/* Supabase Cloud Synchronization */}
         {onSyncFirebase && (
           <button
             type="button"
             onClick={onSyncFirebase}
             disabled={isSyncing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60"
-            title="Sincronizar datos con Cloud Firestore y Supabase PostgreSQL"
+            title="Sincronizar datos con Supabase PostgreSQL"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Nube (Firebase & Supabase)'}</span>
+            <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Nube (Supabase)'}</span>
           </button>
         )}
 

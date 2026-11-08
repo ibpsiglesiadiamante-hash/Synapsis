@@ -136,27 +136,18 @@ export default function App() {
     currentDbRef.current = db;
   }, [db]);
 
-  // Download entire Synapsis Portal database on mount in background (Firestore & Supabase)
+  // Download entire Synapsis Portal database on mount in background from Supabase (PostgreSQL)
   useEffect(() => {
     async function loadInitialDatabase() {
       try {
-        console.log('Loading Synapsis portal database from Cloud Firestore and Supabase...');
-        const [remoteFirestore, remoteSupabase] = await Promise.all([
-          fetchFullStateFromFirestore().catch(e => {
-            console.warn('Firestore fetch notice:', e);
-            return null;
-          }),
-          fetchFullStateFromSupabase().catch(e => {
-            console.warn('Supabase fetch notice:', e);
-            return null;
-          }),
-        ]);
+        console.log('Loading Synapsis portal database from Supabase (PostgreSQL)...');
+        const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
+          console.warn('Supabase fetch notice:', e);
+          return null;
+        });
 
         const localDb = getInitialState();
         let mergedDb = localDb;
-        if (remoteFirestore) {
-          mergedDb = mergeStates(mergedDb, remoteFirestore);
-        }
         if (remoteSupabase) {
           mergedDb = mergeStates(mergedDb, remoteSupabase as any);
         }
@@ -167,20 +158,17 @@ export default function App() {
         const { state: cleanFinalDb, duplicateIds: dupParcIds } = deduplicateParciales(dedupSubDb);
         mergedDb = cleanFinalDb;
 
-        // Limpiar en segundo plano los IDs duplicados en Firestore y Supabase y registrar persistencia
+        // Limpiar en segundo plano los IDs duplicados en Supabase y registrar persistencia
         dupSemIds.forEach(id => {
           registerDeletedId(id, 'semesters');
-          deleteDocFromFirestore('semesters', id).catch(() => {});
           deleteDocFromSupabase('semesters', id).catch(() => {});
         });
         dupSubIds.forEach(id => {
           registerDeletedId(id, 'subjects');
-          deleteDocFromFirestore('subjects', id).catch(() => {});
           deleteDocFromSupabase('subjects', id).catch(() => {});
         });
         dupParcIds.forEach(id => {
           registerDeletedId(id, 'parciales');
-          deleteDocFromFirestore('parciales', id).catch(() => {});
           deleteDocFromSupabase('parciales', id).catch(() => {});
         });
 
@@ -189,11 +177,10 @@ export default function App() {
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
 
-        // Mantener Cloud Firestore y Supabase sincronizados sin forzar resiembra repetitiva
-        syncToFirestore(mergedDb).catch(e => console.warn('Background Firestore sync:', e));
+        // Mantener Supabase sincronizado
         pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
       } catch (err) {
-        console.error('Error synchronizing database, running standalone.', err);
+        console.error('Error synchronizing database, running standalone with Supabase.', err);
       } finally {
         setIsFirebaseLoading(false);
       }
@@ -346,22 +333,13 @@ export default function App() {
   const handleManualSync = async () => {
     setIsSyncingFirebase(true);
     try {
-      showToast('Sincronizando datos con Cloud Firestore y Supabase...', 'info');
-      const [remoteFirestore, remoteSupabase] = await Promise.all([
-        fetchFullStateFromFirestore().catch(e => {
-          console.warn('Firestore fetch notice:', e);
-          return null;
-        }),
-        fetchFullStateFromSupabase().catch(e => {
-          console.warn('Supabase fetch notice:', e);
-          return null;
-        }),
-      ]);
+      showToast('Sincronizando datos con Supabase (PostgreSQL)...', 'info');
+      const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
+        console.warn('Supabase fetch notice:', e);
+        return null;
+      });
 
       let mergedDb = db;
-      if (remoteFirestore) {
-        mergedDb = mergeStates(mergedDb, remoteFirestore);
-      }
       if (remoteSupabase) {
         mergedDb = mergeStates(mergedDb, remoteSupabase as any);
       }
@@ -370,17 +348,13 @@ export default function App() {
       saveState(mergedDb);
       initializeSyncCache(mergedDb);
 
-      const [pushedSupabase] = await Promise.all([
-        pushAllStateToSupabase(mergedDb).catch(() => 0),
-        syncToFirestore(mergedDb).catch(() => {}),
-        uploadAllStudentsToFirestore(mergedDb.users).catch(() => {}),
-      ]);
+      const pushedSupabase = await pushAllStateToSupabase(mergedDb).catch(() => 0);
 
-      showToast(`¡Datos sincronizados y respaldados en Firebase y Supabase! ✓ (${pushedSupabase || 'OK'} registros)`, 'success');
+      showToast(`¡Datos sincronizados y respaldados en Supabase! ✓ (${pushedSupabase || 'OK'} registros)`, 'success');
       return { success: true, pushedCount: pushedSupabase };
     } catch (err) {
       console.error('Manual sync failed', err);
-      showToast('Error en la sincronización con la nube.', 'error');
+      showToast('Error en la sincronización con Supabase.', 'error');
     } finally {
       setIsSyncingFirebase(false);
     }
@@ -389,16 +363,13 @@ export default function App() {
   const handleRestoreBackup = async () => {
     try {
       setIsSyncingFirebase(true);
-      showToast('Restaurando copia de seguridad y sincronizando con la nube...', 'info');
+      showToast('Restaurando copia de seguridad y sincronizando con Supabase...', 'info');
       const restored = restoreBackupState();
       setDb(restored);
       saveState(restored);
       initializeSyncCache(restored);
-      await Promise.all([
-        syncToFirestore(restored).catch(() => {}),
-        pushAllStateToSupabase(restored).catch(() => {}),
-      ]);
-      showToast('¡Copia de seguridad restaurada y sincronizada en Firebase y Supabase exitosamente!', 'success');
+      await pushAllStateToSupabase(restored).catch(() => {});
+      showToast('¡Copia de seguridad restaurada y sincronizada en Supabase exitosamente!', 'success');
     } catch (err) {
       console.error('Failed to restore backup and sync', err);
       showToast('Error al restaurar copia de seguridad', 'error');
@@ -425,11 +396,8 @@ export default function App() {
       setDb(imported);
       saveState(imported);
       initializeSyncCache(imported);
-      await Promise.all([
-        syncToFirestore(imported).catch(() => {}),
-        pushAllStateToSupabase(imported).catch(() => {}),
-      ]);
-      showToast(`¡Respaldo importado y sincronizado! (${imported.subjects?.length || 0} materias, ${imported.semesters?.length || 0} semestres, ${imported.users?.length || 0} usuarios)`, 'success');
+      await pushAllStateToSupabase(imported).catch(() => {});
+      showToast(`¡Respaldo importado y sincronizado en Supabase! (${imported.subjects?.length || 0} materias, ${imported.semesters?.length || 0} semestres, ${imported.users?.length || 0} usuarios)`, 'success');
     } catch (err) {
       console.error('Failed to import backup:', err);
       showToast('El archivo JSON de respaldo no tiene un formato válido', 'error');

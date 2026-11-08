@@ -10,17 +10,11 @@ export const db = (!firebaseConfig.firestoreDatabaseId || firebaseConfig.firesto
   : getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth(app);
 
-// Test connection on boot as instructed in SKILL.md
+// Firebase Disconnected: Platform operates exclusively on Supabase (PostgreSQL) and Render
 async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
+  // Disconnected
+  return;
 }
-testConnection();
 
 // Define error helper as instructed in SKILL.md
 export enum OperationType {
@@ -49,25 +43,15 @@ export interface FirestoreErrorInfo {
   }
 }
 
-// Circuit breaker state to prevent infinite exception/retry cycles when Firestore permissions are restricted
-let isFirestoreAvailable = true;
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    isFirestoreAvailable = true;
-    console.log('Network online. Cloud Firestore synchronization active.');
-  });
-}
+// Standalone mode: Firebase disconnected, routing to Supabase
+let isFirestoreAvailable = false;
 
 export function enableFirestore() {
-  isFirestoreAvailable = true;
+  isFirestoreAvailable = false;
 }
 
 export function getIsFirestoreAvailable(): boolean {
-  if (typeof navigator !== 'undefined' && navigator.onLine) {
-    return isFirestoreAvailable;
-  }
-  return isFirestoreAvailable;
+  return false;
 }
 
 export function getFirebaseAppInfo() {
@@ -104,24 +88,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
+import { 
+  saveDocToSupabase, 
+  deleteDocFromSupabase, 
+  fetchCollectionFromSupabase, 
+  pushAllStateToSupabase,
+  fetchUserByCredentials as fetchUserByCredentialsFromSupabase,
+  resetUserPasswordInCloud as resetUserPasswordInCloudFromSupabase
+} from './supabase';
+
 /**
- * Generic Firebase synchronization methods
+ * Generic Firebase synchronization methods (Delegated to Supabase)
  */
 export async function fetchCollectionFromFirestore<T>(collName: string): Promise<T[]> {
-  if (!isFirestoreAvailable) {
-    return [];
-  }
-  try {
-    const querySnapshot = await getDocs(collection(db, collName));
-    const items: T[] = [];
-    querySnapshot.forEach((docSnapshot) => {
-      items.push(docSnapshot.data() as T);
-    });
-    return items;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, collName);
-    return [];
-  }
+  return fetchCollectionFromSupabase<T>(collName);
 }
 
 export function sanitizeForFirestore(obj: any): any {
@@ -139,57 +119,18 @@ export function sanitizeForFirestore(obj: any): any {
   return clean;
 }
 
-import { saveDocToSupabase, deleteDocFromSupabase } from './supabase';
-
-export async function saveDocToFirestore<T extends { id: string }>(collName: string, item: T, mirrorToSupabase: boolean = true): Promise<void> {
-  // Mirror writes to Supabase asynchronously with diagnostic notification ONLY when mirrorToSupabase is true
-  if (mirrorToSupabase) {
-    saveDocToSupabase(collName, item)
-      .then(res => {
-        if (!res.success) {
-          console.warn(`[Supabase Mirror Warning] Guardado espejo incompleto en "${collName}/${item.id}":`, res.error);
-        }
-      })
-      .catch(err => {
-        console.warn(`[Supabase Mirror Error] Excepción en guardado espejo "${collName}/${item.id}":`, err?.message || err);
-      });
-  }
-
-  if (!isFirestoreAvailable) {
-    return;
-  }
-  try {
-    const cleanItem = sanitizeForFirestore(item);
-    await setDoc(doc(db, collName, item.id), cleanItem as any);
-    itemSyncCache.set(`${collName}/${item.id}`, JSON.stringify(item));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `${collName}/${item.id}`);
-  }
+export async function saveDocToFirestore<T extends { id: string }>(collName: string, item: T, _mirrorToSupabase: boolean = true): Promise<void> {
+  // Disconnected from Firebase: write directly to Supabase
+  await saveDocToSupabase(collName, item);
+  itemSyncCache.set(`${collName}/${item.id}`, JSON.stringify(item));
 }
 
 export async function deleteDocFromFirestore(collName: string, docId: string): Promise<void> {
   if (!docId) return;
   markAsDeleted(docId);
   itemSyncCache.delete(`${collName}/${docId}`);
-  // Mirror deletions to Supabase asynchronously with diagnostic notification
-  deleteDocFromSupabase(collName, docId)
-    .then(res => {
-      if (!res.success) {
-        console.warn(`[Supabase Mirror Warning] Borrado espejo incompleto en "${collName}/${docId}":`, res.error);
-      }
-    })
-    .catch(err => {
-      console.warn(`[Supabase Mirror Error] Excepción en borrado espejo "${collName}/${docId}":`, err?.message || err);
-    });
-
-  if (!isFirestoreAvailable) {
-    return;
-  }
-  try {
-    await deleteDoc(doc(db, collName, docId));
-  } catch (error) {
-    console.warn(`Firestore document deletion failed for ${collName}/${docId}:`, error);
-  }
+  // Disconnected from Firebase: delete directly from Supabase
+  await deleteDocFromSupabase(collName, docId);
 }
 
 import { User, Subject, Semester, Parcial, GradeRecord, Assignment, AssignmentSubmission, Institution, Exam, Submission, RecycleItem } from '../types';
@@ -301,220 +242,31 @@ export async function deleteRecycleItemFromFirestore(id: string): Promise<void> 
 }
 
 /**
- * Fetch the complete application state from Firestore
- * Returns null if the users collection is empty (meaning database is completely uninitialized)
+ * Fetch the complete application state from Firestore (Disconnected: Supabase is authoritative)
  */
 export async function fetchFullStateFromFirestore(): Promise<AppState | null> {
-  if (!isFirestoreAvailable) {
-    return null;
-  }
-
-  const fetchPromise = async (): Promise<AppState | null> => {
-    try {
-      // Synchronize deleted IDs, recycle bin and all collections in parallel for maximum speed (<600ms)
-      const [
-        deletedIds,
-        users,
-        institutions,
-        subjects,
-        semesters,
-        parciales,
-        exams,
-        submissions,
-        gradeRecords,
-        assignments,
-        assignmentSubmissions,
-        recycleBinItems
-      ] = await Promise.all([
-        syncDeletedIdsWithFirestore(),
-        fetchCollectionFromFirestore<User>('users'),
-        fetchCollectionFromFirestore<Institution>('institutions'),
-        fetchCollectionFromFirestore<Subject>('subjects'),
-        fetchCollectionFromFirestore<Semester>('semesters'),
-        fetchCollectionFromFirestore<Parcial>('parciales'),
-        fetchCollectionFromFirestore<Exam>('exams'),
-        fetchCollectionFromFirestore<Submission>('submissions'),
-        fetchCollectionFromFirestore<GradeRecord>('gradeRecords'),
-        fetchCollectionFromFirestore<Assignment>('assignments'),
-        fetchCollectionFromFirestore<AssignmentSubmission>('assignmentSubmissions'),
-        fetchCollectionFromFirestore<RecycleItem>('recycle_bin'),
-      ]);
-
-      if (users.length === 0 && institutions.length === 0 && subjects.length === 0) {
-        return null; // DB is completely fresh/empty
-      }
-
-      // Merge local recycle bin with Firestore recycle bin
-      const localRecycle = getRecycleBin();
-      const recycleMap = new Map<string, RecycleItem>();
-      localRecycle.forEach(r => recycleMap.set(r.id, r));
-      recycleBinItems.forEach(r => recycleMap.set(r.id, r));
-      const combinedRecycle = Array.from(recycleMap.values());
-      saveRecycleBin(combinedRecycle);
-      const recycleOriginalIds = new Set(combinedRecycle.map(r => r.originalId));
-
-      const filterAliveAndClean = <T extends { id: string }>(coll: string, list: T[]): T[] => {
-        return (list || []).filter(item => {
-          if (!item || !item.id) return false;
-          if (deletedIds.has(item.id) || recycleOriginalIds.has(item.id)) {
-            deleteDocFromFirestore(coll, item.id).catch(() => {});
-            return false;
-          }
-          return true;
-        });
-      };
-
-      return {
-        users: filterAliveAndClean('users', users),
-        institutions: filterAliveAndClean('institutions', institutions),
-        subjects: filterAliveAndClean('subjects', subjects),
-        semesters: filterAliveAndClean('semesters', semesters),
-        parciales: filterAliveAndClean('parciales', parciales),
-        exams: filterAliveAndClean('exams', exams),
-        submissions: filterAliveAndClean('submissions', submissions),
-        gradeRecords: filterAliveAndClean('gradeRecords', gradeRecords),
-        assignments: filterAliveAndClean('assignments', assignments),
-        assignmentSubmissions: filterAliveAndClean('assignmentSubmissions', assignmentSubmissions),
-        recycleBin: combinedRecycle
-      };
-    } catch (error) {
-      console.error('Failed to download full db state from Firestore, continuing with local state.', error);
-      return null;
-    }
-  };
-
-  // Safe timeout: if internet is slow, initialize UI with local cache without disabling cloud sync
-  const timeoutPromise = new Promise<null>((resolve) => {
-    setTimeout(() => {
-      console.log("Firestore download taking longer than expected. Using local cache while cloud sync connects in background.");
-      resolve(null);
-    }, 12000);
-  });
-
-  return Promise.race([fetchPromise(), timeoutPromise]);
+  // Disconnected from Firebase: all data is fetched from Supabase
+  return null;
 }
 
 /**
- * Seeds the fresh Firestore database structures with default seed state
+ * Seeds the fresh Firestore database structures with default seed state (Disconnected)
  */
-export async function seedFirestore(initialState: AppState): Promise<void> {
-  if (!isFirestoreAvailable) {
-    return;
-  }
-
-  const seedPromise = async (): Promise<void> => {
-    try {
-      console.log('Seeding fresh Firestore database with institutional structures...');
-      const promises: Promise<void>[] = [];
-
-      initialState.users.forEach(item => promises.push(saveDocToFirestore('users', item)));
-      initialState.institutions.forEach(item => promises.push(saveDocToFirestore('institutions', item)));
-      initialState.subjects.forEach(item => promises.push(saveDocToFirestore('subjects', item)));
-      initialState.semesters.forEach(item => promises.push(saveDocToFirestore('semesters', item)));
-      initialState.parciales.forEach(item => promises.push(saveDocToFirestore('parciales', item)));
-      initialState.exams.forEach(item => promises.push(saveDocToFirestore('exams', item)));
-      initialState.submissions.forEach(item => promises.push(saveDocToFirestore('submissions', item)));
-      initialState.gradeRecords.forEach(item => promises.push(saveDocToFirestore('gradeRecords', item)));
-      initialState.assignments.forEach(item => promises.push(saveDocToFirestore('assignments', item)));
-      (initialState.assignmentSubmissions || []).forEach(item => promises.push(saveDocToFirestore('assignmentSubmissions', item)));
-
-      await Promise.all(promises);
-      console.log('Firestore seeding completed successfully.');
-    } catch (error) {
-      console.error('Failed to seed default state onto Firestore.', error);
-    }
-  };
-
-  const timeoutPromise = new Promise<void>((resolve) => {
-    setTimeout(() => {
-      console.log("Firestore seeding continuing in background.");
-      resolve();
-    }, 15000);
-  });
-
-  return Promise.race([seedPromise(), timeoutPromise]);
+export async function seedFirestore(_initialState: AppState): Promise<void> {
+  return;
 }
 
 // Keep a local cache of individual synced items to avoid redundant Firestore writes and save quota
 let itemSyncCache = new Map<string, string>();
 
 /**
- * Intelligently synchronizes the local AppState changes to Firestore.
- * Utilizes key-based comparison (hashes/strings) to only write documents that are brand-new or modified.
+ * Intelligently synchronizes the local AppState changes to cloud (Delegated to Supabase).
  */
 export async function syncToFirestore(newState: AppState): Promise<void> {
-  if (typeof navigator !== 'undefined' && navigator.onLine) {
-    isFirestoreAvailable = true;
-  }
-  if (!isFirestoreAvailable) {
-    return;
-  }
   try {
-    const keys: (keyof AppState)[] = [
-      'users',
-      'institutions',
-      'subjects',
-      'semesters',
-      'parciales',
-      'exams',
-      'submissions',
-      'gradeRecords',
-      'assignments',
-      'assignmentSubmissions'
-    ];
-
-    const promises: Promise<void>[] = [];
-
-    const deletedIds = getDeletedIds();
-
-    keys.forEach((key) => {
-      const currentList = ((newState[key] || []) as any[]).filter(
-        item => item && item.id && !deletedIds.has(item.id)
-      );
-      const currentIds = new Set(currentList.map(item => item.id));
-
-      // 1. Detect deletions: check if any item previously cached for this collection is gone
-      const cachedIdsForColl: string[] = [];
-      itemSyncCache.forEach((_, cacheKey) => {
-        if (cacheKey.startsWith(`${key}/`)) {
-          const docId = cacheKey.substring(key.length + 1);
-          cachedIdsForColl.push(docId);
-        }
-      });
-
-      cachedIdsForColl.forEach((cachedId) => {
-        if (!currentIds.has(cachedId) || deletedIds.has(cachedId)) {
-          // Document was deleted! Remove from Firestore, cache and mark as deleted
-          promises.push(deleteDocFromFirestore(key, cachedId));
-          itemSyncCache.delete(`${key}/${cachedId}`);
-          markAsDeleted(cachedId);
-          console.log(`Deleted entity ${key}/${cachedId} from Cloud Firestore.`);
-        }
-      });
-
-      // 2. Upsert new or modified items to Firestore
-      currentList.forEach((item: any) => {
-        if (!item || !item.id || deletedIds.has(item.id)) return;
-        const itemKey = `${key}/${item.id}`;
-        const itemString = JSON.stringify(item);
-        const cachedString = itemSyncCache.get(itemKey);
-
-        if (cachedString !== itemString) {
-          const mirrorToSupabase = key !== 'submissions';
-          const savePromise = saveDocToFirestore(key, item, mirrorToSupabase).then(() => {
-            itemSyncCache.set(itemKey, itemString);
-          });
-          promises.push(savePromise);
-        }
-      });
-    });
-
-    if (promises.length > 0) {
-      await Promise.all(promises);
-      console.log(`Synced ${promises.length} modified/new entities to Cloud Firestore.`);
-    }
+    await pushAllStateToSupabase(newState);
   } catch (error) {
-    console.error('Error synchronizing local AppState changes to remote Firestore.', error);
+    console.error('Error synchronizing local AppState changes to Supabase:', error);
   }
 }
 
@@ -546,37 +298,10 @@ export function initializeSyncCache(state: AppState) {
 }
 
 /**
- * Pushes all records of the given AppState to Cloud Firestore
+ * Pushes all records of the given AppState to Cloud (Delegated to Supabase)
  */
 export async function pushAllStateToFirestore(state: AppState): Promise<number> {
-  enableFirestore();
-  const keys: (keyof AppState)[] = [
-    'users',
-    'institutions',
-    'subjects',
-    'semesters',
-    'parciales',
-    'exams',
-    'submissions',
-    'gradeRecords',
-    'assignments',
-    'assignmentSubmissions'
-  ];
-
-  let count = 0;
-  const promises: Promise<void>[] = [];
-
-  keys.forEach((key) => {
-    const list = (state[key] || []) as any[];
-    list.forEach((item: any) => {
-      if (item && item.id) {
-        count++;
-        promises.push(saveDocToFirestore(key, item));
-      }
-    });
-  });
-
-  await Promise.all(promises);
+  const count = await pushAllStateToSupabase(state);
   initializeSyncCache(state);
   return count;
 }
@@ -906,88 +631,20 @@ export async function fullBidirectionalSync(
 }
 
 /**
- * Live search for a user in Cloud Firestore by email, codigo, cedula or id.
+ * Live search for a user in Supabase by email, codigo, cedula or id.
  * Essential for immediate student login after password reset or student registration.
  */
 export async function fetchUserByCredentials(identifier: string): Promise<User | null> {
-  const clean = (identifier || '').trim();
-  if (!clean) return null;
-  const cleanLower = clean.toLowerCase();
-  const cleanUpper = clean.toUpperCase();
-
-  if (!isFirestoreAvailable) return null;
-
-  try {
-    // 1. Direct document lookup by ID
-    try {
-      const directDoc = await getDoc(doc(db, 'users', clean));
-      if (directDoc.exists()) {
-        return directDoc.data() as User;
-      }
-    } catch (e) {
-      // Continue to query search
-    }
-
-    // 2. Query by email
-    try {
-      const emailQuery = query(collection(db, 'users'), where('email', '==', cleanLower));
-      const emailSnap = await getDocs(emailQuery);
-      if (!emailSnap.empty) {
-        return emailSnap.docs[0].data() as User;
-      }
-    } catch (e) {}
-
-    // 3. Query by student code (uppercase and lowercase)
-    try {
-      const codeQuery = query(collection(db, 'users'), where('codigo', '==', cleanUpper));
-      const codeSnap = await getDocs(codeQuery);
-      if (!codeSnap.empty) {
-        return codeSnap.docs[0].data() as User;
-      }
-    } catch (e) {}
-
-    // 4. Query by cedula
-    try {
-      const cedulaQuery = query(collection(db, 'users'), where('cedula', '==', clean));
-      const cedulaSnap = await getDocs(cedulaQuery);
-      if (!cedulaSnap.empty) {
-        return cedulaSnap.docs[0].data() as User;
-      }
-    } catch (e) {}
-
-    // 5. Fallback: fetch users collection to scan in case fields have mixed case
-    const allUsers = await fetchCollectionFromFirestore<User>('users');
-    const matched = allUsers.find(u => {
-      const uEmail = (u.email || '').trim().toLowerCase();
-      const uCode = (u.codigo || '').trim().toLowerCase();
-      const uCedula = (u.cedula || '').trim().toLowerCase();
-      const uId = (u.id || '').trim().toLowerCase();
-      return uEmail === cleanLower || uCode === cleanLower || uCedula === cleanLower || uId === cleanLower;
-    });
-    return matched || null;
-  } catch (err) {
-    console.warn('fetchUserByCredentials failed:', err);
-    return null;
-  }
+  return fetchUserByCredentialsFromSupabase(identifier);
 }
 
 /**
- * Direct password reset for a user in Cloud Firestore and Supabase
+ * Direct password reset for a user in Supabase
  */
 export async function resetUserPasswordInCloud(user: User, newPass: string): Promise<User> {
-  const updatedUser: User = {
-    ...user,
-    pass: newPass.trim(),
-    actualizado: new Date().toISOString()
-  };
-
-  // 1. Save to Cloud Firestore and Supabase
-  await saveDocToFirestore('users', updatedUser, true);
-
-  // 2. Update local sync cache
-  itemSyncCache.set(`users/${updatedUser.id}`, JSON.stringify(updatedUser));
-
-  return updatedUser;
+  const updated = await resetUserPasswordInCloudFromSupabase(user, newPass);
+  itemSyncCache.set(`users/${updated.id}`, JSON.stringify(updated));
+  return updated;
 }
 
 

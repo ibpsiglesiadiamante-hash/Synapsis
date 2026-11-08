@@ -329,27 +329,27 @@ export default function ShareAppModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                    <span>Firebase Hosting & Firestore Conectado</span>
+                    <span>Supabase (PostgreSQL) Activo</span>
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                   </p>
                   <p className="text-[11px] text-emerald-800">
-                    Proyecto: <span className="font-mono font-bold text-indigo-900">synapsis-ec</span>
+                    Host: <span className="font-mono font-bold text-emerald-900">hbkgtsqeeudpwewopazy.supabase.co</span>
                   </p>
                 </div>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-200 text-emerald-900 px-2.5 py-0.5 rounded-md">
-                Vinculado
+                En Línea
               </span>
             </div>
 
             {/* Target Applet Copy Badge */}
             <div className="bg-white/90 border border-emerald-200 rounded-xl p-2.5 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <Server className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="text-slate-600 font-medium text-[11px]">App Web Firebase:</span>
+                <Server className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-slate-600 font-medium text-[11px]">Despliegue Objetivo:</span>
               </div>
-              <span className="font-mono font-bold text-indigo-700 text-[11px] bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                synapsis-ec (webapp)
+              <span className="font-mono font-bold text-emerald-800 text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                Render & Supabase
               </span>
             </div>
 
@@ -451,7 +451,7 @@ export default function ShareAppModal({
               </button>
             )}
 
-            {/* Action 4: Sync to Cloud Firestore */}
+            {/* Action 4: Sync to Supabase */}
             {onSyncFirebase && (
               <button
                 type="button"
@@ -466,10 +466,10 @@ export default function ShareAppModal({
                 <RefreshCw className={`w-3.5 h-3.5 ${isCurrentSyncing ? 'animate-spin' : ''}`} />
                 <span>
                   {isCurrentSyncing 
-                    ? 'Sincronizando datos con Cloud Firestore...' 
+                    ? 'Sincronizando datos con Supabase (PostgreSQL)...' 
                     : localSyncState === 'success'
-                      ? `¡Datos registrados en Firebase! ${lastSyncCount ? `(${lastSyncCount} registros)` : ''}`
-                      : 'Sincronizar y Registrar Toda la Base de Datos en Firebase'
+                      ? `¡Datos registrados en Supabase! ${lastSyncCount ? `(${lastSyncCount} registros)` : ''}`
+                      : 'Sincronizar y Registrar Toda la Base de Datos en Supabase'
                   }
                 </span>
               </button>
