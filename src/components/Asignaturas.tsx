@@ -9,7 +9,7 @@ import {
   Search, Sparkles, RefreshCw, Layers, LayoutGrid, Table as TableIcon, BookmarkCheck, ArrowRight
 } from 'lucide-react';
 import { Subject, User, Semester } from '../types';
-import { uid, now, fmtDate, generateSubjectCode, backupAppState, normalizeSubjectCanonicalKey, markAsDeleted } from '../lib/db';
+import { uid, now, fmtDate, generateSubjectCode, backupAppState, normalizeSubjectCanonicalKey, normalizeSemesterCanonicalKey, markAsDeleted, unmarkAsDeleted } from '../lib/db';
 import { uploadTheologicalSubjectsToFirestore, saveDocToFirestore, deleteDocFromFirestore, registerDeletedId } from '../lib/firebase';
 import { deleteDocFromSupabase } from '../lib/supabase';
 
@@ -208,6 +208,7 @@ export default function Asignaturas({
           docenteId,
           actualizado: now(),
         };
+        unmarkAsDeleted(updatedSub.id);
         nextSubs[idx] = updatedSub;
         onUpdateSubjects(nextSubs);
         saveDocToFirestore('subjects', updatedSub).catch(err => {
@@ -225,6 +226,7 @@ export default function Asignaturas({
         docenteId,
         creado: now(),
       };
+      unmarkAsDeleted(newSub.id);
       onUpdateSubjects([...nextSubs, newSub]);
       saveDocToFirestore('subjects', newSub).catch(err => {
         console.warn('Error saving new subject to Firestore:', err);
@@ -286,8 +288,11 @@ export default function Asignaturas({
     const nivel2Semesters = ['Semestre VI', 'Semestre VII', 'Semestre VIII', 'Semestre IX'];
 
     const getSubjectsForSemester = (semName: string) => {
+      const canonicalTarget = normalizeSemesterCanonicalKey(semName);
       return subjects.filter(s => {
-        const matchesSem = (s.semestre || '').toLowerCase() === semName.toLowerCase();
+        const canonicalSub = normalizeSemesterCanonicalKey(s.semestre);
+        const matchesSem = (canonicalTarget && canonicalSub && canonicalTarget === canonicalSub) ||
+          (s.semestre || '').trim().toLowerCase() === semName.trim().toLowerCase();
         const q = searchQuery.toLowerCase().trim();
         if (!q) return matchesSem;
         const doc = users.find(u => u.id === s.docenteId);

@@ -428,7 +428,7 @@ export default function Dashboard({
     {
       id: 'gestion',
       name: 'Gestión Escolar',
-      badgeCount: 6,
+      badgeCount: 5,
       accentDot: 'bg-teal-400',
       modules: [
         {
@@ -470,14 +470,6 @@ export default function Dashboard({
           icon: <DollarSign className="w-4 h-4" />,
           pageId: 'finanzas',
           color: 'text-emerald-400'
-        },
-        {
-          id: 'notificaciones',
-          title: 'Notificaciones',
-          desc: 'Alertas institucionales, exámenes y tareas',
-          icon: <BellRing className="w-4 h-4" />,
-          pageId: 'notificaciones',
-          color: 'text-rose-400'
         }
       ]
     },
@@ -508,7 +500,7 @@ export default function Dashboard({
     {
       id: 'docente',
       name: 'Docente',
-      badgeCount: 4,
+      badgeCount: 3,
       accentDot: 'bg-cyan-400',
       modules: [
         {
@@ -534,21 +526,13 @@ export default function Dashboard({
           icon: <BarChart3 className="w-4 h-4" />,
           pageId: 'resultados',
           color: 'text-emerald-300'
-        },
-        {
-          id: 'notificaciones',
-          title: 'Notificaciones',
-          desc: 'Avisos académicos y alertas de cursos',
-          icon: <BellRing className="w-4 h-4" />,
-          pageId: 'notificaciones',
-          color: 'text-rose-400'
         }
       ]
     },
     {
       id: 'estudiante',
       name: 'Estudiante',
-      badgeCount: 4,
+      badgeCount: 3,
       accentDot: 'bg-purple-400',
       modules: [
         {
@@ -574,14 +558,6 @@ export default function Dashboard({
           icon: <Clock className="w-4 h-4" />,
           pageId: 'miHistorial',
           color: 'text-amber-300'
-        },
-        {
-          id: 'notificaciones',
-          title: 'Notificaciones',
-          desc: 'Alertas de exámenes próximos y tareas',
-          icon: <BellRing className="w-4 h-4" />,
-          pageId: 'notificaciones',
-          color: 'text-rose-400'
         }
       ]
     },

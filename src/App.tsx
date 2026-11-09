@@ -152,25 +152,7 @@ export default function App() {
           mergedDb = mergeStates(mergedDb, remoteSupabase as any);
         }
 
-        // Ejecutar depuración automática de semestres, materias y parciales duplicados
-        const { state: dedupSemDb, duplicateIds: dupSemIds } = deduplicateSemesters(mergedDb);
-        const { state: dedupSubDb, duplicateIds: dupSubIds } = deduplicateSubjects(dedupSemDb);
-        const { state: cleanFinalDb, duplicateIds: dupParcIds } = deduplicateParciales(dedupSubDb);
-        mergedDb = cleanFinalDb;
 
-        // Limpiar en segundo plano los IDs duplicados en Supabase y registrar persistencia
-        dupSemIds.forEach(id => {
-          registerDeletedId(id, 'semesters');
-          deleteDocFromSupabase('semesters', id).catch(() => {});
-        });
-        dupSubIds.forEach(id => {
-          registerDeletedId(id, 'subjects');
-          deleteDocFromSupabase('subjects', id).catch(() => {});
-        });
-        dupParcIds.forEach(id => {
-          registerDeletedId(id, 'parciales');
-          deleteDocFromSupabase('parciales', id).catch(() => {});
-        });
 
         currentDbRef.current = mergedDb;
         setDb(mergedDb);

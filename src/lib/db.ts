@@ -632,12 +632,7 @@ export function getInitialState(): AppState {
     recycleBin
   };
 
-  const { state: cleanSemDb } = deduplicateSemesters(rawState);
-  const { state: cleanSubsDb } = deduplicateSubjects(cleanSemDb);
-  const { state: cleanState } = deduplicateParciales(cleanSubsDb);
-
-  saveState(cleanState);
-  return cleanState;
+  return rawState;
 }
 
 /**
@@ -839,24 +834,19 @@ export function deduplicateSubjects(state: AppState): {
   const report: string[] = [];
   const remapping = new Map<string, string>(); // duplicateId -> canonicalId
 
-  // Agrupar materias por clave canónica normalizada y por código compartido
+  // Agrupar materias ÚNICAMENTE por clave canónica normalizada Y dentro del mismo semestre
   const groups = new Map<string, Subject[]>();
-  const codeToGroupKey = new Map<string, string>();
 
   subjects.forEach(s => {
-    let key = normalizeSubjectCanonicalKey(s.nombre, s.codigo);
-    const cleanCode = (s.codigo || '').trim().toUpperCase();
-
-    if (cleanCode && codeToGroupKey.has(cleanCode)) {
-      key = codeToGroupKey.get(cleanCode)!;
-    } else if (cleanCode && key) {
-      codeToGroupKey.set(cleanCode, key);
-    }
-
-    if (!key) return;
-    const list = groups.get(key) || [];
+    const semKey = normalizeSemesterCanonicalKey(s.semestre) || (s.semestre || 'sin_semestre').trim().toLowerCase();
+    const nameKey = normalizeSubjectCanonicalKey(s.nombre, s.codigo);
+    if (!nameKey) return;
+    
+    // Solo son duplicadas si comparten nombre canónico Y pertenecen al mismo semestre
+    const groupKey = `${semKey}:::${nameKey}`;
+    const list = groups.get(groupKey) || [];
     list.push(s);
-    groups.set(key, list);
+    groups.set(groupKey, list);
   });
 
   const survivors: Subject[] = [];
