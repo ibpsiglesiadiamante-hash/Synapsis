@@ -13,6 +13,7 @@ import {
 import { User, Exam, Parcial, Subject, Semester } from '../types';
 import { fmtDate, uid, now, cleanExamTitle, resolveExamSemester, SEMESTRES_OFICIALES } from '../lib/db';
 import { SearchableSelect, SelectOption } from './SearchableSelect';
+import { getDefaultExamTitle, getBibleVerseForSubject } from '../lib/examPresets';
 
 interface MisExamenesProps {
   currentUser: User;
@@ -58,6 +59,7 @@ export default function MisExamenes({
   // Form Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [subtitulo, setSubtitulo] = useState('');
   const [selectedSemestre, setSelectedSemestre] = useState('Semestre I');
   const [materia, setMateria] = useState('');
   const [parcialId, setParcialId] = useState('');
@@ -252,26 +254,39 @@ export default function MisExamenes({
 
   const hasActiveFilters = filterSemestre !== 'todos' || filterMateria !== 'todos' || filterStatus !== 'all' || filterNivel !== 'todos' || !!searchQuery.trim();
 
-  const handleOpenModal = (presetSemestre?: string) => {
-    setTitle('');
+  const handleOpenModal = (presetSemestre?: string, presetMateria?: string, presetParcialId?: string) => {
     const targetSem = presetSemestre || (filterSemestre !== 'todos' ? filterSemestre : 'Semestre I');
     setSelectedSemestre(targetSem);
     
     // Auto-select materia if filterMateria is active and matches, or first in that semester
-    if (filterMateria !== 'todos') {
+    let chosenMateria = '';
+    if (presetMateria) {
+      chosenMateria = presetMateria;
+    } else if (filterMateria !== 'todos') {
       const matchFilterMat = teacherSubjects.find(s => s.nombre.toLowerCase().trim() === filterMateria.toLowerCase().trim());
-      if (matchFilterMat) {
-        setMateria(matchFilterMat.nombre);
-        if (matchFilterMat.semestre) setSelectedSemestre(matchFilterMat.semestre);
-      } else {
-        setMateria(filterMateria);
-      }
+      chosenMateria = matchFilterMat ? matchFilterMat.nombre : filterMateria;
     } else {
       const firstSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === targetSem.toLowerCase().trim()) || teacherSubjects[0];
-      setMateria(firstSub ? firstSub.nombre : '');
+      chosenMateria = firstSub ? firstSub.nombre : '';
     }
-    
-    setParcialId('');
+    setMateria(chosenMateria);
+
+    let chosenParcialId = presetParcialId || '';
+    if (!chosenParcialId && chosenMateria) {
+      const sub = subjects.find(s => s.nombre.toLowerCase().trim() === chosenMateria.toLowerCase().trim());
+      if (sub) {
+        const parc = parciales.find(p => p.asignatura === sub.id);
+        if (parc) chosenParcialId = parc.id;
+      }
+    }
+    setParcialId(chosenParcialId);
+
+    const parcObj = parciales.find(p => p.id === chosenParcialId);
+    const standardTitle = getDefaultExamTitle(chosenMateria, parcObj?.nombre || targetSem || 'Evaluación I');
+    const standardVerse = getBibleVerseForSubject(chosenMateria);
+
+    setTitle(standardTitle);
+    setSubtitulo(standardVerse);
     setDescription('');
     setTiempo(60);
     setIntentos(1);
@@ -288,7 +303,8 @@ export default function MisExamenes({
       toast('Debes seleccionar la materia o asignatura', 'error');
       return;
     }
-    const resolvedTitle = title.trim() || `Examen - ${materia.trim()}`;
+    const resolvedTitle = title.trim() || getDefaultExamTitle(materia.trim());
+    const resolvedSubtitulo = subtitulo.trim() || getBibleVerseForSubject(materia.trim());
 
     // Link semester explicitly to preserve robust relation
     const targetSubject = subjects.find(s => s.nombre.toLowerCase().trim() === materia.toLowerCase().trim() || s.id === materia);
@@ -296,18 +312,19 @@ export default function MisExamenes({
 
     const newExam: Exam = {
       id: uid(),
-      titulo: resolvedTitle.trim(),
+      titulo: resolvedTitle,
+      subtitulo: resolvedSubtitulo,
       materia: materia.trim(),
       parcialId: parcialId || null,
       semestre: resolvedSem,
       descripcion: description.trim(),
       docenteId: currentUser.id,
       estado,
-      tiempo: Number(tiempo) || 0,
-      intentos: Number(intentos) || 0,
+      tiempo: Number(tiempo) || 60,
+      intentos: Number(intentos) || 1,
       aprobacion: Number(aprobacion) || 60,
-      aleatorio,
-      mostrarNota,
+      aleatorio: Boolean(aleatorio),
+      mostrarNota: mostrarNota ?? true,
       creado: now(),
       preguntas: [],
       bannerUrl: 'https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=1200&q=80',
@@ -317,7 +334,7 @@ export default function MisExamenes({
     onUpdateExams(nextExams);
     setIsModalOpen(false);
 
-    toast(`Examen organizado en ${resolvedSem} con éxito. Abriendo editor...`, 'success');
+    toast(`Examen organizado en ${resolvedSem} con formato estándar IBPS. Abriendo editor...`, 'success');
     onOpenBuilder(newExam.id);
   };
 
@@ -1321,9 +1338,11 @@ export default function MisExamenes({
                         const matchingSub = teacherSubjects.find(s => (s.semestre || '').toLowerCase().trim() === newSem.toLowerCase().trim());
                         if (matchingSub) {
                           setMateria(matchingSub.nombre);
-                          if (!title.trim() || title.startsWith('Examen de ')) {
-                            setTitle(`Examen de ${matchingSub.nombre}`);
-                          }
+                          const matchingParc = parciales.find(p => p.asignatura === matchingSub.id);
+                          const newPId = matchingParc?.id || '';
+                          setParcialId(newPId);
+                          setTitle(getDefaultExamTitle(matchingSub.nombre, matchingParc?.nombre || newSem));
+                          setSubtitulo(getBibleVerseForSubject(matchingSub.nombre));
                         }
                       }}
                       className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-[#ea580c]"
@@ -1346,16 +1365,17 @@ export default function MisExamenes({
                       noResultsText="Sin materias en este semestre"
                       onChange={selectedMat => {
                         setMateria(selectedMat);
-                        if (!title.trim() || title.startsWith('Examen de ')) {
-                          setTitle(`Examen de ${selectedMat}`);
-                        }
-                        // Auto-sync semester if subject has it
                         const foundSub = subjects.find(s => s.nombre === selectedMat);
+                        let curSem = selectedSemestre;
                         if (foundSub?.semestre) {
+                          curSem = foundSub.semestre;
                           setSelectedSemestre(foundSub.semestre);
                         }
                         const matchingParc = foundSub ? parciales.find(p => p.asignatura === foundSub.id) : null;
-                        setParcialId(matchingParc?.id || '');
+                        const newPId = matchingParc?.id || '';
+                        setParcialId(newPId);
+                        setTitle(getDefaultExamTitle(selectedMat, matchingParc?.nombre || curSem));
+                        setSubtitulo(getBibleVerseForSubject(selectedMat));
                       }}
                     />
                   </div>
@@ -1368,7 +1388,14 @@ export default function MisExamenes({
                   </label>
                   <select 
                     value={parcialId} 
-                    onChange={e => setParcialId(e.target.value)}
+                    onChange={e => {
+                      const newPId = e.target.value;
+                      setParcialId(newPId);
+                      const parc = parciales.find(p => p.id === newPId);
+                      if (materia) {
+                        setTitle(getDefaultExamTitle(materia, parc?.nombre || selectedSemestre));
+                      }
+                    }}
                     className="w-full p-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">-- Sin parcial relativo (Evaluación independiente) --</option>
@@ -1388,19 +1415,56 @@ export default function MisExamenes({
                 </div>
               </div>
 
-              {/* Step 2: Basic Info */}
+              {/* Step 2: Basic Info & Standard IBPS Header */}
               <div className="space-y-3.5">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    Título de la Evaluación <span className="text-red-500">*</span>
-                  </label>
-                  <input 
-                    type="text" 
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Título Oficial de la Evaluación (2 Líneas IBPS) <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parc = parciales.find(p => p.id === parcialId);
+                        setTitle(getDefaultExamTitle(materia, parc?.nombre || selectedSemestre));
+                      }}
+                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                    >
+                      ↺ Formato oficial
+                    </button>
+                  </div>
+                  <textarea 
                     required 
+                    rows={2}
                     value={title} 
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="Ej: EVALUACIÓN I - TEOLOGÍA" 
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white"
+                    placeholder="Línea 1: Examen de Asignatura&#10;Línea 2: Evaluación II - IBPS" 
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-600 bg-white leading-relaxed"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Predefinido con el nombre de la materia y el corte institucional IBPS.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Cita Bíblica / Subtítulo Institucional
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSubtitulo(getBibleVerseForSubject(materia))}
+                      className="text-[10px] font-bold text-amber-700 hover:text-amber-900 cursor-pointer"
+                    >
+                      ↺ Cita de {materia || 'Materia'}
+                    </button>
+                  </div>
+                  <textarea 
+                    rows={2}
+                    value={subtitulo} 
+                    onChange={e => setSubtitulo(e.target.value)}
+                    placeholder='“Toda la Escritura está inspirada por Dios...”' 
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs italic text-slate-700 focus:outline-none focus:border-amber-500 bg-amber-50/30 leading-relaxed"
                   />
                 </div>
 

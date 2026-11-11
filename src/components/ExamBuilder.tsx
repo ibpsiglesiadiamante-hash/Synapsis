@@ -12,6 +12,7 @@ import { Exam, Question, Parcial, Subject, Semester } from '../types';
 import { uid } from '../lib/db';
 import { saveDocToFirestore } from '../lib/firebase';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
+import { getDefaultExamTitle, getBibleVerseForSubject } from '../lib/examPresets';
 
 interface ExamBuilderProps {
   examId: string;
@@ -138,17 +139,30 @@ export default function ExamBuilder({
     );
   }
 
-  // Local Form States (initialized from active exam)
-  const [title, setTitle] = useState(exam.titulo);
-  const [subtitulo, setSubtitulo] = useState(exam.subtitulo || '');
-  const [materia, setMateria] = useState(exam.materia);
+  // Local Form States (initialized from active exam with standard IBPS presets if unset)
+  const initialStandardTitle = () => {
+    if (exam.titulo && (exam.titulo.includes('\n') || exam.titulo.toUpperCase().includes('IBPS'))) {
+      return exam.titulo;
+    }
+    const parc = parciales.find(p => p.id === exam.parcialId);
+    return getDefaultExamTitle(exam.materia, parc?.nombre || exam.semestre || 'Evaluación I');
+  };
+
+  const initialStandardSubtitle = () => {
+    if (exam.subtitulo && exam.subtitulo.trim()) return exam.subtitulo;
+    return getBibleVerseForSubject(exam.materia);
+  };
+
+  const [title, setTitle] = useState(initialStandardTitle);
+  const [subtitulo, setSubtitulo] = useState(initialStandardSubtitle);
+  const [materia, setMateria] = useState(exam.materia || '');
   const [parcialId, setParcialId] = useState(exam.parcialId || '');
   const [description, setDescription] = useState(exam.descripcion || '');
-  const [tiempo, setTiempo] = useState(exam.tiempo);
-  const [intentos, setIntentos] = useState(exam.intentos);
-  const [aprobacion, setAprobacion] = useState(exam.aprobacion);
-  const [aleatorio, setAleatorio] = useState(exam.aleatorio);
-  const [mostrarNota, setMostrarNota] = useState(exam.mostrarNota);
+  const [tiempo, setTiempo] = useState(exam.tiempo !== undefined ? exam.tiempo : 60);
+  const [intentos, setIntentos] = useState(exam.intentos !== undefined ? exam.intentos : 1);
+  const [aprobacion, setAprobacion] = useState(exam.aprobacion !== undefined ? exam.aprobacion : 60);
+  const [aleatorio, setAleatorio] = useState(exam.aleatorio ?? false);
+  const [mostrarNota, setMostrarNota] = useState(exam.mostrarNota ?? true);
   const [questions, setQuestions] = useState<Question[]>(() => ensureValidQuestions(exam.preguntas || []));
   const [bannerUrl, setBannerUrl] = useState(exam.bannerUrl || PRESET_BANNERS[0].url);
 
@@ -1089,6 +1103,23 @@ export default function ExamBuilder({
     isDirtyRef.current = true;
   };
 
+  const handleApplyStandardIbpsFormat = () => {
+    const parc = parciales.find(p => p.id === parcialId);
+    const standardTitle = getDefaultExamTitle(materia, parc?.nombre || exam.semestre || 'Evaluación I');
+    const standardVerse = getBibleVerseForSubject(materia);
+    setTitle(standardTitle);
+    setSubtitulo(standardVerse);
+    notifyUserEdit();
+    toast('Formato oficial IBPS aplicado (Título institucional y Cita Bíblica)', 'success');
+  };
+
+  const handleApplyVerseForMateria = () => {
+    const standardVerse = getBibleVerseForSubject(materia);
+    setSubtitulo(standardVerse);
+    notifyUserEdit();
+    toast(`Cita bíblica institucional de "${materia || 'la materia'}" cargada`, 'success');
+  };
+
   const handleAddEnunciado = (qid: string) => {
     notifyUserEdit();
     setQuestions(prev => prev.map(q => {
@@ -1482,15 +1513,28 @@ export default function ExamBuilder({
             </div>
 
             <div className="p-6 text-center border-b border-slate-100 flex flex-col items-center">
-              {/* Badge */}
-              <div className="mb-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-indigo-50 text-indigo-700 select-none">
-                ⚙ CONFIGURACIÓN DE CABECERA (VISTA REALISTA)
+              {/* Badges & Actions */}
+              <div className="mb-2.5 flex items-center gap-2 flex-wrap justify-center">
+                <div className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-indigo-50 text-indigo-700 select-none">
+                  ⚙ CONFIGURACIÓN DE CABECERA (VISTA REALISTA)
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyStandardIbpsFormat}
+                  className="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-orange-50 text-[#ea580c] border border-orange-200 hover:bg-orange-100 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                  title="Restablecer el título oficial de 2 líneas y la cita bíblica de la materia según el estándar IBPS"
+                >
+                  ⚡ Restablecer Formato Estándar IBPS
+                </button>
               </div>
               
               {/* Main Title text area centered */}
               <AutoExpandingTextarea 
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={e => {
+                  setTitle(e.target.value);
+                  notifyUserEdit();
+                }}
                 placeholder="INSTITUTO BÍBLICO PATRICIO SYMES - MATERIA..."
                 rows={1}
                 className="w-full text-center text-md md:text-lg font-bold text-slate-800 bg-transparent border border-dashed border-slate-200 rounded-lg py-3 px-3 outline-none placeholder-slate-400 focus:border-indigo-500 tracking-wide leading-normal"
@@ -1502,13 +1546,26 @@ export default function ExamBuilder({
 
               {/* Subtitle / Bible Verse */}
               <div className="w-full mt-4 flex flex-col items-center">
-                <span className="text-xs font-semibold text-slate-500 mb-1">Subtítulo / Mensaje / Cita Bíblica</span>
+                <div className="flex items-center justify-between w-full max-w-xl mb-1 px-1">
+                  <span className="text-xs font-semibold text-slate-500">Subtítulo / Mensaje / Cita Bíblica</span>
+                  <button
+                    type="button"
+                    onClick={handleApplyVerseForMateria}
+                    className="text-[10px] font-bold text-amber-700 hover:text-amber-900 cursor-pointer"
+                    title="Cargar cita bíblica de la materia seleccionada"
+                  >
+                    ↺ Cargar Cita de {materia || 'Materia'}
+                  </button>
+                </div>
                 <AutoExpandingTextarea 
                   value={subtitulo}
-                  onChange={e => setSubtitulo(e.target.value)}
-                  placeholder='Ej: "Toda la Escritura está inspirada por Dios y es provechosa para enseñar..." 2 Tim 3:16'
+                  onChange={e => {
+                    setSubtitulo(e.target.value);
+                    notifyUserEdit();
+                  }}
+                  placeholder='Ej: "Id, y haced discípulos a todas las naciones..." (Mateo 28:19,20)'
                   rows={1}
-                  className="w-full max-w-xl text-center text-xs text-slate-600 bg-amber-50/20 border border-slate-200 focus:border-indigo-500 rounded-lg p-2 outline-none placeholder-slate-400/60 italic"
+                  className="w-full max-w-xl text-center text-xs text-slate-600 bg-amber-50/20 border border-slate-200 focus:border-indigo-500 rounded-lg p-2 outline-none placeholder-slate-400/60 italic leading-relaxed"
                 />
               </div>
 

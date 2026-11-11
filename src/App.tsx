@@ -1362,6 +1362,8 @@ export default function App() {
             users={db.users}
             onDeduplicateParciales={handleDeduplicateParciales}
             onSendToRecycle={(p) => handleSendToRecycle('parcial', p, p.nombre, p.asignatura, `Semestre: ${p.semestre || 'S/S'}`)}
+            onOpenBuilder={(id) => setActiveEditExamId(id)}
+            onUpdateExams={updateExams}
           />
         );
       case 'registroNotas':

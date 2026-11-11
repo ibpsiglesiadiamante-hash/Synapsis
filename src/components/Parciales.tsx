@@ -9,6 +9,7 @@ import { Parcial, Semester, Subject, User, Exam, Submission } from '../types';
 import { uid, now, fmtDate, normalizeParcialPeriod } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
 import { saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
+import { createDefaultExamObject } from '../lib/examPresets';
 
 interface ParcialesProps {
   parciales: Parcial[];
@@ -17,15 +18,18 @@ interface ParcialesProps {
   exams?: Exam[];
   submissions?: Submission[];
   onUpdateParciales: (updated: Parcial[]) => void;
-  toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
+  toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   currentUser?: User;
   users?: User[];
   onDeduplicateParciales?: () => void;
   onSendToRecycle?: (parcial: Parcial) => void;
+  onOpenBuilder?: (examId: string) => void;
+  onUpdateExams?: (updated: Exam[]) => void;
 }
 
 export default function Parciales({ 
-  parciales, semesters, subjects, exams = [], submissions = [], onUpdateParciales, toast, currentUser, users, onDeduplicateParciales, onSendToRecycle 
+  parciales, semesters, subjects, exams = [], submissions = [], onUpdateParciales, toast, currentUser, users, onDeduplicateParciales, onSendToRecycle,
+  onOpenBuilder, onUpdateExams
 }: ParcialesProps) {
   const isTeacher = currentUser?.rol === 'docente';
   
@@ -191,6 +195,35 @@ export default function Parciales({
     const nextParciales = parciales.filter(p => p.id !== id);
     onUpdateParciales(nextParciales);
     toast('Corte o parcial eliminado correctamente', 'success');
+  };
+
+  const handleCreateOrOpenExamForParcial = (p: Parcial) => {
+    if (!onOpenBuilder) return;
+    const linkedExams = (exams || []).filter(e => e.parcialId === p.id);
+    if (linkedExams.length > 0) {
+      onOpenBuilder(linkedExams[0].id);
+      toast(`Abriendo examen existente de ${p.nombre}`, 'info');
+      return;
+    }
+
+    if (!onUpdateExams) return;
+    const sub = subjects.find(s => s.id === p.asignatura);
+    const sem = semesters.find(s => s.id === p.semestre);
+    const newExam = createDefaultExamObject({
+      materia: sub ? sub.nombre : 'Asignatura',
+      parcialId: p.id,
+      parcialNombre: p.nombre,
+      semestre: sem ? sem.nombre : sub?.semestre || 'Semestre I',
+      docenteId: currentUser?.id,
+      tiempo: 60,
+      intentos: 1,
+      aprobacion: 60,
+    });
+
+    const nextExams = [...(exams || []), newExam];
+    onUpdateExams(nextExams);
+    toast(`Examen estándar IBPS creado para "${p.nombre}". Abriendo editor...`, 'success');
+    onOpenBuilder(newExam.id);
   };
 
   return (
@@ -412,7 +445,18 @@ export default function Parciales({
                         )}
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <div className="inline-flex gap-1.5 justify-end">
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {onOpenBuilder && (
+                            <button
+                              type="button"
+                              onClick={() => handleCreateOrOpenExamForParcial(p)}
+                              className="px-2.5 py-1 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#ea580c] font-bold text-[11px] flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                              title={linkedExams.length > 0 ? "Abrir examen existente en el editor" : "Crear examen con formato institucional IBPS predeterminado"}
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                              <span>{linkedExams.length > 0 ? 'Editar Examen' : '+ Examen IBPS'}</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenEditModal(p)}
                             className="p-1 rounded border border-slate-200 hover:bg-slate-100 text-slate-505 cursor-pointer"
