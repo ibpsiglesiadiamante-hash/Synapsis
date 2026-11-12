@@ -1009,8 +1009,8 @@ export default function Resultados({
                         </div>
                       </div>
 
-                      {/* Clave modelo y criterio del docente para preguntas con respuestaEsperada */}
-                      {q.respuestaEsperada && canGrade && (
+                      {/* Clave modelo y criterio del docente para preguntas con respuestaEsperada o criterioDocente */}
+                      {(q.respuestaEsperada || q.criterioDocente) && canGrade && (
                         <div className="mt-2.5 p-3 rounded-lg border border-indigo-200 bg-indigo-50/70 dark:bg-indigo-950/30 dark:border-indigo-900/50 text-left">
                           <div className="flex items-center justify-between gap-2 mb-1">
                             <span className="text-[10.5px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wide flex items-center gap-1.5">

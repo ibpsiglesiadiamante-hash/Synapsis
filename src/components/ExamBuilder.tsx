@@ -172,6 +172,7 @@ export default function ExamBuilder({
 
   // Auto-save states
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('saved');
+  const [expandedTeacherKey, setExpandedTeacherKey] = useState<Record<string, boolean>>({});
 
   // Table Classification Wizard states
   const [tableWizardQId, setTableWizardQId] = useState<string | null>(null);
@@ -2068,6 +2069,52 @@ export default function ExamBuilder({
                             >
                               📘 Cargar: Nombres de Dios (screenshot 1)
                             </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuestions(prev => prev.map(item => {
+                                  if (item.id === q.id) {
+                                    const opts = ['1', '2', '3', '4', '5', '6', '7', '8'];
+                                    const enuns = [
+                                      'Llamamiento de Samuel.',
+                                      'David hecho rey de todo Israel.',
+                                      'Samuel muere.',
+                                      'Nacimiento de Samuel.',
+                                      'Muerte de Elí y comienzos del trabajo de Samuel como juez.',
+                                      'Saúl comienza su reinado.',
+                                      'Saúl muerto en Gilboa.',
+                                      'David reina sobre Judá.'
+                                    ];
+                                    // Chronological order:
+                                    // 1: Nacimiento de Samuel (enun idx 3) -> match 0 ('1')
+                                    // 2: Llamamiento de Samuel (enun idx 0) -> match 1 ('2')
+                                    // 3: Muerte de Elí (enun idx 4) -> match 2 ('3')
+                                    // 4: Saúl comienza su reinado (enun idx 5) -> match 3 ('4')
+                                    // 5: Samuel muere (enun idx 2) -> match 4 ('5')
+                                    // 6: Saúl muerto en Gilboa (enun idx 6) -> match 5 ('6')
+                                    // 7: David reina sobre Judá (enun idx 7) -> match 6 ('7')
+                                    // 8: David hecho rey de todo Israel (enun idx 1) -> match 7 ('8')
+                                    return {
+                                      ...item,
+                                      texto: 'Organice numéricamente la cronología aproximada de los siguientes eventos:',
+                                      opciones: opts,
+                                      opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
+                                      enunciados: enuns,
+                                      enunciadoIds: enuns.map((_, i) => `enun_${item.id}_${i}_${uid()}`),
+                                      matchCorrectos: [1, 7, 4, 0, 2, 3, 5, 6],
+                                      puntos: 8,
+                                      respuestaEsperada: 'Orden cronológico correcto:\n1. Nacimiento de Samuel\n2. Llamamiento de Samuel\n3. Muerte de Elí y comienzos del trabajo de Samuel como juez\n4. Saúl comienza su reinado\n5. Samuel muere\n6. Saúl muerto en Gilboa\n7. David reina sobre Judá\n8. David hecho rey de todo Israel',
+                                      criterioDocente: 'Cada posición cronológica correcta equivale a 1 punto (8 puntos en total).'
+                                    };
+                                  }
+                                  return item;
+                                }));
+                              }}
+                              className="text-[10px] uppercase font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded px-2.5 py-1.5 transition cursor-pointer font-sans"
+                            >
+                              ⏳ Cargar: Cronología Numérica (1 al 8)
+                            </button>
                           </div>
 
                           <div className="flex flex-wrap gap-2 mb-3">
@@ -2796,6 +2843,81 @@ export default function ExamBuilder({
                             </button>
                           </div>
                         </div>
+                      </div>
+                    )}
+
+                    {/* Clave / Guía Privada del Docente (Aplicable a todo tipo de pregunta, a criterio del docente) */}
+                    {q.tipo !== 'abierta' && (
+                      <div className="mb-4">
+                        {(q.respuestaEsperada !== undefined && q.respuestaEsperada !== '') || (q.criterioDocente !== undefined && q.criterioDocente !== '') || expandedTeacherKey[q.id] ? (
+                          <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-slate-50 p-4 text-left shadow-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
+                                  🔒 Clave / Notas Privadas del Docente
+                                </span>
+                                <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2 py-0.5 rounded-full border border-indigo-200">
+                                  👁️ Oculto al estudiante · Solo para calificar
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateQExpected(q.id, '');
+                                  handleUpdateQCriterio(q.id, '');
+                                  setExpandedTeacherKey(prev => ({ ...prev, [q.id]: false }));
+                                }}
+                                className="text-[11px] text-slate-400 hover:text-rose-600 font-semibold transition cursor-pointer"
+                              >
+                                Quitar clave privada
+                              </button>
+                            </div>
+
+                            <p className="text-[11px] text-slate-600 mb-3 leading-relaxed">
+                              Opcional: Agrega notas privadas de referencia, justificación bíblica o académica, orden cronológico o criterios que solo verás tú como docente al revisar o calificar.
+                            </p>
+
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-[11px] font-bold text-slate-800 block mb-1">
+                                  Respuesta modelo / Justificación o notas del docente:
+                                </label>
+                                <AutoExpandingTextarea
+                                  value={q.respuestaEsperada || ''}
+                                  onChange={e => handleUpdateQExpected(q.id, e.target.value)}
+                                  placeholder="Ej: Justificación de la respuesta, versículos clave, orden cronológico de eventos o notas pedagógicas..."
+                                  rows={1}
+                                  minHeight={52}
+                                  className="w-full bg-white text-slate-900 border border-indigo-200 rounded-lg p-2.5 text-xs font-medium placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                  Criterio o rúbrica de evaluación interna (Opcional):
+                                </label>
+                                <input
+                                  type="text"
+                                  value={q.criterioDocente || ''}
+                                  onChange={e => handleUpdateQCriterio(q.id, e.target.value)}
+                                  placeholder="Ej: Puntos a considerar, tolerancia en fechas, criterios de evaluación..."
+                                  className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTeacherKey(prev => ({ ...prev, [q.id]: true }))}
+                              className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg px-3 py-1.5 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <span>🔒</span>
+                              <span>+ Agregar clave / notas privadas del docente (Oculto al estudiante)</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
