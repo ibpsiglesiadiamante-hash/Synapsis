@@ -9,8 +9,8 @@ import {
   ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
   Download, Copy, FileText
 } from 'lucide-react';
-import { User, Exam, Submission, Subject } from '../types';
-import { avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5 } from '../lib/db';
+import { User, Exam, Submission, Subject, Parcial } from '../types';
+import { avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5, sortExamsBySubjectAndSequence } from '../lib/db';
 import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions } from '../lib/questionAdapter';
 
 interface ResultadosProps {
@@ -19,6 +19,7 @@ interface ResultadosProps {
   exams: Exam[];
   submissions: Submission[];
   subjects?: Subject[];
+  parciales?: Parcial[];
   onUpdateSubmissions: (
     updated: Submission[], 
     forceIds?: string[]
@@ -29,11 +30,12 @@ interface ResultadosProps {
     successfulIds?: string[];
     failedIds?: string[];
   }> | void;
+  onRefreshSubmissions?: () => Promise<void> | void;
   toast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export default function Resultados({ 
-  currentUser, users, exams, submissions, subjects = [], onUpdateSubmissions, toast 
+  currentUser, users, exams, submissions, subjects = [], parciales = [], onUpdateSubmissions, onRefreshSubmissions, toast 
 }: ResultadosProps) {
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
@@ -41,6 +43,8 @@ export default function Resultados({
   const [deletingSubId, setDeletingSubId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [onlyWithSubmissions, setOnlyWithSubmissions] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
   // Local grading scores & comment forms
@@ -77,34 +81,45 @@ export default function Resultados({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isSavingGrading]);
 
+  const allMyUserIds = (users && currentUser)
+    ? users.filter(u => u.nombre === currentUser.nombre || (u.email || '').toLowerCase() === (currentUser.email || '').toLowerCase()).map(u => u.id)
+    : [currentUser.id];
   const userAsignaturas = currentUser.asignaturas || [];
-  const myExams = exams
+
+  const filteredExams = exams
     .filter(e => {
       if (currentUser.rol === 'admin') return true;
-      if (e.docenteId === currentUser.id) return true;
+      if (e.docenteId && (e.docenteId === currentUser.id || allMyUserIds.includes(e.docenteId))) return true;
       const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
-      if (subj && (userAsignaturas.includes(subj.id) || subj.docenteId === currentUser.id)) return true;
+      if (subj && (userAsignaturas.includes(subj.id) || subj.docenteId === currentUser.id || (subj.docenteId && allMyUserIds.includes(subj.docenteId)))) return true;
       if (e.materia && userAsignaturas.includes(e.materia)) return true;
       return false;
     })
     .filter(e => {
+      if (onlyWithSubmissions) {
+        const hasSubs = submissions.some(s => s.examenId === e.id);
+        if (!hasSubs) return false;
+      }
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
       const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
       const subjName = subj ? subj.nombre.toLowerCase() : '';
-      const matchesExam = e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
+      const matchesExam = e.titulo.toLowerCase().includes(q) || (e.materia || '').toLowerCase().includes(q) || subjName.includes(q);
       if (matchesExam) return true;
       
-      // Check if student name matches
+      // Check if student name or cedula matches
       const examSubs = submissions.filter(s => s.examenId === e.id);
       return examSubs.some(s => {
         const student = users.find(u => u.id === s.estudianteId);
         const name = student ? student.nombre : (s.estudianteNombre || '');
-        return name.toLowerCase().includes(q);
+        const cedula = student?.cedula || '';
+        return name.toLowerCase().includes(q) || cedula.toLowerCase().includes(q);
       });
     });
 
-  const examsPerPage = 4;
+  const myExams = sortExamsBySubjectAndSequence(filteredExams, subjects, parciales);
+
+  const examsPerPage = 10;
   const totalPages = Math.ceil(myExams.length / examsPerPage) || 1;
   const currentActivePage = Math.min(currentPage, totalPages);
   const paginatedExams = myExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
@@ -383,6 +398,25 @@ export default function Resultados({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {onRefreshSubmissions && (
+            <button
+              type="button"
+              disabled={isRefreshing}
+              onClick={async () => {
+                setIsRefreshing(true);
+                try {
+                  await onRefreshSubmissions();
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }}
+              className="px-3 py-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs select-none disabled:opacity-50"
+              title="Descargar inmediatamente las entregas más recientes desde la nube"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Actualizando...' : 'Actualizar entregas'}</span>
+            </button>
+          )}
           {submissions.length > 0 && (
             <>
               <button
@@ -435,13 +469,19 @@ export default function Resultados({
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar por título de examen, materia o nombre del estudiante..."
             className="w-full pl-10 pr-9 py-2 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-sm font-semibold text-slate-800 transition duration-150 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-150"
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer font-extrabold select-none text-xs transition"
               title="Limpiar búsqueda"
             >
@@ -449,9 +489,25 @@ export default function Resultados({
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 self-start md:self-auto text-xs font-semibold text-slate-500 bg-slate-50/70 py-1.5 px-3 rounded-lg border border-slate-100 select-none">
-          <span>Evaluaciones encontradas: </span>
-          <span className="font-extrabold text-indigo-700">{myExams.length}</span>
+        <div className="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setOnlyWithSubmissions(prev => !prev);
+              setCurrentPage(1);
+            }}
+            className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition cursor-pointer select-none ${
+              onlyWithSubmissions
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {onlyWithSubmissions ? '✓ Solo con entregas' : 'Mostrar solo con entregas'}
+          </button>
+          <div className="flex items-center gap-1.5 shrink-0 text-xs font-semibold text-slate-500 bg-slate-50/70 py-1.5 px-3 rounded-lg border border-slate-100 select-none">
+            <span>Evaluaciones: </span>
+            <span className="font-extrabold text-indigo-700">{myExams.length}</span>
+          </div>
         </div>
       </div>
 
@@ -494,7 +550,7 @@ export default function Resultados({
       ) : (
         <div className="flex flex-col gap-6">
           {paginatedExams.map(exam => {
-            const examSubs = submissions.filter(s => s.examenId === exam.id);
+            const examSubs = [...submissions.filter(s => s.examenId === exam.id)].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
             const totalScore = examSubs.reduce((acc, current) => acc + current.puntaje, 0);
             const avgScore = examSubs.length ? Math.round(totalScore / examSubs.length) : 0;
             const passCount = examSubs.filter(s => s.aprobado).length;
@@ -675,10 +731,10 @@ export default function Resultados({
             );
           })}
 
-          {myExams.length > 4 && (
+          {myExams.length > examsPerPage && (
             <div className="flex items-center justify-between p-4.5 rounded-2xl border border-slate-200 bg-white shadow-sm theme-bg-surface theme-border">
               <span className="text-xs font-semibold text-slate-400">
-                Mostrando { (currentActivePage - 1) * 4 + 1 } a { Math.min(currentActivePage * 4, myExams.length) } de { myExams.length } evaluaciones
+                Mostrando { (currentActivePage - 1) * examsPerPage + 1 } a { Math.min(currentActivePage * examsPerPage, myExams.length) } de { myExams.length } evaluaciones
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-slate-500 mr-2">

@@ -17,7 +17,7 @@ import {
   Flame, Inbox
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
-import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester } from '../lib/db';
+import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence } from '../lib/db';
 
 export interface AcademicNotification {
   id: string;
@@ -204,6 +204,8 @@ export default function Dashboard({
     });
   }
 
+  sortedExams = sortExamsBySubjectAndSequence(sortedExams, subjects, parciales);
+
   // =========================================================================
   // MOTOR DE NOTIFICACIONES ACADÉMICAS (Alertas de Exámenes y Tareas)
   // =========================================================================
@@ -213,7 +215,7 @@ export default function Dashboard({
   const studentSubsList = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
 
   // 1. Notificaciones de Exámenes Próximos / Activos
-  const examNotifications: AcademicNotification[] = (exams || [])
+  const examNotifications: AcademicNotification[] = sortExamsBySubjectAndSequence(exams || [], subjects, parciales)
     .filter(e => {
       if (e.estado !== 'activo') return false;
       if (rol === 'estudiante') {

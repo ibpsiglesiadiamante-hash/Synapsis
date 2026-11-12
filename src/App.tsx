@@ -67,7 +67,10 @@ import {
   getRecycleBin,
   saveRecycleBin,
   markAsDeleted,
-  unmarkAsDeleted
+  unmarkAsDeleted,
+  getPendingSubmissionIds,
+  addPendingSubmissionId,
+  removePendingSubmissionId
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -131,39 +134,98 @@ export default function App() {
   const [db, setDb] = useState(() => getInitialState());
   const currentDbRef = useRef<AppState>(db);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(false);
+  const hasCompletedInitialLoadRef = useRef(false);
+  const lastRemoteRefreshRef = useRef<number>(0);
 
   useEffect(() => {
     currentDbRef.current = db;
   }, [db]);
+
+  const flushPendingSubmissions = async (subsList: Submission[]) => {
+    const pendingIds = getPendingSubmissionIds();
+    if (pendingIds.length === 0) return;
+    for (const pId of pendingIds) {
+      const targetSub = subsList.find(s => s.id === pId);
+      if (!targetSub) {
+        removePendingSubmissionId(pId);
+        continue;
+      }
+      const res = await saveDocToSupabase('submissions', targetSub);
+      if (res.success) {
+        removePendingSubmissionId(pId);
+      }
+    }
+  };
+
+  const refreshRemoteData = async (showFeedback = false) => {
+    try {
+      // Push any locally pending submissions first so they are preserved on remote
+      await flushPendingSubmissions(currentDbRef.current.submissions || []);
+
+      const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
+        console.warn('Supabase refresh notice:', e);
+        return null;
+      });
+
+      if (remoteSupabase) {
+        const mergedDb = mergeStates(currentDbRef.current, remoteSupabase as any);
+        currentDbRef.current = mergedDb;
+        setDb(mergedDb);
+        saveState(mergedDb);
+        initializeSyncCache(mergedDb);
+
+        // If local had submissions missing in remote, push them immediately
+        const remoteSubIds = new Set((remoteSupabase.submissions || []).map(s => s.id));
+        const missingRemoteSubs = (mergedDb.submissions || []).filter(s => !remoteSubIds.has(s.id));
+        for (const sub of missingRemoteSubs) {
+          const res = await saveDocToSupabase('submissions', sub);
+          if (res.success) removePendingSubmissionId(sub.id);
+        }
+
+        if (showFeedback) {
+          showToast(`Entregas actualizadas desde la nube (${mergedDb.submissions.length} registros) ✓`, 'success');
+        }
+      } else if (showFeedback) {
+        showToast('No se pudo contactar la nube en este momento. Se muestran datos locales.', 'warning');
+      }
+    } catch (err) {
+      console.warn('refreshRemoteData warning:', err);
+      if (showFeedback) {
+        showToast('Error al consultar actualizaciones en la nube.', 'error');
+      }
+    }
+  };
 
   // Download entire Synapsis Portal database on mount in background from Supabase (PostgreSQL)
   useEffect(() => {
     async function loadInitialDatabase() {
       try {
         console.log('Loading Synapsis portal database from Supabase (PostgreSQL)...');
+        const localDb = getInitialState();
+        await flushPendingSubmissions(localDb.submissions || []);
+
         const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
           console.warn('Supabase fetch notice:', e);
           return null;
         });
 
-        const localDb = getInitialState();
         let mergedDb = localDb;
         if (remoteSupabase) {
           mergedDb = mergeStates(mergedDb, remoteSupabase as any);
         }
 
-
-
         currentDbRef.current = mergedDb;
         setDb(mergedDb);
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
+        lastRemoteRefreshRef.current = Date.now();
 
-        // Mantener Supabase sincronizado
-        pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
+        // Mantener Supabase sincronizado (incluyendo cualquier entrega que hubiera quedado local)
+        await pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
       } catch (err) {
         console.error('Error synchronizing database, running standalone with Supabase.', err);
       } finally {
+        hasCompletedInitialLoadRef.current = true;
         setIsFirebaseLoading(false);
       }
     }
@@ -282,13 +344,54 @@ export default function App() {
     }
   }, [activeEditExamId]);
 
-  // Persist DB state changes to local storage & Cloud Firestore
+  // Persist DB state changes to local storage & debounced background Supabase sync
   useEffect(() => {
     saveState(db);
-    if (!isFirebaseLoading) {
+    if (!hasCompletedInitialLoadRef.current || isFirebaseLoading) return;
+    const timer = setTimeout(() => {
       syncToFirestore(db);
-    }
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [db, isFirebaseLoading]);
+
+  // Auto-refresh submissions & flush pending local writes when opening key views or returning online
+  useEffect(() => {
+    const triggerThrottledRefresh = () => {
+      if (!hasCompletedInitialLoadRef.current) return;
+      const elapsed = Date.now() - lastRemoteRefreshRef.current;
+      if (elapsed < 15000) return;
+      lastRemoteRefreshRef.current = Date.now();
+      refreshRemoteData(false);
+    };
+
+    if (
+      activeTab === 'resultados' ||
+      activeTab === 'historialAcademico' ||
+      activeTab === 'registroNotas' ||
+      activeTab === 'misExamenesTake' ||
+      activeTab === 'miHistorial' ||
+      activeTab === 'dashboard'
+    ) {
+      triggerThrottledRefresh();
+    }
+
+    const handleOnline = () => {
+      flushPendingSubmissions(currentDbRef.current.submissions || []);
+      triggerThrottledRefresh();
+    };
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        triggerThrottledRefresh();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [activeTab]);
 
   // Persist current theme
   useEffect(() => {
@@ -785,8 +888,10 @@ export default function App() {
       const res = await saveDocToSupabase('submissions', sub);
       if (res.success) {
         successfulIds.push(sub.id);
+        removePendingSubmissionId(sub.id);
       } else {
         failedIds.push(sub.id);
+        addPendingSubmissionId(sub.id);
         lastError = res.error;
       }
     }
@@ -1267,7 +1372,9 @@ export default function App() {
             exams={db.exams}
             submissions={db.submissions}
             subjects={db.subjects}
+            parciales={db.parciales}
             onUpdateSubmissions={updateSubmissions}
+            onRefreshSubmissions={() => refreshRemoteData(true)}
             toast={showToast}
           />
         );
@@ -1291,6 +1398,7 @@ export default function App() {
             submissions={db.submissions}
             subjects={db.subjects}
             semesters={db.semesters}
+            parciales={db.parciales}
             onTakeExam={(id) => setActiveTakeExamId(id)}
           />
         );
@@ -1978,11 +2086,23 @@ export default function App() {
                 setDashboardCategory('estudiante');
                 try { localStorage.setItem('synapsis_dash_cat', 'estudiante'); } catch(e) {}
               }}
-              onSubmit={(sub) => {
-                // Prepend new submittal
-                const nextSubs = [sub, ...db.submissions];
-                updateSubmissions(nextSubs);
-                showToast('Examen enviado y guardado correctamente en la base de datos', 'success');
+              onSubmit={async (sub) => {
+                // Marcar en cola de respaldo local mientras confirmamos persistencia remota
+                addPendingSubmissionId(sub.id);
+                const latestSubs = currentDbRef.current.submissions || [];
+                const existingIdx = latestSubs.findIndex(s => s.id === sub.id);
+                const nextSubs = existingIdx > -1
+                  ? latestSubs.map((s, idx) => idx === existingIdx ? sub : s)
+                  : [sub, ...latestSubs];
+
+                const res = await updateSubmissions(nextSubs, [sub.id]);
+                if (res.remoteSynced) {
+                  removePendingSubmissionId(sub.id);
+                  showToast('Examen enviado y guardado correctamente en la nube ✓', 'success');
+                } else {
+                  showToast('Examen guardado en tu dispositivo. Se sincronizará automáticamente al restablecer conexión.', 'warning');
+                }
+                return res;
               }}
               toast={showToast}
             />

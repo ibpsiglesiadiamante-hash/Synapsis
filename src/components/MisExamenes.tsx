@@ -11,7 +11,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { User, Exam, Parcial, Subject, Semester } from '../types';
-import { fmtDate, uid, now, cleanExamTitle, resolveExamSemester, SEMESTRES_OFICIALES } from '../lib/db';
+import { fmtDate, uid, now, cleanExamTitle, resolveExamSemester, SEMESTRES_OFICIALES, sortExamsBySubjectAndSequence } from '../lib/db';
 import { SearchableSelect, SelectOption } from './SearchableSelect';
 import { getDefaultExamTitle, getBibleVerseForSubject } from '../lib/examPresets';
 
@@ -141,9 +141,9 @@ export default function MisExamenes({
     return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
   }, [teacherSubjects, userFilteredExams, subjects, semesters, parciales]);
 
-  // Exams filtered simultaneously by status, semester, materia, and search query
+  // Exams filtered simultaneously by status, semester, materia, and search query, ordered by subject & partial sequence
   const fullyFilteredExams = useMemo(() => {
-    return userFilteredExams.filter(e => {
+    const filtered = userFilteredExams.filter(e => {
       // 1. Status Filter
       if (filterStatus !== 'all' && e.estado !== filterStatus) return false;
 
@@ -179,6 +179,8 @@ export default function MisExamenes({
 
       return examTitle.includes(q) || subjName.includes(q) || subjCode.includes(q) || semName.includes(q);
     });
+
+    return sortExamsBySubjectAndSequence(filtered, subjects, parciales);
   }, [userFilteredExams, filterStatus, filterSemestre, filterMateria, searchQuery, subjects, semesters, parciales]);
 
   // Semesters list with exams grouped (uses fullyFilteredExams)

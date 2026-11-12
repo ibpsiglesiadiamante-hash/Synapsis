@@ -3,10 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BookOpen, Clock, RefreshCw, Award, CheckCircle, HelpCircle, Search, Lock, Shield, X, AlertCircle, GraduationCap } from 'lucide-react';
-import { User, Exam, Submission, Subject, Semester } from '../types';
-import { cleanExamTitle, getStudentAssignedSubjects } from '../lib/db';
+import { User, Exam, Submission, Subject, Semester, Parcial } from '../types';
+import {
+  cleanExamTitle,
+  getStudentAssignedSubjects,
+  sortExamsBySubjectAndSequence,
+  resolveExamSubjectName,
+  extractPartialSequenceNumber
+} from '../lib/db';
 
 interface MisExamenesTakeProps {
   currentUser: User;
@@ -14,10 +20,19 @@ interface MisExamenesTakeProps {
   submissions: Submission[];
   subjects?: Subject[];
   semesters?: Semester[];
+  parciales?: Parcial[];
   onTakeExam: (examId: string) => void;
 }
 
-export default function MisExamenesTake({ currentUser, exams, submissions, subjects = [], semesters = [], onTakeExam }: MisExamenesTakeProps) {
+export default function MisExamenesTake({
+  currentUser,
+  exams,
+  submissions,
+  subjects = [],
+  semesters = [],
+  parciales = [],
+  onTakeExam
+}: MisExamenesTakeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -51,24 +66,29 @@ export default function MisExamenesTake({ currentUser, exams, submissions, subje
   const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
   const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
 
-  const activeExams = exams
-    .filter(e => e.estado === 'activo')
-    .filter(e => {
-      if (currentUser.rol === 'admin' || currentUser.rol === 'docente' || myAssignedSubjects.length === 0) return true;
-      if (e.materia && assignedIds.has(e.materia)) return true;
-      const eMat = (e.materia || '').toLowerCase().trim();
-      if (assignedNames.has(eMat)) return true;
-      const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
-      if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-      return false;
-    })
-    .filter(e => {
-      const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
-      const subjName = subj ? subj.nombre.toLowerCase() : '';
-      return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
-    });
+  const activeExams = useMemo(() => {
+    const filtered = exams
+      .filter(e => e.estado === 'activo')
+      .filter(e => {
+        if (currentUser.rol === 'admin' || currentUser.rol === 'docente' || myAssignedSubjects.length === 0) return true;
+        if (e.materia && assignedIds.has(e.materia)) return true;
+        const eMat = (e.materia || '').toLowerCase().trim();
+        if (assignedNames.has(eMat)) return true;
+        const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
+        if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
+        return false;
+      })
+      .filter(e => {
+        const q = searchQuery.toLowerCase().trim();
+        if (!q) return true;
+        const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
+        const subjName = subj ? subj.nombre.toLowerCase() : '';
+        return e.titulo.toLowerCase().includes(q) || e.materia.toLowerCase().includes(q) || subjName.includes(q);
+      });
+
+    // Agrupar siempre por asignatura y ordenar Parcial 1 / Evaluación I antes que Parcial 2 / Evaluación II
+    return sortExamsBySubjectAndSequence(filtered, subjects, parciales);
+  }, [exams, currentUser.rol, myAssignedSubjects.length, assignedIds, assignedNames, subjects, parciales, searchQuery]);
 
   const mySubs = submissions.filter(s => s.estudianteId === currentUser.id);
 
@@ -77,10 +97,30 @@ export default function MisExamenesTake({ currentUser, exams, submissions, subje
     setCurrentPage(1);
   }, [searchQuery]);
 
-  const examsPerPage = 6;
+  const examsPerPage = 12;
   const totalPages = Math.ceil(activeExams.length / examsPerPage) || 1;
   const currentActivePage = Math.min(currentPage, totalPages);
   const paginatedExams = activeExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
+
+  // Agrupar exámenes paginados visualmente por materia para mantener Parcial 1 y 2 siempre juntos
+  const groupedBySubject = useMemo(() => {
+    const groups: { subjectName: string; exams: Exam[] }[] = [];
+    const map = new Map<string, Exam[]>();
+
+    paginatedExams.forEach(exam => {
+      const subjName = resolveExamSubjectName(exam, subjects);
+      const key = subjName.toLowerCase().trim();
+      if (!map.has(key)) {
+        const arr: Exam[] = [exam];
+        map.set(key, arr);
+        groups.push({ subjectName: subjName, exams: arr });
+      } else {
+        map.get(key)!.push(exam);
+      }
+    });
+
+    return groups;
+  }, [paginatedExams, subjects]);
 
   return (
     <div className="page-misExamenesTake animate-fade-in pb-12">
@@ -89,7 +129,7 @@ export default function MisExamenesTake({ currentUser, exams, submissions, subje
           Exámenes disponibles
         </h2>
         <div className="page-sub text-sm font-medium mt-1 text-slate-500 font-sans">
-          Selecciona una evaluación disponible para responder. Lee las instrucciones de los docentes detenidamente.
+          Selecciona una evaluación disponible para responder. Las evaluaciones están ordenadas por materia y parcial (primero la Evaluación I y luego la Evaluación II).
         </div>
       </div>
 
@@ -188,97 +228,137 @@ export default function MisExamenesTake({ currentUser, exams, submissions, subje
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {paginatedExams.map(e => {
-              const myAttempts = mySubs.filter(s => s.examenId === e.id);
-              const canTake = e.intentos === 0 || myAttempts.length < e.intentos;
-              const lastAttempt = myAttempts[myAttempts.length - 1];
+        <div className="flex flex-col gap-7">
+          {groupedBySubject.map(group => {
+            // Determinar si hay una Evaluación 1 sin presentar en esta misma materia
+            const hasPendingEarlierExam = (targetSeq: number) => {
+              if (targetSeq <= 1 || targetSeq >= 999) return false;
+              return group.exams.some(other => {
+                const otherSeq = extractPartialSequenceNumber(other, parciales, subjects);
+                const otherAttempts = mySubs.filter(s => s.examenId === other.id);
+                return otherSeq < targetSeq && otherAttempts.length === 0;
+              });
+            };
 
-              return (
-                <div 
-                  key={e.id} 
-                  className="card bg-white p-5 rounded-2xl border border-slate-205 flex flex-col justify-between shadow-sm relative hover:border-slate-350 transition-colors theme-bg-surface theme-border"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-2.5">
-                      <div>
-                        {(() => {
-                          const subj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === (e.materia || '').toLowerCase().trim());
-                          const subjName = subj?.nombre || e.materia;
-                          return (
-                            <>
+            return (
+              <div key={group.subjectName} className="space-y-3">
+                <div className="flex items-center justify-between gap-2 px-1 border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800" style={{ color: 'var(--gray-900)' }}>
+                      {group.subjectName}
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+                    {group.exams.length} {group.exams.length === 1 ? 'parcial' : 'parciales en orden'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {group.exams.map(e => {
+                    const myAttempts = mySubs.filter(s => s.examenId === e.id);
+                    const canTake = e.intentos === 0 || myAttempts.length < e.intentos;
+                    const lastAttempt = myAttempts[myAttempts.length - 1];
+                    const seqNum = extractPartialSequenceNumber(e, parciales, subjects);
+                    const showOrderHint = canTake && hasPendingEarlierExam(seqNum);
+
+                    return (
+                      <div 
+                        key={e.id} 
+                        className="card bg-white p-5 rounded-2xl border border-slate-205 flex flex-col justify-between shadow-sm relative hover:border-slate-350 transition-colors theme-bg-surface theme-border"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-3 mb-2.5">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                {seqNum < 999 && (
+                                  <span className={`inline-flex px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded border ${
+                                    seqNum === 1
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-sky-50 text-sky-700 border-sky-200'
+                                  }`}>
+                                    {seqNum === 1 ? '1° · Primer Parcial' : seqNum === 2 ? '2° · Segundo Parcial' : `${seqNum}° · Parcial`}
+                                  </span>
+                                )}
+                                <span className="badge inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
+                                  {group.subjectName}
+                                </span>
+                              </div>
                               <h4 className="font-bold text-base text-slate-800 leading-snug" style={{ color: 'var(--gray-900)' }} title={e.titulo}>
                                 {cleanExamTitle(e.titulo)}
                               </h4>
-                              <span className="badge mt-2 inline-flex px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
-                                {subjName}
+                            </div>
+
+                            {lastAttempt && (
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
+                                lastAttempt.aprobado 
+                                  ? 'bg-emerald-50 border border-emerald-100 text-emerald-700' 
+                                  : 'bg-rose-50 border border-rose-100 text-rose-700'
+                              }`}>
+                                {lastAttempt.puntaje}%
                               </span>
-                            </>
-                          );
-                        })()}
-                      </div>
+                            )}
+                          </div>
 
-                      {lastAttempt && (
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${
-                          lastAttempt.aprobado 
-                            ? 'bg-emerald-50 border border-emerald-100 text-emerald-700' 
-                            : 'bg-rose-50 border border-rose-100 text-rose-700'
-                        }`}>
-                          {lastAttempt.puntaje}%
-                        </span>
-                      )}
-                    </div>
+                          {showOrderHint && (
+                            <div className="mb-3 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800 flex items-center gap-1.5">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span>Recuerda presentar primero la Evaluación 1 de esta materia.</span>
+                            </div>
+                          )}
 
-                    {/* Metadata labels */}
-                    <div className="flex flex-col gap-1.5 mt-3 my-4 text-xs font-semibold text-slate-500 font-sans">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-450" />
-                        <span>{e.tiempo > 0 ? `${e.tiempo} minutos de límite` : 'Sin límite de tiempo'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <HelpCircle className="w-3.5 h-3.5 text-slate-450" />
-                        <span>{(e.preguntas || []).length} preguntas totales</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <RefreshCw className="w-3.5 h-3.5 text-slate-450" />
-                        <span>Intentos: {myAttempts.length} / {e.intentos === 0 ? 'ilimitados' : e.intentos}</span>
-                      </div>
-                    </div>
+                          {/* Metadata labels */}
+                          <div className="flex flex-col gap-1.5 mt-3 my-4 text-xs font-semibold text-slate-500 font-sans">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-slate-450" />
+                              <span>{e.tiempo > 0 ? `${e.tiempo} minutos de límite` : 'Sin límite de tiempo'}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <HelpCircle className="w-3.5 h-3.5 text-slate-450" />
+                              <span>{(e.preguntas || []).length} preguntas totales</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <RefreshCw className="w-3.5 h-3.5 text-slate-450" />
+                              <span>Intentos: {myAttempts.length} / {e.intentos === 0 ? 'ilimitados' : e.intentos}</span>
+                            </div>
+                          </div>
 
-                    {e.descripcion && (
-                      <div className="p-3 mb-4 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-400 italic font-medium leading-relaxed">
-                        {e.descripcion}
-                      </div>
-                    )}
-                  </div>
+                          {e.descripcion && (
+                            <div className="p-3 mb-4 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-400 italic font-medium leading-relaxed">
+                              {e.descripcion}
+                            </div>
+                          )}
+                        </div>
 
-                  {/* Submit / Take Button triggers */}
-                  {canTake ? (
-                    <button 
-                      onClick={() => handleInitiateExam(e.id)}
-                      className="btn btn-primary w-full p-2.5 rounded-xl text-white font-bold tracking-wide mt-2 block shadow-sm hover:scale-[1.01] transition-transform cursor-pointer"
-                      style={{ backgroundColor: 'var(--primary)' }}
-                    >
-                      Presentar examen →
-                    </button>
-                  ) : (
-                    <button 
-                      disabled
-                      className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 font-bold block text-sm select-none cursor-not-allowed mt-2"
-                    >
-                      Intentos agotados
-                    </button>
-                  )}
+                        {/* Submit / Take Button triggers */}
+                        {canTake ? (
+                          <button 
+                            onClick={() => handleInitiateExam(e.id)}
+                            className="btn btn-primary w-full p-2.5 rounded-xl text-white font-bold tracking-wide mt-2 block shadow-sm hover:scale-[1.01] transition-transform cursor-pointer"
+                            style={{ backgroundColor: 'var(--primary)' }}
+                          >
+                            Presentar examen →
+                          </button>
+                        ) : (
+                          <button 
+                            disabled
+                            className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 font-bold block text-sm select-none cursor-not-allowed mt-2"
+                          >
+                            Intentos agotados
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
 
-          {activeExams.length > 6 && (
+          {activeExams.length > examsPerPage && (
             <div className="flex items-center justify-between p-4.5 rounded-2xl border border-slate-200 bg-white shadow-sm theme-bg-surface theme-border">
               <span className="text-xs font-semibold text-slate-400">
-                Mostrando { (currentActivePage - 1) * 6 + 1 } a { Math.min(currentActivePage * 6, activeExams.length) } de { activeExams.length } exámenes disponibles
+                Mostrando { (currentActivePage - 1) * examsPerPage + 1 } a { Math.min(currentActivePage * examsPerPage, activeExams.length) } de { activeExams.length } exámenes disponibles
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-slate-500 mr-2">

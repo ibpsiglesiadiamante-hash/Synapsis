@@ -14,6 +14,7 @@ import {
   Layers
 } from 'lucide-react';
 import { User, Exam, Assignment, AssignmentSubmission, Submission, Subject, Parcial } from '../types';
+import { sortExamsBySubjectAndSequence } from '../lib/db';
 
 interface CentroNotificacionesProps {
   currentUser: User;
@@ -118,7 +119,7 @@ export default function CentroNotificaciones({
 
   // 1. Exam notifications
   const examNotifications: AcademicNotification[] = useMemo(() => {
-    return (exams || [])
+    return sortExamsBySubjectAndSequence(exams || [], subjects, parciales)
       .filter(e => e.estado === 'activo')
       .filter(exam => {
         if (rol === 'estudiante') {

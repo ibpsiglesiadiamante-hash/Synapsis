@@ -1438,3 +1438,178 @@ export function formatGrade5(score?: number): string {
   const val = score <= 5 ? score : (score / 20);
   return val.toFixed(1);
 }
+
+/**
+ * Resuelve el nombre oficial de la asignatura asociada a un examen.
+ */
+export function resolveExamSubjectName(exam: Exam, subjects: Subject[] = []): string {
+  if (!exam) return 'Sin Asignatura';
+  const rawMat = (exam.materia || '').trim();
+  const rawMatLower = rawMat.toLowerCase();
+  const matched = (subjects || []).find(s =>
+    s && (
+      s.id === rawMat ||
+      (s.nombre && s.nombre.toLowerCase().trim() === rawMatLower) ||
+      (s.codigo && s.codigo.toLowerCase().trim() === rawMatLower)
+    )
+  );
+  if (matched?.nombre) return matched.nombre.trim();
+  if (rawMat) return rawMat;
+  return 'Sin Asignatura';
+}
+
+/**
+ * Extrae el número de secuencia del parcial / evaluación (1, 2, 3, 4, 5...)
+ * para garantizar que Evaluación I / Parcial 1 siempre aparezca antes que Evaluación II / Parcial 2.
+ */
+export function extractPartialSequenceNumber(
+  exam: Exam,
+  parciales: Parcial[] = [],
+  subjects: Subject[] = []
+): number {
+  const parseFromText = (txt?: string): number | null => {
+    if (!txt) return null;
+    const clean = txt
+      .replace(/\r?\n/g, ' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    if (!clean) return null;
+
+    // 1. Etiquetas explícitas: Evaluación I/II/1/2, Parcial 1/2, Corte 1/2
+    const explicitMatch = clean.match(/(?:evaluacion|parcial|corte|examen)\s*[-–—:#.]*\s*(iv|iii|ii|i|v|[1-9])\b/i);
+    if (explicitMatch) {
+      const token = explicitMatch[1].toLowerCase();
+      if (token === 'i' || token === '1') return 1;
+      if (token === 'ii' || token === '2') return 2;
+      if (token === 'iii' || token === '3') return 3;
+      if (token === 'iv' || token === '4') return 4;
+      if (token === 'v' || token === '5') return 5;
+      const num = Number(token);
+      if (!isNaN(num)) return num;
+    }
+
+    // 2. Ordinales escritos
+    if (/\b(primer[oa]?|1r[oa]|1er[oa]?)\b/.test(clean)) return 1;
+    if (/\b(segund[oa]?|2d[oa])\b/.test(clean)) return 2;
+    if (/\b(tercer[oa]?|3r[oa]|3er[oa]?)\b/.test(clean)) return 3;
+    if (/\b(cuart[oa]?|4t[oa])\b/.test(clean)) return 4;
+    if (/\b(quint[oa]?|5t[oa]|final)\b/.test(clean)) return 5;
+
+    return null;
+  };
+
+  // Prioridad 1: Título y subtítulo del examen (removiendo primero el nombre de la asignatura si trae "I" o "II")
+  const subjName = resolveExamSubjectName(exam, subjects);
+  const subjNorm = subjName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  const titleNoSubj = (exam.titulo || '')
+    .replace(/\r?\n/g, ' ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(subjNorm, ' ')
+    .trim();
+
+  const fromTitleExplicit = parseFromText(exam.titulo) ?? parseFromText(exam.subtitulo);
+  if (fromTitleExplicit !== null) return fromTitleExplicit;
+
+  // Prioridad 2: Parcial vinculado
+  if (exam.parcialId) {
+    const linked = (parciales || []).find(p => p && p.id === exam.parcialId);
+    if (linked) {
+      const fromParcial = parseFromText(linked.nombre);
+      if (fromParcial !== null) return fromParcial;
+      const tailParcialMatch = (linked.nombre || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .match(/\b(iv|iii|ii|i|v|[1-5])\b/);
+      if (tailParcialMatch) {
+        const t = tailParcialMatch[1];
+        if (t === 'i' || t === '1') return 1;
+        if (t === 'ii' || t === '2') return 2;
+        if (t === 'iii' || t === '3') return 3;
+        if (t === 'iv' || t === '4') return 4;
+        if (t === 'v' || t === '5') return 5;
+      }
+    }
+  }
+
+  // Prioridad 3: Número suelto en el resto del título sin el nombre de la materia (ej. "N.T. 1" vs "N.T. 2")
+  const looseMatch = titleNoSubj
+    .replace(/\bibps\b/g, ' ')
+    .match(/\b(iv|iii|ii|i|v|[1-5])\b/);
+  if (looseMatch) {
+    const t = looseMatch[1];
+    if (t === 'i' || t === '1') return 1;
+    if (t === 'ii' || t === '2') return 2;
+    if (t === 'iii' || t === '3') return 3;
+    if (t === 'iv' || t === '4') return 4;
+    if (t === 'v' || t === '5') return 5;
+  }
+
+  return 999;
+}
+
+/**
+ * Agrupa los exámenes por asignatura (para que todos los parciales de la misma materia
+ * queden juntos) y los ordena secuencialmente (Parcial 1 / Evaluación I -> Parcial 2 / Evaluación II).
+ */
+export function sortExamsBySubjectAndSequence(
+  exams: Exam[] = [],
+  subjects: Subject[] = [],
+  parciales: Parcial[] = []
+): Exam[] {
+  return [...exams].sort((a, b) => {
+    const subjA = normalizeString(resolveExamSubjectName(a, subjects));
+    const subjB = normalizeString(resolveExamSubjectName(b, subjects));
+    const subjCmp = subjA.localeCompare(subjB, 'es', { sensitivity: 'base' });
+    if (subjCmp !== 0) return subjCmp;
+
+    const seqA = extractPartialSequenceNumber(a, parciales, subjects);
+    const seqB = extractPartialSequenceNumber(b, parciales, subjects);
+    if (seqA !== seqB) return seqA - seqB;
+
+    const createdA = parseSafeTimestamp(a.creado);
+    const createdB = parseSafeTimestamp(b.creado);
+    if (createdA !== createdB) return createdA - createdB;
+
+    return cleanExamTitle(a.titulo).localeCompare(cleanExamTitle(b.titulo), 'es', { sensitivity: 'base' });
+  });
+}
+
+const PENDING_SUBMISSIONS_KEY = 'ep_pending_submission_ids';
+
+export function getPendingSubmissionIds(): string[] {
+  try {
+    const raw = safeStorage.getItem(PENDING_SUBMISSIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string' && id.length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addPendingSubmissionId(subId: string): void {
+  if (!subId) return;
+  try {
+    const current = new Set(getPendingSubmissionIds());
+    current.add(subId);
+    safeStorage.setItem(PENDING_SUBMISSIONS_KEY, JSON.stringify(Array.from(current)));
+  } catch {}
+}
+
+export function removePendingSubmissionId(subId: string): void {
+  if (!subId) return;
+  try {
+    const next = getPendingSubmissionIds().filter(id => id !== subId);
+    safeStorage.setItem(PENDING_SUBMISSIONS_KEY, JSON.stringify(next));
+  } catch {}
+}
+

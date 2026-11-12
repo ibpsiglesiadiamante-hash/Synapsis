@@ -22,7 +22,7 @@ interface ExamTakeScreenProps {
   semesters: Semester[];
   currentUser: any;
   onExit: () => void;
-  onSubmit: (sub: Submission) => void;
+  onSubmit: (sub: Submission) => Promise<{ remoteSynced?: boolean; error?: string } | void> | void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
@@ -92,11 +92,19 @@ export default function ExamTakeScreen({
   });
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modals state triggers
+  // Modals & submission lock states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultsState, setResultsState] = useState<Submission | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [remoteSyncStatus, setRemoteSyncStatus] = useState<'saving' | 'synced' | 'queued'>('saving');
+  const hasSubmittedRef = useRef(false);
+  const answersRef = useRef<Record<string, any>>(answers);
+  answersRef.current = answers;
+  const timeLeftRef = useRef<number>(timeLeft);
+  timeLeftRef.current = timeLeft;
+  const autoSubmitCallbackRef = useRef<() => void>(() => {});
 
   // Helper to remove all cached local drafts
   const clearPersistedData = () => {
@@ -138,7 +146,7 @@ export default function ExamTakeScreen({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-          handleAutoSubmit();
+          autoSubmitCallbackRef.current();
           return 0;
         }
         return prev - 1;
@@ -154,6 +162,7 @@ export default function ExamTakeScreen({
     toast('Tiempo agotado. El examen se enviará de manera automática.', 'warning');
     processSubmitPayload();
   };
+  autoSubmitCallbackRef.current = handleAutoSubmit;
 
   const handleSetAnswer = (qid: string, value: any) => {
     setAnswers(prev => ({
@@ -193,16 +202,26 @@ export default function ExamTakeScreen({
     setShowConfirmModal(true);
   };
 
-  const processSubmitPayload = () => {
+  const processSubmitPayload = async () => {
+    if (hasSubmittedRef.current || isSubmitting) return;
+    hasSubmittedRef.current = true;
+    setIsSubmitting(true);
+    setRemoteSyncStatus('saving');
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
     let autoEarnedSum = 0;
     let maxPtsSum = 0;
     let correctCount = 0;
     let incorrectCount = 0;
     let pendingGrading = false;
 
+    const latestAnswers = answersRef.current || answers;
     questions.forEach(q => {
       maxPtsSum += q.puntos;
-      const ans = answers[q.id];
+      const ans = latestAnswers[q.id];
 
       if (q.tipo === 'incisos' && (q.modoIncisos === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'))) {
         const userAnsObj = typeof ans === 'object' && ans !== null && !Array.isArray(ans) ? ans : {};
@@ -342,15 +361,16 @@ export default function ExamTakeScreen({
 
     const formatElapsedTime = () => {
       if (exam.tiempo === 0) return '—';
-      const elapsed = exam.tiempo * 60 - timeLeft;
+      const elapsed = Math.max(0, exam.tiempo * 60 - timeLeftRef.current);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
       return `${mins}m ${secs}s`;
     };
 
     const studentAnswers: Record<string, any> = {};
-    Object.keys(answers || {}).forEach(k => {
-      const val = answers[k];
+    const rawAnsMap = answersRef.current || answers || {};
+    Object.keys(rawAnsMap).forEach(k => {
+      const val = rawAnsMap[k];
       if (typeof val === 'string') {
         studentAnswers[k] = val.trim();
       } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
@@ -368,7 +388,7 @@ export default function ExamTakeScreen({
       id: uid(),
       examenId: exam.id,
       estudianteId: currentUser.id,
-      estudianteNombre: currentUser.nombre || '',
+      estudianteNombre: currentUser.nombre || currentUser.email || '',
       respuestas: studentAnswers,
       puntaje: percent,
       aprobado: isApproved,
@@ -382,24 +402,36 @@ export default function ExamTakeScreen({
       autoPuntaje: percent,
     };
 
+    // Persistir inmediatamente tanto en memoria/localStorage como en Supabase antes o mientras se muestra el modal
+    clearPersistedData();
     setResultsState(submission);
     setShowConfirmModal(false);
 
     if (exam.mostrarNota) {
       setShowResultModal(true);
-    } else {
-      clearPersistedData();
-      onSubmit(submission);
+    }
+
+    try {
+      const result = await onSubmit(submission);
+      if (result && result.remoteSynced === false) {
+        setRemoteSyncStatus('queued');
+      } else {
+        setRemoteSyncStatus('synced');
+      }
+    } catch (err) {
+      console.error('Error propagating submission:', err);
+      setRemoteSyncStatus('queued');
+    } finally {
+      setIsSubmitting(false);
+    }
+
+    if (!exam.mostrarNota) {
       toast('Examen enviado exitosamente ✓', 'success');
       onExit();
     }
   };
 
   const handleCloseResultsModal = () => {
-    clearPersistedData();
-    if (resultsState) {
-      onSubmit(resultsState);
-    }
     setShowResultModal(false);
     onExit();
   };
@@ -1267,16 +1299,18 @@ export default function ExamTakeScreen({
 
             <div className="flex gap-2.5 mt-6 justify-end border-t border-slate-100 pt-4">
               <button 
+                disabled={isSubmitting}
                 onClick={() => setShowConfirmModal(false)}
-                className="text-slate-500 hover:bg-slate-100 px-4 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                className="text-slate-500 hover:bg-slate-100 px-4 py-1.5 rounded text-xs font-semibold cursor-pointer disabled:opacity-50"
               >
                 Revisar
               </button>
               <button 
+                disabled={isSubmitting}
                 onClick={processSubmitPayload}
-                className="bg-[#673ab7] hover:bg-[#58319d] text-white text-xs px-4.5 py-2 rounded font-bold shadow-sm cursor-pointer"
+                className="bg-[#673ab7] hover:bg-[#58319d] text-white text-xs px-4.5 py-2 rounded font-bold shadow-sm cursor-pointer disabled:opacity-60"
               >
-                Enviar ahora
+                {isSubmitting ? 'Enviando...' : 'Enviar ahora'}
               </button>
             </div>
           </div>
@@ -1303,11 +1337,24 @@ export default function ExamTakeScreen({
             <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-semibold mt-2">{exam.materia}</span>
             
             <p className="text-xs text-slate-500 mt-3 leading-relaxed max-w-sm">
-              Tu examen ha sido guardado exitosamente. Nota mínima requerida para aprobar: {exam.aprobacion}%
+              Tu examen ha sido registrado. Nota mínima requerida para aprobar: {exam.aprobacion}%
             </p>
 
+            {/* Cloud sync verification pill */}
+            <div className={`mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${
+              remoteSyncStatus === 'synced'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : remoteSyncStatus === 'saving'
+                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {remoteSyncStatus === 'synced' && '✓ Guardado y sincronizado en la nube'}
+              {remoteSyncStatus === 'saving' && '⏳ Guardando entrega en la nube...'}
+              {remoteSyncStatus === 'queued' && '⚠ Guardado local · Reintentando envío al servidor'}
+            </div>
+
             {/* Score Grid details */}
-            <div className="grid grid-cols-3 gap-2.5 w-full mt-5 bg-slate-50 p-3.5 rounded-lg border border-slate-150 text-left">
+            <div className="grid grid-cols-3 gap-2.5 w-full mt-4 bg-slate-50 p-3.5 rounded-lg border border-slate-150 text-left">
               <div className="text-center">
                 <span className="block text-md font-bold text-emerald-600">{resultsState.correctas}</span>
                 <span className="text-[9px] uppercase font-bold text-slate-400">Correctas</span>
@@ -1324,9 +1371,10 @@ export default function ExamTakeScreen({
 
             <button 
               onClick={handleCloseResultsModal}
-              className="w-full bg-[#673ab7] hover:bg-[#58319d] text-white p-2.5 rounded shadow font-bold tracking-wide mt-6 block cursor-pointer transition-colors"
+              disabled={remoteSyncStatus === 'saving'}
+              className="w-full bg-[#673ab7] hover:bg-[#58319d] text-white p-2.5 rounded shadow font-bold tracking-wide mt-6 block cursor-pointer transition-colors disabled:opacity-60"
             >
-              Cerrar y ver resultados
+              {remoteSyncStatus === 'saving' ? 'Completando guardado...' : 'Cerrar y ver resultados'}
             </button>
           </div>
          </div>
