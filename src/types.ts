@@ -165,6 +165,8 @@ export interface Question {
   modoIncisos?: 'texto' | 'vf';
   incisos?: { texto: string; tipo?: 'texto' | 'vf'; respuestaVF?: 'V' | 'F'; respuestaEsperada?: string }[];
   incisoIds?: string[];
+  respuestaEsperada?: string; // Clave de respuesta o guía privada del docente (solo para calificar)
+  criterioDocente?: string; // Puntos clave o rúbrica de evaluación interna
 }
 
 export interface Exam {

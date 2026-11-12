@@ -226,6 +226,8 @@ export default function ExamBuilder({
         tableColumns: q.tableColumns || [],
         tableOptions: q.tableOptions || [],
         tableRows: q.tableRows || [],
+        respuestaEsperada: (q.respuestaEsperada || '').trim(),
+        criterioDocente: (q.criterioDocente || '').trim(),
       }))
     });
   };
@@ -676,6 +678,24 @@ export default function ExamBuilder({
       }
       return q;
     }));
+  };
+
+  const handleUpdateQExpected = (qid: string, val: string) => {
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => q.id === qid ? { ...q, respuestaEsperada: val } : q);
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
+  };
+
+  const handleUpdateQCriterio = (qid: string, val: string) => {
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => q.id === qid ? { ...q, criterioDocente: val } : q);
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const applyIncisosVFPreset = (qid: string) => {
@@ -1873,8 +1893,58 @@ export default function ExamBuilder({
                     )}
 
                     {isText && (
-                      <div className="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100 text-xs font-semibold text-slate-400">
-                        El estudiante completará un cuadro de texto libre con su respuesta.
+                      <div className="mb-4 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-slate-50 p-4 text-left shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
+                              🔒 Clave de Respuesta / Guía Privada del Docente
+                            </span>
+                            <span className="text-[10px] bg-indigo-100 text-indigo-800 font-extrabold px-2 py-0.5 rounded-full border border-indigo-200">
+                              👁️ Solo visible para calificar · Oculto al estudiante
+                            </span>
+                          </div>
+                          <span className="text-[10.5px] text-slate-500 font-medium">
+                            Estilo Google Forms
+                          </span>
+                        </div>
+
+                        <p className="text-[11.5px] text-slate-600 mb-3 leading-relaxed">
+                          Escribe aquí la respuesta modelo esperada, conceptos obligatorios o palabras clave. Te servirá como guía para comparar y asignar la nota rápidamente cuando el estudiante envíe su prueba.
+                        </p>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-800 block mb-1">
+                              Respuesta modelo o palabras clave requeridas:
+                            </label>
+                            <AutoExpandingTextarea
+                              value={q.respuestaEsperada || ''}
+                              onChange={e => handleUpdateQExpected(q.id, e.target.value)}
+                              placeholder="Ej: Los tres principios son: 1. Justificación por la fe, 2. La sola Escritura como máxima autoridad, 3. El sacerdocio universal de los creyentes..."
+                              rows={2}
+                              minHeight={64}
+                              className="w-full bg-white text-slate-900 border border-indigo-200 rounded-lg p-2.5 text-xs font-medium placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                              Criterio o rúbrica de evaluación interna (Opcional):
+                            </label>
+                            <input
+                              type="text"
+                              value={q.criterioDocente || ''}
+                              onChange={e => handleUpdateQCriterio(q.id, e.target.value)}
+                              placeholder="Ej: Asignar 5 pts si menciona los 3 principios, 3 pts si menciona 2, 0 si no los explica."
+                              className="w-full bg-white text-slate-900 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-indigo-100 flex items-center gap-2 text-[10.5px] text-indigo-700 font-medium">
+                          <span>💡</span>
+                          <span>El estudiante verá únicamente una caja limpia de texto para redactar su respuesta. Tu clave permanecerá 100% privada hasta la revisión de resultados.</span>
+                        </div>
                       </div>
                     )}
 

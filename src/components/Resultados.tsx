@@ -989,16 +989,48 @@ export default function Resultados({
                       
                       <p className="font-semibold text-slate-900 leading-snug mb-2 text-[12.5px] whitespace-pre-wrap">{q.texto}</p>
                       
-                      <div className="flex items-start gap-1 p-2 bg-white rounded border border-slate-100 mt-2 font-medium">
+                      <div className="flex items-start gap-1 p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 mt-2 font-medium shadow-2xs">
                         {isTextGraded ? (
-                          <span className="text-slate-400 font-bold mr-1">📝</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 font-bold mr-1 text-sm">📝</span>
                         ) : isCorrect ? (
                           <span className="text-emerald-600 font-bold mr-1">✅</span>
                         ) : (
                           <span className="text-rose-600 font-bold mr-1">❌</span>
                         )}
-                        <span className="flex-1 italic whitespace-pre-wrap">{readableAnsText}</span>
+                        <div className="flex-1 min-w-0">
+                          {isTextGraded && (
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-0.5">
+                              Respuesta escrita por el estudiante:
+                            </span>
+                          )}
+                          <span className={`whitespace-pre-wrap ${!readableAnsText || readableAnsText === 'Sin respuesta' ? 'italic text-slate-400' : 'text-slate-900 dark:text-white'}`}>
+                            {readableAnsText}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Clave modelo y criterio del docente para preguntas con respuestaEsperada */}
+                      {q.respuestaEsperada && canGrade && (
+                        <div className="mt-2.5 p-3 rounded-lg border border-indigo-200 bg-indigo-50/70 dark:bg-indigo-950/30 dark:border-indigo-900/50 text-left">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-[10.5px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wide flex items-center gap-1.5">
+                              🔒 Clave Modelo / Guía de Calificación del Docente
+                            </span>
+                            <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 font-extrabold px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                              Oculto al estudiante
+                            </span>
+                          </div>
+                          <p className="text-xs text-indigo-950 dark:text-indigo-100 whitespace-pre-wrap leading-relaxed font-medium">
+                            {q.respuestaEsperada}
+                          </p>
+                          {q.criterioDocente && (
+                            <div className="mt-2 pt-1.5 border-t border-indigo-200/60 dark:border-indigo-900/60 text-[11px] text-indigo-800 dark:text-indigo-300">
+                              <span className="font-bold">📋 Criterio / Rúbrica interna: </span>
+                              <span>{q.criterioDocente}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* If matching question, present a detailed side-by-side matches breakdown */}
                       {q.tipo === 'matching' && matchingDetails.length > 0 && (
@@ -1155,23 +1187,55 @@ export default function Resultados({
 
                       {/* Manual grading form for open text answers */}
                       {isTextGraded && canGrade && !activeOrphanStatus.isBlocked && (
-                        <div className="mt-3 p-3 bg-white rounded-lg border border-slate-220 flex flex-col sm:flex-row gap-3 items-center">
-                          <label className="text-[11px] font-bold text-slate-600 select-none block shrink-0">Calificar puntos:</label>
-                          <input 
-                            type="number" 
-                            min={0}
-                            max={q.puntos}
-                            value={manualScores[q.id] !== undefined ? manualScores[q.id] : ''}
-                            onChange={e => handleManualScoreChange(q.id, Number(e.target.value), q.puntos)}
-                            className="bg-slate-50 w-20 p-1.5 border rounded text-center text-xs font-bold"
-                            placeholder="Score"
-                          />
+                        <div className="mt-3 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-3 items-center">
+                          <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 select-none block shrink-0">Calificar puntos:</label>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <input 
+                              type="number" 
+                              min={0}
+                              max={q.puntos}
+                              value={manualScores[q.id] !== undefined ? manualScores[q.id] : ''}
+                              onChange={e => handleManualScoreChange(q.id, Number(e.target.value), q.puntos)}
+                              className="bg-slate-50 dark:bg-slate-900 w-18 p-1.5 border border-slate-300 dark:border-slate-600 rounded text-center text-xs font-bold text-slate-900 dark:text-white"
+                              placeholder="0"
+                            />
+                            <span className="text-[11px] font-bold text-slate-500">/ {q.puntos} pts</span>
+                          </div>
+
+                          {/* Quick score buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleManualScoreChange(q.id, q.puntos, q.puntos)}
+                              className="px-2 py-1 text-[10.5px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded transition cursor-pointer"
+                              title="Asignar todo el puntaje"
+                            >
+                              ✓ Todo ({q.puntos})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleManualScoreChange(q.id, Math.round(q.puntos / 2), q.puntos)}
+                              className="px-2 py-1 text-[10.5px] font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded transition cursor-pointer"
+                              title="Asignar mitad de puntos"
+                            >
+                              ½ ({Math.round(q.puntos / 2)})
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleManualScoreChange(q.id, 0, q.puntos)}
+                              className="px-2 py-1 text-[10.5px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 rounded transition cursor-pointer"
+                              title="Asignar 0 puntos"
+                            >
+                              0 pts
+                            </button>
+                          </div>
+
                           <input 
                             type="text" 
                             value={manualComments[q.id] || ''}
                             onChange={e => handleManualCommentChange(q.id, e.target.value)}
                             placeholder="Escribe comentarios u observaciones opcionales..."
-                            className="bg-slate-50 p-1.5 border rounded text-xs flex-1 text-slate-700 outline-none"
+                            className="bg-slate-50 dark:bg-slate-900 p-1.5 border border-slate-300 dark:border-slate-600 rounded text-xs flex-1 text-slate-700 dark:text-slate-200 outline-none w-full"
                           />
                         </div>
                       )}
