@@ -17,6 +17,7 @@ export interface User {
   codigo?: string;
   foto?: string;
   avatarUrl?: string;
+  titulo?: string;
   actualizado?: string;
   permisosCategorias?: string[]; // e.g. ['estudiante', 'recursos', 'gestion']
   permisosModulos?: string[]; // e.g. ['misMaterias', 'misExamenesTake', 'miHistorial']
