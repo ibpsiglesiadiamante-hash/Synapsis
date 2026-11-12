@@ -2097,15 +2097,15 @@ export default function ExamBuilder({
                                     // 8: David hecho rey de todo Israel (enun idx 1) -> match 7 ('8')
                                     return {
                                       ...item,
-                                      texto: 'Organice numéricamente la cronología aproximada de los siguientes eventos:',
+                                      texto: '2. Organice numéricamente la cronología aproximada de los siguientes eventos: (4 PUNTOS=0.5 C/U)',
                                       opciones: opts,
                                       opcionIds: opts.map((_, i) => `opt_${item.id}_${i}_${uid()}`),
                                       enunciados: enuns,
                                       enunciadoIds: enuns.map((_, i) => `enun_${item.id}_${i}_${uid()}`),
                                       matchCorrectos: [1, 7, 4, 0, 2, 3, 5, 6],
-                                      puntos: 8,
-                                      respuestaEsperada: 'Orden cronológico correcto:\n1. Nacimiento de Samuel\n2. Llamamiento de Samuel\n3. Muerte de Elí y comienzos del trabajo de Samuel como juez\n4. Saúl comienza su reinado\n5. Samuel muere\n6. Saúl muerto en Gilboa\n7. David reina sobre Judá\n8. David hecho rey de todo Israel',
-                                      criterioDocente: 'Cada posición cronológica correcta equivale a 1 punto (8 puntos en total).'
+                                      puntos: 4,
+                                      respuestaEsperada: 'Orden de arriba hacia abajo: 2, 8, 5, 1, 3, 4, 6, 7.\n\nDesglose cronológico de eventos:\n1. Nacimiento de Samuel\n2. Llamamiento de Samuel\n3. Muerte de Elí y comienzos del trabajo de Samuel como juez\n4. Saúl comienza su reinado\n5. Samuel muere\n6. Saúl muerto en Gilboa\n7. David reina sobre Judá\n8. David hecho rey de todo Israel',
+                                      criterioDocente: 'Total: 4 puntos (0.5 puntos por cada posición cronológica correcta).'
                                     };
                                   }
                                   return item;
