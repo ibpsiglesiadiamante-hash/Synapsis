@@ -689,6 +689,14 @@ export default function App() {
       showToast('Por favor escribe tu correo electrónico', 'warning');
       return;
     }
+    if (!regCedula.trim()) {
+      showToast('Por favor escribe tu número de cédula o documento', 'warning');
+      return;
+    }
+    if (!regCelular.trim()) {
+      showToast('Por favor escribe tu número de celular (campo obligatorio)', 'warning');
+      return;
+    }
     if (!regPass.trim()) {
       showToast('Por favor define una contraseña de acceso', 'warning');
       return;
@@ -718,8 +726,8 @@ export default function App() {
         pass: regPass.trim(),
         rol: 'estudiante',
         codigo: newStudentCode,
-        cedula: regCedula.trim() || undefined,
-        celular: regCelular.trim() || undefined,
+        cedula: regCedula.trim(),
+        celular: regCelular.trim(),
         semestre: regSemestre || 'SEMESTRE I',
         foto: regFoto.trim() || undefined,
         permisosCategorias: ['estudiante', 'recursos'],
@@ -1906,6 +1914,19 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                      Celular *
+                    </label>
+                    <input 
+                      type="tel" 
+                      required
+                      value={regCelular}
+                      onChange={e => setRegCelular(e.target.value)}
+                      placeholder="ej: 3001234567"
+                      className="w-full bg-white rounded-xl px-3.5 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
                       Semestre
                     </label>
                     <select 
@@ -1923,18 +1944,30 @@ export default function App() {
                       <option value="SEMESTRE VIII">SEMESTRE VIII</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                      Contraseña *
-                    </label>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    Contraseña *
+                  </label>
+                  <div className="w-full bg-white rounded-xl flex items-center px-3.5 py-2">
                     <input 
                       type={regShowPass ? "text" : "password"}
                       required
+                      minLength={6}
                       value={regPass}
                       onChange={e => setRegPass(e.target.value)}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full bg-white rounded-xl px-3 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                      className="w-full bg-transparent text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setRegShowPass(!regShowPass)}
+                      className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded cursor-pointer shrink-0 ml-1"
+                      title={regShowPass ? "Ocultar contraseña" : "Ver contraseña"}
+                    >
+                      {regShowPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
 
