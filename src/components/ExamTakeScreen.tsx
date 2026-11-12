@@ -716,7 +716,7 @@ export default function ExamTakeScreen({
                         value={answers[qItem.id] !== undefined ? answers[qItem.id] : ''}
                         onClick={(e) => e.stopPropagation()}
                         onChange={e => handleSetAnswer(qItem.id, e.target.value !== '' ? Number(e.target.value) : '')}
-                        className="w-full p-2.5 border-2 border-slate-300 rounded-xl bg-white text-xs sm:text-sm text-slate-900 font-bold focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-xs"
+                        className="w-full min-w-0 max-w-full p-2.5 border-2 border-slate-300 rounded-xl bg-white text-xs sm:text-sm text-slate-900 font-bold focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-xs truncate"
                       >
                         <option value="">-- Selecciona una opción del menú desplegable --</option>
                         {qItem.opciones.map((opt, oIdx) => (
@@ -741,16 +741,16 @@ export default function ExamTakeScreen({
                             return (
                               <span 
                                 key={oIdx} 
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-center gap-1.5 ${
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition duration-200 select-none shadow-sm flex items-start gap-2 max-w-full break-words ${
                                   isUsed 
                                     ? 'bg-slate-200/80 border-slate-300 text-slate-500 line-through' 
                                     : 'bg-white border-slate-300 text-slate-900 hover:border-indigo-400'
                                 }`}
                               >
                                 {isUsed && (
-                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-black shrink-0">✓</span>
+                                  <span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[8px] font-black shrink-0 mt-0.5">✓</span>
                                 )}
-                                <span>{opt}</span>
+                                <span className="flex-1 min-w-0 leading-relaxed">{opt}</span>
                               </span>
                             );
                           })}
@@ -767,26 +767,38 @@ export default function ExamTakeScreen({
                           return (
                             <div 
                               key={eIdx} 
-                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-xl transition duration-200 text-left shadow-sm ${
+                              className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 border rounded-xl transition duration-200 text-left shadow-sm w-full max-w-full overflow-hidden ${
                                 hasValue 
                                   ? 'bg-indigo-50/40 border-indigo-300' 
                                   : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                               }`}
                             >
                               <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                                <span className={`font-black select-none shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs ${
+                                <span className={`font-black select-none shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-xs mt-0.5 ${
                                   hasValue 
                                     ? 'bg-indigo-600 text-white' 
                                     : 'bg-slate-200 text-slate-700'
                                 }`}>
                                   {eIdx + 1}
                                 </span>
-                                <span className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap">
-                                  {enun}
-                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap break-words block">
+                                    {enun}
+                                  </span>
+                                  {hasValue && (
+                                    <div className="mt-2 text-[11.5px] text-indigo-950 font-semibold bg-white/95 p-2.5 rounded-lg border border-indigo-200/90 shadow-2xs flex items-start gap-2 break-words">
+                                      <span className="text-emerald-700 font-extrabold shrink-0 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded text-[10px]">
+                                        ✓ Asignado:
+                                      </span>
+                                      <span className="flex-1 min-w-0 font-medium text-slate-900 leading-snug">
+                                        {qItem.opciones[selectedValue]}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               
-                              <div className="shrink-0 flex items-center gap-2">
+                              <div className="w-full md:w-80 lg:w-96 md:max-w-[48%] shrink-0 flex items-center gap-2 min-w-0">
                                 <select
                                   value={selectedValue}
                                   onClick={(e) => e.stopPropagation()}
@@ -794,16 +806,18 @@ export default function ExamTakeScreen({
                                     const nextMap = { ...currentMap, [eIdx]: e.target.value !== '' ? Number(e.target.value) : '' };
                                     handleSetAnswer(qItem.id, nextMap);
                                   }}
-                                  className={`p-2.5 border rounded-lg bg-white text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-300 transition ${
+                                  title={hasValue ? qItem.opciones[selectedValue] : 'Seleccionar opción'}
+                                  className={`w-full min-w-0 max-w-full p-2.5 border rounded-lg bg-white text-xs font-bold text-slate-900 truncate focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-300 transition cursor-pointer shadow-xs ${
                                     hasValue 
                                       ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200' 
                                       : 'border-slate-300 text-slate-800'
                                   }`}
-                                  style={{ minWidth: '180px' }}
                                 >
                                   <option value="">-- Seleccionar --</option>
                                   {qItem.opciones.map((opt, oIdx) => (
-                                    <option key={oIdx} value={oIdx}>{opt}</option>
+                                    <option key={oIdx} value={oIdx} title={opt}>
+                                      {opt}
+                                    </option>
                                   ))}
                                 </select>
                                 
@@ -903,7 +917,7 @@ export default function ExamTakeScreen({
                                                 const nextMap = { ...currentMap, [`${rIdx}-${cIdx}`]: nextValue };
                                                 handleSetAnswer(qItem.id, nextMap);
                                               }}
-                                              className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 ${
+                                              className={`w-full min-w-0 max-w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 truncate ${
                                                 hasValue 
                                                   ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200' 
                                                   : 'border-slate-300 text-slate-800'
@@ -1018,7 +1032,7 @@ export default function ExamTakeScreen({
                                           const nextMap = { ...currentMap, [rIdx]: nextValue };
                                           handleSetAnswer(qItem.id, nextMap);
                                         }}
-                                        className={`w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 ${
+                                        className={`w-full min-w-0 max-w-full p-2 border rounded-lg bg-white text-xs font-bold transition shadow-xs cursor-pointer focus:outline-none focus:border-indigo-600 truncate ${
                                           hasValue
                                             ? 'border-indigo-500 text-indigo-900 ring-1 ring-indigo-200'
                                             : 'border-slate-300 text-slate-800'

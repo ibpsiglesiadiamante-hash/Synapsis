@@ -1052,16 +1052,16 @@ export default function Resultados({
                                   <span className="text-slate-400 font-extrabold shrink-0">{itemIdx + 1}.</span>
                                   <span className="text-slate-700 dark:text-slate-200 font-semibold whitespace-pre-wrap">{item.enunciado}</span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:justify-end max-w-full min-w-0">
+                                  <span className={`px-2.5 py-1 rounded text-[10.5px] font-bold max-w-full break-words leading-relaxed text-left ${
                                     item.isItemCorrect 
-                                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                                      : 'bg-rose-55 text-rose-700 dark:bg-rose-950/40 dark:text-rose-405'
+                                      ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' 
+                                      : 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                                   }`}>
                                     Elegiste: {item.studentTerm}
                                   </span>
                                   {!item.isItemCorrect && (
-                                    <span className="text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900">
+                                    <span className="text-emerald-800 dark:text-emerald-200 text-[10.5px] font-bold bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded border border-emerald-200 dark:border-emerald-900 max-w-full break-words leading-relaxed text-left">
                                       Correcta: {item.correctTerm}
                                     </span>
                                   )}

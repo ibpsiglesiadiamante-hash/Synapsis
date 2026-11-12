@@ -2138,15 +2138,16 @@ export default function ExamBuilder({
                                       }}
                                     />
                                   </div>
-                                  <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                                  <div className="flex items-center gap-2 shrink-0 pt-0.5 max-w-full sm:max-w-xs md:max-w-sm min-w-0">
                                     <span className="text-xs font-bold text-slate-400 block shrink-0">Respuesta:</span>
                                     <select
                                       value={matchCorrectIdx}
                                       onChange={e => handleUpdateEnunciadoCorrectValue(q.id, eIdx, Number(e.target.value))}
-                                      className="text-xs p-1.5 font-bold border rounded-lg bg-slate-50 text-emerald-700 border-emerald-200 cursor-pointer focus:outline-none"
+                                      title={q.opciones[matchCorrectIdx] || ''}
+                                      className="text-xs p-1.5 font-bold border rounded-lg bg-slate-50 text-emerald-700 border-emerald-200 cursor-pointer focus:outline-none w-full min-w-0 max-w-[190px] sm:max-w-[250px] truncate"
                                     >
                                       {q.opciones.map((opt, oIdx) => (
-                                        <option key={oIdx} value={oIdx}>{opt}</option>
+                                        <option key={oIdx} value={oIdx} title={opt}>{opt}</option>
                                       ))}
                                     </select>
                                     <button
