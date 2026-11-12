@@ -250,14 +250,12 @@ export default function App() {
   const [isRecuperarModalOpen, setIsRecuperarModalOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Registration states (Estudiante / Docente)
-  const [regRol, setRegRol] = useState<'estudiante' | 'docente'>('estudiante');
+  // Student registration states
   const [regNombre, setRegNombre] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regCedula, setRegCedula] = useState('');
   const [regCelular, setRegCelular] = useState('');
   const [regSemestre, setRegSemestre] = useState('SEMESTRE I');
-  const [regEspecialidad, setRegEspecialidad] = useState('');
   const [regPass, setRegPass] = useState('');
   const [regFoto, setRegFoto] = useState('');
   const [regShowPass, setRegShowPass] = useState(false);
@@ -601,7 +599,7 @@ export default function App() {
     });
 
     if (existing) {
-      showToast(`Ya existe un usuario registrado con este correo o documento (${existing.rol.toUpperCase()}). Inicia sesión directamente.`, 'error');
+      showToast('Ya existe un estudiante registrado con este correo o documento. Inicia sesión directamente.', 'error');
       setLoginEmail(existing.email || regEmail);
       setLoginTab('login');
       return;
@@ -609,32 +607,27 @@ export default function App() {
 
     setIsRegistering(true);
     try {
-      const isDoc = regRol === 'docente';
-      const userCode = isDoc 
-        ? `DOC-${Math.floor(1000 + Math.random() * 9000)}` 
-        : generateStudentCode();
-
-      const newUser: User = {
+      const newStudentCode = generateStudentCode();
+      const newStudent: User = {
         id: uid(),
         nombre: regNombre.trim(),
         email: regEmail.trim().toLowerCase(),
         pass: regPass.trim(),
-        rol: regRol,
-        codigo: userCode,
+        rol: 'estudiante',
+        codigo: newStudentCode,
         cedula: regCedula.trim() || undefined,
         celular: regCelular.trim() || undefined,
-        semestre: !isDoc ? (regSemestre || 'SEMESTRE I') : undefined,
+        semestre: regSemestre || 'SEMESTRE I',
         foto: regFoto.trim() || undefined,
-        titulo: isDoc && regEspecialidad.trim() ? regEspecialidad.trim() : undefined,
-        permisosCategorias: isDoc ? ['docente', 'recursos', 'gestion'] : ['estudiante', 'recursos'],
+        permisosCategorias: ['estudiante', 'recursos'],
         creado: now(),
         actualizado: now()
       };
 
-      const updatedUsers = [newUser, ...db.users];
+      const updatedUsers = [newStudent, ...db.users];
       updateUsers(updatedUsers);
-      await saveDocToFirestore('users', newUser).catch(err => {
-        console.warn('Could not save registered user directly to Firestore:', err);
+      await saveDocToFirestore('users', newStudent).catch(err => {
+        console.warn('Could not save registered student directly to Firestore:', err);
       });
 
       // Clear register form
@@ -644,21 +637,15 @@ export default function App() {
       setRegCelular('');
       setRegPass('');
       setRegFoto('');
-      setRegEspecialidad('');
 
-      // Automatically log in newly registered user
-      setCurrentUser(newUser);
-      localStorage.setItem('instituto_currentUser', JSON.stringify(newUser));
+      // Automatically log in newly registered student
+      setCurrentUser(newStudent);
+      localStorage.setItem('instituto_currentUser', JSON.stringify(newStudent));
       setActiveTab('dashboard');
-      
-      if (isDoc) {
-        showToast(`¡Registro de Docente exitoso! Tu código es ${userCode}. ¡Bienvenido/a al cuerpo docente!`, 'success');
-      } else {
-        showToast(`¡Matrícula confirmada con éxito! Tu código es ${userCode}. ¡Bienvenido/a!`, 'success');
-      }
+      showToast(`¡Matrícula confirmada con éxito! Tu código es ${newStudentCode}. ¡Bienvenido/a!`, 'success');
     } catch (err) {
-      console.error('Error in registration:', err);
-      showToast('Ocurrió un error al procesar el registro. Inténtalo de nuevo.', 'error');
+      console.error('Error in student registration:', err);
+      showToast('Ocurrió un error al procesar la matrícula. Inténtalo de nuevo.', 'error');
     } finally {
       setIsRegistering(false);
     }
@@ -1750,11 +1737,11 @@ export default function App() {
                 </button>
               </form>
             ) : (
-              /* REGISTRO DE NUEVO USUARIO (ESTUDIANTE O DOCENTE) */
-              <form onSubmit={handleRegisterStudent} className="w-full mt-4 space-y-3 animate-fade-in text-left">
-                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-1">
-                  <span className={`text-xs font-bold uppercase tracking-wider ${regRol === 'docente' ? 'text-cyan-400' : 'text-emerald-400'}`}>
-                    {regRol === 'docente' ? '👨‍🏫 Registro de Nuevo Docente' : '🎓 Matrícula de Nuevo Estudiante'}
+              /* REGISTRO DE NUEVO ESTUDIANTE EN LA MISMA TARJETA */
+              <form onSubmit={handleRegisterStudent} className="w-full mt-5 space-y-3 animate-fade-in text-left">
+                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-2">
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                    Matrícula de Nuevo Estudiante
                   </span>
                   <button 
                     type="button" 
@@ -1762,34 +1749,6 @@ export default function App() {
                     className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
                   >
                     ← Iniciar sesión
-                  </button>
-                </div>
-
-                {/* SELECTOR DE PERFIL: ESTUDIANTE / DOCENTE */}
-                <div className="flex rounded-xl bg-slate-900/90 p-1 border border-slate-700/80 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRol('estudiante')}
-                    className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      regRol === 'estudiante'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>🎓</span>
-                    <span>Soy Estudiante</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRol('docente')}
-                    className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                      regRol === 'docente'
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-xs'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>👨‍🏫</span>
-                    <span>Soy Docente</span>
                   </button>
                 </div>
 
@@ -1802,7 +1761,7 @@ export default function App() {
                     required
                     value={regNombre}
                     onChange={e => setRegNombre(e.target.value)}
-                    placeholder={regRol === 'docente' ? 'ej: Prof. Carlos Alberto Mendoza' : 'ej: María Carmen Gómez'}
+                    placeholder="ej: María Carmen Gómez"
                     className="w-full bg-white rounded-xl px-3.5 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
                   />
                 </div>
@@ -1823,7 +1782,7 @@ export default function App() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                      Cédula / Documento *
+                      Cédula *
                     </label>
                     <input 
                       type="text" 
@@ -1837,41 +1796,25 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  {regRol === 'estudiante' ? (
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                        Semestre
-                      </label>
-                      <select 
-                        value={regSemestre}
-                        onChange={e => setRegSemestre(e.target.value)}
-                        className="w-full bg-white rounded-xl px-2 py-2 text-slate-900 text-xs font-medium outline-none cursor-pointer"
-                      >
-                        <option value="SEMESTRE I">SEMESTRE I</option>
-                        <option value="SEMESTRE II">SEMESTRE II</option>
-                        <option value="SEMESTRE III">SEMESTRE III</option>
-                        <option value="SEMESTRE IV">SEMESTRE IV</option>
-                        <option value="SEMESTRE V">SEMESTRE V</option>
-                        <option value="SEMESTRE VI">SEMESTRE VI</option>
-                        <option value="SEMESTRE VII">SEMESTRE VII</option>
-                        <option value="SEMESTRE VIII">SEMESTRE VIII</option>
-                      </select>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
-                        Especialidad / Área (Opcional)
-                      </label>
-                      <input 
-                        type="text" 
-                        value={regEspecialidad}
-                        onChange={e => setRegEspecialidad(e.target.value)}
-                        placeholder="ej: Teología, Historia..."
-                        className="w-full bg-white rounded-xl px-3 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
-                      />
-                    </div>
-                  )}
-
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                      Semestre
+                    </label>
+                    <select 
+                      value={regSemestre}
+                      onChange={e => setRegSemestre(e.target.value)}
+                      className="w-full bg-white rounded-xl px-2 py-2 text-slate-900 text-xs font-medium outline-none cursor-pointer"
+                    >
+                      <option value="SEMESTRE I">SEMESTRE I</option>
+                      <option value="SEMESTRE II">SEMESTRE II</option>
+                      <option value="SEMESTRE III">SEMESTRE III</option>
+                      <option value="SEMESTRE IV">SEMESTRE IV</option>
+                      <option value="SEMESTRE V">SEMESTRE V</option>
+                      <option value="SEMESTRE VI">SEMESTRE VI</option>
+                      <option value="SEMESTRE VII">SEMESTRE VII</option>
+                      <option value="SEMESTRE VIII">SEMESTRE VIII</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
                       Contraseña *
@@ -1890,15 +1833,9 @@ export default function App() {
                 <button 
                   type="submit" 
                   disabled={isRegistering}
-                  className={`w-full mt-3 py-3 px-4 rounded-xl text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50 ${
-                    regRol === 'docente' 
-                      ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-cyan-500/20' 
-                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20'
-                  }`}
+                  className="w-full mt-3 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {isRegistering 
-                    ? (regRol === 'docente' ? 'Registrando Docente...' : 'Matriculando...') 
-                    : (regRol === 'docente' ? 'Completar Registro de Docente y Acceder' : 'Completar Matrícula y Acceder')}
+                  {isRegistering ? 'Matriculando...' : 'Completar Matrícula y Acceder'}
                 </button>
               </form>
             )}
