@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { UserPlus, UserCheck, Trash2, Edit2, Shield, Calendar, ChevronLeft, ChevronRight, Search, KeyRound, Eye, EyeOff, Copy } from 'lucide-react';
+import { UserPlus, Trash2, Edit2, ChevronLeft, ChevronRight, Search, KeyRound, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
 import { saveDocToFirestore } from '../lib/firebase';
@@ -15,10 +15,11 @@ interface UsuariosProps {
   subjects: Subject[];
   semesters: Semester[];
   onUpdateUsers: (updated: User[]) => void;
+  onUpdateSubjects?: (updated: Subject[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
-export default function Usuarios({ currentUser, users, subjects, semesters, onUpdateUsers, toast }: UsuariosProps) {
+export default function Usuarios({ currentUser, users, subjects, semesters, onUpdateUsers, onUpdateSubjects, toast }: UsuariosProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
@@ -28,6 +29,8 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
   const [pass, setPass] = useState('');
   const [showModalPass, setShowModalPass] = useState(false);
   const [rol, setRol] = useState<User['rol']>('estudiante');
+  const [selectedAsignaturas, setSelectedAsignaturas] = useState<string[]>([]);
+  const [subjSearch, setSubjSearch] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Search state
@@ -58,6 +61,8 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
     setEmail('');
     setPass('');
     setRol('estudiante');
+    setSelectedAsignaturas([]);
+    setSubjSearch('');
     setIsModalOpen(true);
   };
 
@@ -68,7 +73,18 @@ export default function Usuarios({ currentUser, users, subjects, semesters, onUp
     setPass(user.pass || ''); // Load current password so admin knows what it is!
     setShowModalPass(false);
     setRol(user.rol);
+    const assignedIds = subjects
+      .filter(s => s.docenteId === user.id || (Array.isArray(user.asignaturas) && user.asignaturas.includes(s.id)))
+      .map(s => s.id);
+    setSelectedAsignaturas(Array.from(new Set(assignedIds)));
+    setSubjSearch('');
     setIsModalOpen(true);
+  };
+
+  const toggleAsignatura = (subjectId: string) => {
+    setSelectedAsignaturas(prev =>
+      prev.includes(subjectId) ? prev.filter(id => id !== subjectId) : [...prev, subjectId]
+    );
   };
 
   const handleCopyCredentials = (u: User) => {
@@ -97,6 +113,8 @@ Enlace: ${window.location.origin}`;
     }
 
     const nextUsers = [...users];
+    let targetUserId = editingUserId || '';
+    const isStaffRole = rol === 'docente' || rol === 'admin';
 
     if (editingUserId) {
       // Editing Mode
@@ -108,6 +126,7 @@ Enlace: ${window.location.origin}`;
           nombre: nombre.trim(),
           email: email.trim().toLowerCase(),
           rol,
+          asignaturas: isStaffRole ? selectedAsignaturas : existing.asignaturas,
           actualizado: new Date().toISOString(),
           ...(pass.trim() ? { pass: pass.trim() } : {}), // only override if typed
         };
@@ -132,14 +151,40 @@ Enlace: ${window.location.origin}`;
         email: email.trim().toLowerCase(),
         pass: pass.trim(),
         rol,
+        ...(isStaffRole ? { asignaturas: selectedAsignaturas } : {}),
         creado: now(),
         actualizado: now(),
       };
+      targetUserId = newUser.id;
       saveDocToFirestore('users', newUser, true).catch(err => {
         console.error('Error creating user in cloud:', err);
       });
       onUpdateUsers([...nextUsers, newUser]);
       toast('Usuario registrado y sincronizado en la nube exitosamente', 'success');
+    }
+
+    if (targetUserId && onUpdateSubjects) {
+      let subjectsChanged = false;
+      const selectedSet = new Set(isStaffRole ? selectedAsignaturas : []);
+      const nextSubjects = subjects.map(s => {
+        if (!s || !s.id) return s;
+        if (selectedSet.has(s.id) && s.docenteId !== targetUserId) {
+          subjectsChanged = true;
+          const modSub: Subject = { ...s, docenteId: targetUserId, actualizado: now() };
+          saveDocToFirestore('subjects', modSub, true).catch(() => {});
+          return modSub;
+        }
+        if (!selectedSet.has(s.id) && s.docenteId === targetUserId) {
+          subjectsChanged = true;
+          const modSub: Subject = { ...s, docenteId: '', actualizado: now() };
+          saveDocToFirestore('subjects', modSub, true).catch(() => {});
+          return modSub;
+        }
+        return s;
+      });
+      if (subjectsChanged) {
+        onUpdateSubjects(nextSubjects);
+      }
     }
 
     setIsModalOpen(false);
@@ -240,27 +285,40 @@ Enlace: ${window.location.origin}`;
 
                   // Calculate academic relation tag/info
                   let relationshipContent = null;
-                  if (u.rol === 'docente') {
-                    const assignedSubjects = subjects.filter(s => s.docenteId === u.id);
+                  if (u.rol === 'docente' || u.rol === 'admin') {
+                    const assignedSubjects = subjects.filter(
+                      s => s.docenteId === u.id || (Array.isArray(u.asignaturas) && u.asignaturas.includes(s.id))
+                    );
                     relationshipContent = (
-                      <div className="flex flex-wrap gap-1 max-w-xs">
+                      <div className="flex flex-wrap gap-1 max-w-xs items-center">
+                        {u.rol === 'admin' && (
+                          <span className="text-[10px] text-rose-600 font-extrabold bg-rose-50/70 px-2 py-0.5 rounded border border-rose-200 uppercase">
+                            Superusuario
+                          </span>
+                        )}
                         {assignedSubjects.length > 0 ? (
                           assignedSubjects.map(s => (
-                            <span key={s.id} className="text-[10px] font-bold bg-indigo-50 text-indigo-750 px-2 py-0.5 rounded border border-indigo-150 uppercase" title="Materia impartida">
+                            <span
+                              key={s.id}
+                              className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 uppercase"
+                              title="Materia impartida"
+                            >
                               {s.nombre} {s.codigo ? `(${s.codigo})` : ''}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[10px] text-slate-450 italic font-normal">Sin materias asignadas aún</span>
+                          <span className="text-[10px] text-slate-400 italic font-normal">
+                            Sin materias asignadas aún
+                          </span>
                         )}
                       </div>
                     );
-                  } else if (u.rol === 'estudiante') {
+                  } else {
                     const currentSem = semesters.find(s => s.id === u.semestre);
                     relationshipContent = (
                       <div className="flex flex-col gap-0.5 max-w-xs">
                         <span className="text-[10px] font-bold text-violet-750 bg-violet-50/80 px-2 py-0.5 rounded border border-violet-100 max-w-max uppercase">
-                          {currentSem?.nombre || 'Período no asignado'}
+                          {currentSem?.nombre || u.semestre || 'Período no asignado'}
                         </span>
                         <span className="text-[10px] text-slate-450 font-semibold">
                           {u.asignaturas && u.asignaturas.length > 0
@@ -268,12 +326,6 @@ Enlace: ${window.location.origin}`;
                             : 'Ninguna materia vinculada'}
                         </span>
                       </div>
-                    );
-                  } else {
-                    relationshipContent = (
-                      <span className="text-[10px] text-rose-600 font-extrabold bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100 uppercase">
-                        Superusuario
-                      </span>
                     );
                   }
 
@@ -491,6 +543,74 @@ Enlace: ${window.location.origin}`;
                   </button>
                 </div>
               </div>
+
+              {(rol === 'docente' || rol === 'admin') && (
+                <div className="form-group flex flex-col pt-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="form-label text-xs font-semibold text-slate-700 flex items-center gap-1.5 leading-none">
+                      <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Materias asignadas ({selectedAsignaturas.length})</span>
+                    </label>
+                    {selectedAsignaturas.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAsignaturas([])}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={subjSearch}
+                    onChange={e => setSubjSearch(e.target.value)}
+                    placeholder="Filtrar materias por nombre, código o semestre..."
+                    className="p-2 mb-2 border border-slate-200 rounded-lg text-xs bg-slate-50 focus:bg-white focus:outline-indigo-600"
+                  />
+                  <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-slate-50/40">
+                    {subjects
+                      .filter(s => {
+                        const q = subjSearch.trim().toLowerCase();
+                        if (!q) return true;
+                        return (
+                          (s.nombre || '').toLowerCase().includes(q) ||
+                          (s.codigo || '').toLowerCase().includes(q) ||
+                          (s.semestre || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map(s => {
+                        const checked = selectedAsignaturas.includes(s.id);
+                        return (
+                          <label
+                            key={s.id}
+                            className={`flex items-center justify-between gap-2 px-3 py-2 text-xs cursor-pointer transition ${
+                              checked ? 'bg-indigo-50/80 text-indigo-950 font-semibold' : 'hover:bg-white text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleAsignatura(s.id)}
+                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                              <span className="truncate">{s.nombre}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                              {s.semestre || s.codigo || ''}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    {subjects.length === 0 && (
+                      <div className="p-3 text-center text-xs text-slate-400">
+                        No hay materias registradas aún
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="modal-footer border-t border-slate-100 flex justify-end gap-2.5 pt-4 mt-6 bg-slate-50 rounded-b-2xl -mx-5 -mb-5 p-4">
                 <button

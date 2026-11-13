@@ -240,6 +240,86 @@ export function getStudentAssignedSubjects(student: User | null | undefined, sub
   return [];
 }
 
+/**
+ * Resuelve todos los IDs de usuario que pertenecen a la misma persona
+ * (por ID exacto, correo normalizado, nombre normalizado o cédula).
+ */
+export function getAllMatchingUserIds(user: User | null | undefined, users: User[] = []): string[] {
+  if (!user) return [];
+  const ids = new Set<string>([user.id]);
+  const cleanEmail = (user.email || '').trim().toLowerCase();
+  const cleanName = normalizeString(user.nombre);
+  const cleanCedula = (user.cedula || '').trim();
+
+  (users || []).forEach(u => {
+    if (!u || !u.id) return;
+    if (u.id === user.id) {
+      ids.add(u.id);
+      return;
+    }
+    const uEmail = (u.email || '').trim().toLowerCase();
+    const uName = normalizeString(u.nombre);
+    const uCedula = (u.cedula || '').trim();
+    if (
+      (cleanEmail && uEmail && uEmail === cleanEmail) ||
+      (cleanName && cleanName.length >= 3 && uName === cleanName) ||
+      (cleanCedula && cleanCedula.length >= 4 && uCedula === cleanCedula)
+    ) {
+      ids.add(u.id);
+    }
+  });
+
+  return Array.from(ids);
+}
+
+/**
+ * Resuelve las asignaturas asignadas a un usuario independientemente de su rol:
+ * - Docente / Admin: combina `subject.docenteId` (incluyendo IDs equivalentes del mismo usuario)
+ *   y `user.asignaturas` (por ID, nombre o código).
+ * - Estudiante: delega en `getStudentAssignedSubjects` contemplando cuentas equivalentes.
+ */
+export function getUserAssignedSubjects(
+  user: User | null | undefined,
+  subjects: Subject[] = [],
+  semesters: Semester[] = [],
+  users: User[] = []
+): Subject[] {
+  if (!user) return [];
+  const matchingIds = new Set(getAllMatchingUserIds(user, users));
+  const matchingUsers = (users || []).filter(u => u && matchingIds.has(u.id));
+  const combinedAsignaturas = new Set<string>();
+  const addAsg = (list?: string[]) => {
+    (list || []).forEach(item => {
+      if (typeof item === 'string' && item.trim()) {
+        combinedAsignaturas.add(item.trim());
+      }
+    });
+  };
+  addAsg(user.asignaturas);
+  matchingUsers.forEach(mu => addAsg(mu.asignaturas));
+
+  if (user.rol === 'estudiante') {
+    const mergedStudent: User = {
+      ...user,
+      asignaturas: Array.from(combinedAsignaturas)
+    };
+    return getStudentAssignedSubjects(mergedStudent, subjects, semesters);
+  }
+
+  const normalizedAsg = new Set(Array.from(combinedAsignaturas).map(a => normalizeString(a)));
+
+  return (subjects || []).filter(s => {
+    if (!s || !s.id) return false;
+    if (s.docenteId && matchingIds.has(s.docenteId)) return true;
+    if (combinedAsignaturas.has(s.id)) return true;
+    const subNameNorm = normalizeString(s.nombre);
+    const subCodeNorm = normalizeString(s.codigo);
+    if (subNameNorm && normalizedAsg.has(subNameNorm)) return true;
+    if (subCodeNorm && normalizedAsg.has(subCodeNorm)) return true;
+    return false;
+  });
+}
+
 export const SEMESTRES_OFICIALES = [
   'Semestre I',
   'Semestre II',

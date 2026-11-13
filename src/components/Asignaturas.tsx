@@ -18,6 +18,7 @@ interface AsignaturasProps {
   users: User[];
   semesters?: Semester[];
   onUpdateSubjects: (updated: Subject[]) => void;
+  onUpdateUsers?: (updated: User[]) => void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
   onDeduplicateSubjects?: () => void;
 }
@@ -38,7 +39,7 @@ export const SEMESTRES_LIST = [
 ];
 
 export default function Asignaturas({ 
-  subjects, users, semesters = [], onUpdateSubjects, toast, onDeduplicateSubjects 
+  subjects, users, semesters = [], onUpdateSubjects, onUpdateUsers, toast, onDeduplicateSubjects 
 }: AsignaturasProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -149,6 +150,14 @@ export default function Asignaturas({
     setIsModalOpen(true);
   };
 
+  const resolveAssignedDocente = (sub: Subject): User | undefined => {
+    if (sub.docenteId) {
+      const direct = users.find(u => u.id === sub.docenteId);
+      if (direct) return direct;
+    }
+    return users.find(u => u.rol !== 'estudiante' && Array.isArray(u.asignaturas) && u.asignaturas.includes(sub.id));
+  };
+
   const handleOpenEditModal = (sub: Subject) => {
     setEditingId(sub.id);
     setNombre(sub.nombre);
@@ -156,7 +165,7 @@ export default function Asignaturas({
     setIsCodeAuto(false);
     setNivel(sub.nivel || NIVEL_PASTORAL);
     setSemestre(sub.semestre || 'Semestre I');
-    setDocenteId(sub.docenteId || '');
+    setDocenteId(sub.docenteId || resolveAssignedDocente(sub)?.id || '');
     setIsModalOpen(true);
   };
 
@@ -196,9 +205,13 @@ export default function Asignaturas({
     const safeSubs = Array.isArray(subjects) ? subjects.filter((s): s is Subject => Boolean(s && s.id)) : [];
     const nextSubs = [...safeSubs];
 
+    let savedSubId = '';
+    let prevDocenteId = '';
+
     if (editingId) {
       const idx = nextSubs.findIndex(s => s.id === editingId);
       if (idx > -1) {
+        prevDocenteId = nextSubs[idx].docenteId || '';
         const updatedSub: Subject = {
           ...nextSubs[idx],
           nombre: cleanNombre,
@@ -208,10 +221,11 @@ export default function Asignaturas({
           docenteId,
           actualizado: now(),
         };
+        savedSubId = updatedSub.id;
         unmarkAsDeleted(updatedSub.id);
         nextSubs[idx] = updatedSub;
         onUpdateSubjects(nextSubs);
-        saveDocToFirestore('subjects', updatedSub).catch(err => {
+        saveDocToFirestore('subjects', updatedSub, true).catch(err => {
           console.warn('Error saving subject update to Firestore:', err);
         });
         toast('Materia o asignatura actualizada con éxito', 'success');
@@ -226,12 +240,45 @@ export default function Asignaturas({
         docenteId,
         creado: now(),
       };
+      savedSubId = newSub.id;
       unmarkAsDeleted(newSub.id);
       onUpdateSubjects([...nextSubs, newSub]);
-      saveDocToFirestore('subjects', newSub).catch(err => {
+      saveDocToFirestore('subjects', newSub, true).catch(err => {
         console.warn('Error saving new subject to Firestore:', err);
       });
       toast(`Asignatura creada satisfactoriamente con código ${finalCode}`, 'success');
+    }
+
+    if (savedSubId && onUpdateUsers) {
+      let usersChanged = false;
+      const updatedUsers = users.map(u => {
+        if (!u || u.rol === 'estudiante') return u;
+        const currentAsg = Array.isArray(u.asignaturas) ? u.asignaturas : [];
+        if (docenteId && u.id === docenteId) {
+          if (!currentAsg.includes(savedSubId)) {
+            usersChanged = true;
+            const modUser: User = { ...u, asignaturas: [...currentAsg, savedSubId], actualizado: now() };
+            saveDocToFirestore('users', modUser, true).catch(() => {});
+            return modUser;
+          }
+        } else if (
+          currentAsg.includes(savedSubId) &&
+          (u.id === prevDocenteId || !docenteId || docenteId !== u.id)
+        ) {
+          usersChanged = true;
+          const modUser: User = {
+            ...u,
+            asignaturas: currentAsg.filter(id => id !== savedSubId),
+            actualizado: now(),
+          };
+          saveDocToFirestore('users', modUser, true).catch(() => {});
+          return modUser;
+        }
+        return u;
+      });
+      if (usersChanged) {
+        onUpdateUsers(updatedUsers);
+      }
     }
 
     setIsModalOpen(false);
@@ -256,7 +303,7 @@ export default function Asignaturas({
     return subjects.filter(sub => {
       // Search query filter
       const q = searchQuery.toLowerCase().trim();
-      const doc = users.find(u => u.id === sub.docenteId);
+      const doc = resolveAssignedDocente(sub);
       const docName = doc ? doc.nombre : '';
       const matchesSearch = !q || (
         sub.nombre.toLowerCase().includes(q) ||
@@ -295,7 +342,7 @@ export default function Asignaturas({
           (s.semestre || '').trim().toLowerCase() === semName.trim().toLowerCase();
         const q = searchQuery.toLowerCase().trim();
         if (!q) return matchesSem;
-        const doc = users.find(u => u.id === s.docenteId);
+        const doc = resolveAssignedDocente(s);
         return matchesSem && (
           s.nombre.toLowerCase().includes(q) ||
           (s.codigo || '').toLowerCase().includes(q) ||
@@ -591,7 +638,7 @@ export default function Asignaturas({
                           </div>
                         ) : (
                           sem.subjects.map(sub => {
-                            const doc = users.find(u => u.id === sub.docenteId);
+                            const doc = resolveAssignedDocente(sub);
                             return (
                               <div
                                 key={sub.id}
@@ -605,8 +652,15 @@ export default function Asignaturas({
                                   </div>
                                 </div>
 
+                                <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500">
+                                  <Users className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span className={`truncate ${doc ? 'font-semibold text-slate-700' : 'italic text-slate-400'}`}>
+                                    {doc ? doc.nombre : 'Sin docente asignado'}
+                                  </span>
+                                </div>
+
                                 {/* Subtle meta footer (code & docent & actions) */}
-                                <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px] text-slate-500">
+                                <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px] text-slate-500">
                                   <span className="font-mono font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
                                     {sub.codigo || 'S/C'}
                                   </span>
@@ -687,7 +741,7 @@ export default function Asignaturas({
                           </div>
                         ) : (
                           sem.subjects.map(sub => {
-                            const doc = users.find(u => u.id === sub.docenteId);
+                            const doc = resolveAssignedDocente(sub);
                             return (
                               <div
                                 key={sub.id}
@@ -770,7 +824,7 @@ export default function Asignaturas({
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {currentTableSubjects.map(sub => {
-                    const doc = users.find(u => u.id === sub.docenteId);
+                    const doc = resolveAssignedDocente(sub);
                     const isNivel1 = (sub.nivel || '').includes('NIVEL I');
                     return (
                       <tr key={sub.id} className="hover:bg-slate-50/60 transition">
@@ -1011,7 +1065,9 @@ export default function Asignaturas({
                 >
                   <option value="">-- Sin docente asignado --</option>
                   {docentes.map(d => (
-                    <option key={d.id} value={d.id}>{d.nombre} ({d.rol})</option>
+                    <option key={d.id} value={d.id}>
+                      {d.nombre} ({d.rol}{d.email ? ` · ${d.email}` : ''})
+                    </option>
                   ))}
                 </select>
               </div>

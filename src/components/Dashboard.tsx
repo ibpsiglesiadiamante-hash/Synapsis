@@ -502,9 +502,27 @@ export default function Dashboard({
     {
       id: 'docente',
       name: 'Docente',
-      badgeCount: 3,
+      badgeCount: currentUser?.rol === 'docente' ? 5 : 3,
       accentDot: 'bg-cyan-400',
       modules: [
+        ...(currentUser?.rol === 'docente' ? [
+          {
+            id: 'docente-misMaterias',
+            title: 'Mis Asignaturas',
+            desc: 'Materias asignadas a tu carga docente',
+            icon: <BookOpen className="w-4 h-4" />,
+            pageId: 'misMaterias',
+            color: 'text-purple-400'
+          },
+          {
+            id: 'docente-miHistorial',
+            title: 'Mi historial',
+            desc: 'Notas, entregas y exámenes de tus cursos',
+            icon: <Clock className="w-4 h-4" />,
+            pageId: 'miHistorial',
+            color: 'text-amber-300'
+          }
+        ] : []),
         {
           id: 'misExamenes',
           title: 'Mis exámenes',

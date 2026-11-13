@@ -256,7 +256,10 @@ export default function App() {
         JSON.stringify(refreshed.asignaturas || []) !== JSON.stringify(currentUser.asignaturas || []) ||
         refreshed.semestre !== currentUser.semestre ||
         refreshed.nombre !== currentUser.nombre ||
-        refreshed.codigo !== currentUser.codigo
+        refreshed.codigo !== currentUser.codigo ||
+        refreshed.rol !== currentUser.rol ||
+        refreshed.email !== currentUser.email ||
+        refreshed.celular !== currentUser.celular
       )) {
         const merged = { ...currentUser, ...refreshed };
         setCurrentUser(merged);
@@ -369,6 +372,8 @@ export default function App() {
       activeTab === 'historialAcademico' ||
       activeTab === 'registroNotas' ||
       activeTab === 'misExamenesTake' ||
+      activeTab === 'misMaterias' ||
+      activeTab === 'asignaturas' ||
       activeTab === 'miHistorial' ||
       activeTab === 'dashboard'
     ) {
@@ -672,7 +677,7 @@ export default function App() {
         : ['docente', 'recursos', 'gestion'];
 
       if (user.permisosModulos && user.permisosModulos.includes(tab)) return true;
-      if (tab === 'registroNotas' || tab === 'trabajos') return true;
+      if (tab === 'registroNotas' || tab === 'trabajos' || tab === 'misMaterias' || tab === 'miHistorial') return true;
       return allowedCategories.includes(catId);
     }
 
@@ -1414,6 +1419,7 @@ export default function App() {
         return (
           <MiHistorial
             currentUser={currentUser}
+            users={db.users}
             exams={db.exams}
             submissions={db.submissions}
             gradeRecords={db.gradeRecords}
@@ -1422,6 +1428,7 @@ export default function App() {
             semesters={db.semesters}
             assignments={db.assignments}
             assignmentSubmissions={db.assignmentSubmissions || []}
+            onNavigate={(tab) => setActiveTab(tab)}
           />
         );
       case 'docentes':
@@ -1433,6 +1440,7 @@ export default function App() {
             subjects={db.subjects}
             semesters={db.semesters}
             onUpdateUsers={updateUsers}
+            onUpdateSubjects={updateSubjects}
             toast={showToast}
           />
         );
@@ -1452,6 +1460,7 @@ export default function App() {
             semesters={db.semesters}
             users={db.users}
             onUpdateSubjects={updateSubjects}
+            onUpdateUsers={updateUsers}
             toast={showToast}
             onDeduplicateSubjects={handleDeduplicateSubjects}
           />
