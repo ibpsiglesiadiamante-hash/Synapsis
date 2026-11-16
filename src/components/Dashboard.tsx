@@ -17,7 +17,7 @@ import {
   Flame, Inbox
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
-import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence } from '../lib/db';
+import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus } from '../lib/db';
 
 export interface AcademicNotification {
   id: string;
@@ -178,7 +178,8 @@ export default function Dashboard({
     sortedSubs = [...mySubsList].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     sortedExams = docExams;
   } else {
-    const studentSubs = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
+    const matchingStudentIds = new Set(getAllMatchingUserIds(currentUser, users));
+    const studentSubs = (submissions || []).filter(s => matchingStudentIds.has(s.estudianteId));
     sortedSubs = [...studentSubs].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
     
     const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
@@ -197,11 +198,7 @@ export default function Dashboard({
       }
       return true;
     });
-    sortedExams = availableExams.filter(e => {
-      if (e.intentos === 0) return true;
-      const myCount = studentSubs.filter(s => s.examenId === e.id).length;
-      return myCount < e.intentos;
-    });
+    sortedExams = availableExams.filter(e => getStudentExamAttemptStatus(currentUser, e, submissions, users).canTake);
   }
 
   sortedExams = sortExamsBySubjectAndSequence(sortedExams, subjects, parciales);
@@ -212,7 +209,8 @@ export default function Dashboard({
   const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
   const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
   const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
-  const studentSubsList = (submissions || []).filter(s => s.estudianteId === currentUser?.id);
+  const matchingIdsForNotif = new Set(getAllMatchingUserIds(currentUser, users));
+  const studentSubsList = (submissions || []).filter(s => matchingIdsForNotif.has(s.estudianteId));
 
   // 1. Notificaciones de Exámenes Próximos / Activos
   const examNotifications: AcademicNotification[] = sortExamsBySubjectAndSequence(exams || [], subjects, parciales)
@@ -236,14 +234,17 @@ export default function Dashboard({
       const subjName = matchingSubj?.nombre || exam.materia || 'Asignatura';
       const parc = (parciales || []).find(p => p.id === exam.parcialId);
       
-      const myAttempts = studentSubsList.filter(s => s.examenId === exam.id).length;
-      const hasRemaining = exam.intentos === 0 || myAttempts < exam.intentos;
-      if (rol === 'estudiante' && !hasRemaining) return null;
+      const attemptStatus = getStudentExamAttemptStatus(currentUser, exam, submissions, users);
+      if (rol === 'estudiante' && !attemptStatus.canTake) return null;
 
       // Check if new (created within 7 days)
       const isNew = exam.creado ? (Date.now() - new Date(exam.creado).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
       const urgency: 'urgent' | 'upcoming' | 'normal' = isNew ? 'urgent' : 'upcoming';
-      const badgeText = isNew ? '¡Nuevo Examen!' : (exam.intentos > 0 ? `${exam.intentos - myAttempts} intento(s) disp.` : 'Examen Disponible');
+      const badgeText = attemptStatus.hasTeacherGrant && attemptStatus.canTake
+        ? '+1 Intento habilitado'
+        : isNew
+          ? '¡Nuevo Examen!'
+          : (!attemptStatus.isUnlimited ? `${attemptStatus.remainingAttempts} intento(s) disp.` : 'Examen Disponible');
 
       const subtitle = parc ? `Corte / Parcial: ${parc.nombre}` : (exam.descripcion ? exam.descripcion : 'Evaluación activa en la plataforma');
 
@@ -266,7 +267,7 @@ export default function Dashboard({
           }
         },
         timeLimit: exam.tiempo,
-        attemptsLeft: exam.intentos > 0 ? (exam.intentos - myAttempts) : undefined,
+        attemptsLeft: attemptStatus.isUnlimited ? undefined : attemptStatus.remainingAttempts,
         rawDate: exam.creado
       };
     })

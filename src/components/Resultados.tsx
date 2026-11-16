@@ -7,10 +7,13 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, Award, Percent, Calendar, 
   ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
-  Download, Copy, FileText
+  Download, Copy, FileText, RotateCcw, ShieldCheck
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Parcial } from '../types';
-import { avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5, sortExamsBySubjectAndSequence } from '../lib/db';
+import { 
+  avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5, sortExamsBySubjectAndSequence,
+  EXTRA_ATTEMPTS_KEY, EXTRA_ATTEMPTS_META_KEY, getStudentExamAttemptStatus, StudentExamAttemptStatus
+} from '../lib/db';
 import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions } from '../lib/questionAdapter';
 
 interface ResultadosProps {
@@ -54,6 +57,16 @@ export default function Resultados({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [failedSubmissionIds, setFailedSubmissionIds] = useState<string[]>([]);
 
+  // Per-student extra attempt grant modal state
+  const [grantModal, setGrantModal] = useState<{
+    exam: Exam;
+    submission: Submission;
+    studentName: string;
+    status: StudentExamAttemptStatus;
+  } | null>(null);
+  const [grantReason, setGrantReason] = useState('');
+  const [isSavingGrant, setIsSavingGrant] = useState(false);
+
   const handleDeleteSubmission = async (subId: string, studentName: string) => {
     try {
       setIsDeleting(true);
@@ -65,6 +78,107 @@ export default function Resultados({
     } finally {
       setIsDeleting(false);
       setDeletingSubId(null);
+    }
+  };
+
+  const handleConfirmGrantAttempt = async () => {
+    if (!grantModal || isSavingGrant) return;
+    const { submission, studentName, exam } = grantModal;
+    setIsSavingGrant(true);
+    try {
+      const timeNow = now();
+      const prevExtra = parseInt(String(submission.manualComments?.[EXTRA_ATTEMPTS_KEY] || '0'), 10);
+      const safePrevExtra = isNaN(prevExtra) || prevExtra < 0 ? 0 : prevExtra;
+      const nextExtra = safePrevExtra + 1;
+      const reasonText = grantReason.trim() || 'Autorización docente tras análisis del caso';
+
+      const updatedSubs = submissions.map(s => {
+        if (s.id !== submission.id) return s;
+        return {
+          ...s,
+          gradedAt: timeNow,
+          actualizado: timeNow,
+          manualComments: {
+            ...(s.manualComments || {}),
+            [EXTRA_ATTEMPTS_KEY]: String(nextExtra),
+            [EXTRA_ATTEMPTS_META_KEY]: JSON.stringify({
+              by: currentUser.nombre || 'Docente',
+              at: timeNow,
+              reason: reasonText
+            })
+          }
+        };
+      });
+
+      const res = await onUpdateSubmissions(updatedSubs, [submission.id]);
+      if (res && res.remoteSynced) {
+        toast(`Se habilitó +1 intento adicional para ${studentName} en "${cleanExamTitle(exam.titulo)}" ✓`, 'success');
+      } else {
+        toast(`+1 intento guardado localmente para ${studentName}. Sincronización pendiente con la nube.`, 'warning');
+      }
+      setGrantModal(null);
+      setGrantReason('');
+    } catch {
+      toast('Error al habilitar el intento adicional', 'error');
+    } finally {
+      setIsSavingGrant(false);
+    }
+  };
+
+  const handleRevokeExtraAttempt = async (submission: Submission, studentName: string, exam: Exam) => {
+    if (isSavingGrant) return;
+    setIsSavingGrant(true);
+    try {
+      const timeNow = now();
+      // Find all submissions for this student & exam that hold extra attempts, decrement 1 from the latest granted one
+      const studentObj = users.find(u => u.id === submission.estudianteId) || {
+        id: submission.estudianteId,
+        nombre: studentName,
+        email: '',
+        pass: '',
+        rol: 'estudiante' as const,
+        creado: ''
+      };
+      const status = getStudentExamAttemptStatus(studentObj, exam, submissions, users);
+      const targetGrantSub = [...status.studentSubmissions].find(sub => {
+        const val = parseInt(String(sub.manualComments?.[EXTRA_ATTEMPTS_KEY] || '0'), 10);
+        return !isNaN(val) && val > 0;
+      });
+      if (!targetGrantSub) {
+        toast('No hay intentos adicionales activos para revocar', 'info');
+        return;
+      }
+
+      const currentVal = parseInt(String(targetGrantSub.manualComments?.[EXTRA_ATTEMPTS_KEY] || '0'), 10) || 0;
+      const nextVal = Math.max(0, currentVal - 1);
+
+      const updatedSubs = submissions.map(s => {
+        if (s.id !== targetGrantSub.id) return s;
+        const nextComments = { ...(s.manualComments || {}) };
+        if (nextVal > 0) {
+          nextComments[EXTRA_ATTEMPTS_KEY] = String(nextVal);
+        } else {
+          delete nextComments[EXTRA_ATTEMPTS_KEY];
+          delete nextComments[EXTRA_ATTEMPTS_META_KEY];
+        }
+        return {
+          ...s,
+          gradedAt: timeNow,
+          actualizado: timeNow,
+          manualComments: nextComments
+        };
+      });
+
+      const res = await onUpdateSubmissions(updatedSubs, [targetGrantSub.id]);
+      if (res && res.remoteSynced) {
+        toast(`Intento adicional revocado para ${studentName} ✓`, 'success');
+      } else {
+        toast(`Intento adicional revocado localmente para ${studentName}.`, 'warning');
+      }
+    } catch {
+      toast('Error al revocar el intento adicional', 'error');
+    } finally {
+      setIsSavingGrant(false);
     }
   };
 
@@ -570,7 +684,9 @@ export default function Resultados({
                         const qText = comp.totalEvaluableItems > comp.totalQuestions 
                           ? `${comp.totalQuestions} preguntas (${comp.totalEvaluableItems} ítems evaluables)`
                           : `${comp.totalQuestions} preguntas`;
-                        return `${subjectName} · ${qText} · ${examSubs.length} entregas`;
+                        const baseAtt = exam.intentos === undefined || exam.intentos === null ? 1 : Number(exam.intentos);
+                        const attText = baseAtt === 0 ? 'Intentos ilimitados' : `Límite: ${baseAtt} ${baseAtt === 1 ? 'intento' : 'intentos'}`;
+                        return `${subjectName} · ${qText} · ${attText} · ${examSubs.length} entregas`;
                       })()}
                     </div>
                   </div>
@@ -638,6 +754,18 @@ export default function Resultados({
                           const student = users.find(u => u.id === s.estudianteId);
                           const stName = student?.nombre || s.estudianteNombre;
                           const isPending = s.estado === 'pendiente';
+                          const studentForAttempt: User = student || {
+                            id: s.estudianteId,
+                            nombre: stName,
+                            email: '',
+                            pass: '',
+                            rol: 'estudiante',
+                            creado: ''
+                          };
+                          const attemptStatus = getStudentExamAttemptStatus(studentForAttempt, exam, submissions, users);
+                          const isLatestForStudent = attemptStatus.latestSubmission?.id === s.id;
+                          const hasExtraActive = !attemptStatus.isUnlimited && attemptStatus.canTake && attemptStatus.extraGranted > 0;
+                          const exceededLimit = !attemptStatus.isUnlimited && attemptStatus.usedAttempts > attemptStatus.totalAllowed;
 
                           return (
                             <tr key={s.id} className="hover:bg-slate-50/50">
@@ -649,7 +777,31 @@ export default function Resultados({
                                   >
                                     {avatarLetter(stName)}
                                   </div>
-                                  <span className="text-slate-800 font-semibold">{stName}</span>
+                                  <div>
+                                    <span className="text-slate-800 font-semibold block">{stName}</span>
+                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                      {!attemptStatus.isUnlimited && (
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                          exceededLimit
+                                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                            : hasExtraActive
+                                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                                        }`}>
+                                          Intentos: {attemptStatus.usedAttempts}/{attemptStatus.totalAllowed}
+                                          {hasExtraActive ? ` (+${attemptStatus.remainingAttempts} extra activo)` : ''}
+                                        </span>
+                                      )}
+                                      {isLatestForStudent && attemptStatus.grantReason && (
+                                        <span
+                                          className="text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded truncate max-w-[200px]"
+                                          title={`Autorizado por ${attemptStatus.grantedBy || 'Docente'}: ${attemptStatus.grantReason}`}
+                                        >
+                                          Motivo: {attemptStatus.grantReason}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </td>
                               <td className="py-3 px-4">
@@ -679,7 +831,41 @@ export default function Resultados({
                                 {fmtDate(s.fecha)} {fmtTime(s.fecha)}
                               </td>
                               <td className="py-3 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  {isLatestForStudent && !attemptStatus.isUnlimited && (
+                                    <>
+                                      {hasExtraActive && (
+                                        <button
+                                          type="button"
+                                          disabled={isSavingGrant}
+                                          onClick={() => handleRevokeExtraAttempt(s, stName, exam)}
+                                          className="px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-[11px] font-bold rounded-lg transition cursor-pointer shadow-2xs disabled:opacity-50"
+                                          title="Cancelar intento adicional no utilizado"
+                                        >
+                                          Revocar extra
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        disabled={isSavingGrant}
+                                        onClick={() => {
+                                          setGrantReason('');
+                                          setGrantModal({
+                                            exam,
+                                            submission: s,
+                                            studentName: stName,
+                                            status: attemptStatus
+                                          });
+                                        }}
+                                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg transition duration-150 flex items-center gap-1 cursor-pointer shadow-2xs disabled:opacity-50"
+                                        title={`Habilitar 1 intento adicional para ${stName} tras analizar la causa`}
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>+1 Intento</span>
+                                      </button>
+                                    </>
+                                  )}
+
                                   <button 
                                     onClick={() => handleOpenGradingModal(s.id)}
                                     className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition duration-150 cursor-pointer shadow-2xs"
@@ -1420,6 +1606,86 @@ export default function Resultados({
                   )}
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA AUTORIZAR +1 INTENTO ADICIONAL AL ESTUDIANTE */}
+      {grantModal && (
+        <div className="modal-overlay fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[210] p-4">
+          <div className="modal bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden theme-bg-surface theme-border animate-fade-in">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-sm">Habilitar Nuevo Intento</h4>
+                  <p className="text-[11px] text-slate-500 font-semibold truncate max-w-[260px]">
+                    {cleanExamTitle(grantModal.exam.titulo)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isSavingGrant}
+                onClick={() => setGrantModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-left">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1 text-xs">
+                <p className="font-bold text-slate-800">Estudiante: {grantModal.studentName}</p>
+                <p className="text-slate-600">
+                  Uso actual: <strong>{grantModal.status.usedAttempts}</strong> de <strong>{grantModal.status.totalAllowed}</strong> intento(s) permitido(s)
+                  {grantModal.status.extraGranted > 0 ? ` (${grantModal.status.extraGranted} extra otorgado antes)` : ''}
+                </p>
+                {grantModal.status.remainingAttempts > 0 && (
+                  <p className="text-emerald-700 font-semibold pt-1">
+                    Nota: Este estudiante todavía tiene {grantModal.status.remainingAttempts} intento disponible. Si continúas, tendrá {grantModal.status.remainingAttempts + 1} disponibles.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Causa o motivo de la autorización (opcional)
+                </label>
+                <textarea
+                  value={grantReason}
+                  onChange={e => setGrantReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Se desconectó el internet durante el envío / Cierre accidental / Autorizado por coordinación..."
+                  className="w-full rounded-xl border border-slate-300 focus:border-indigo-500 p-3 text-xs text-slate-800 outline-none resize-none"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Se habilitará exactamente <strong>1 intento adicional</strong> solo para este estudiante. En cuanto lo utilice, la evaluación volverá a bloquearse automáticamente.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isSavingGrant}
+                onClick={() => setGrantModal(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isSavingGrant}
+                onClick={handleConfirmGrantAttempt}
+                className="px-4 py-2 text-xs font-extrabold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isSavingGrant ? 'animate-spin' : ''}`} />
+                <span>{isSavingGrant ? 'Habilitando...' : 'Autorizar +1 Intento'}</span>
+              </button>
             </div>
           </div>
         </div>

@@ -320,6 +320,112 @@ export function getUserAssignedSubjects(
   });
 }
 
+export const EXTRA_ATTEMPTS_KEY = '__extraAttemptsAdded';
+export const EXTRA_ATTEMPTS_META_KEY = '__extraAttemptsMeta';
+
+export interface ExtraAttemptMeta {
+  by?: string;
+  at?: string;
+  reason?: string;
+}
+
+export interface StudentExamAttemptStatus {
+  usedAttempts: number;
+  baseAttempts: number;
+  extraGranted: number;
+  totalAllowed: number;
+  remainingAttempts: number;
+  canTake: boolean;
+  isUnlimited: boolean;
+  hasTeacherGrant: boolean;
+  grantReason?: string;
+  grantedBy?: string;
+  grantedAt?: string;
+  studentSubmissions: Submission[];
+  latestSubmission?: Submission;
+}
+
+export function getStudentExamAttemptStatus(
+  student: User | null | undefined,
+  exam: Exam | null | undefined,
+  submissions: Submission[] = [],
+  users: User[] = []
+): StudentExamAttemptStatus {
+  const rawIntentos = exam?.intentos;
+  const parsedIntentos = typeof rawIntentos === 'number'
+    ? rawIntentos
+    : (rawIntentos !== undefined && rawIntentos !== null && rawIntentos !== '' ? Number(rawIntentos) : 1);
+  const baseAttempts = isNaN(parsedIntentos) ? 1 : Math.max(0, parsedIntentos);
+  const isUnlimited = baseAttempts === 0;
+
+  if (!student || !exam) {
+    return {
+      usedAttempts: 0,
+      baseAttempts,
+      extraGranted: 0,
+      totalAllowed: baseAttempts,
+      remainingAttempts: isUnlimited ? Infinity : baseAttempts,
+      canTake: false,
+      isUnlimited,
+      hasTeacherGrant: false,
+      studentSubmissions: [],
+    };
+  }
+
+  const matchingIds = new Set(getAllMatchingUserIds(student, users));
+  const studentSubmissions = (submissions || [])
+    .filter(s => s && s.id && s.examenId === exam.id && matchingIds.has(s.estudianteId))
+    .sort((a, b) => parseSafeTimestamp(a.fecha || a.gradedAt) - parseSafeTimestamp(b.fecha || b.gradedAt));
+
+  let extraGranted = 0;
+  let latestMeta: ExtraAttemptMeta | undefined;
+  let latestMetaTs = -1;
+
+  studentSubmissions.forEach(sub => {
+    const comments = sub.manualComments || {};
+    const rawExtra = comments[EXTRA_ATTEMPTS_KEY];
+    if (rawExtra !== undefined) {
+      const n = parseInt(String(rawExtra), 10);
+      if (!isNaN(n) && n > 0) {
+        extraGranted += n;
+      }
+    }
+    const rawMeta = comments[EXTRA_ATTEMPTS_META_KEY];
+    if (rawMeta) {
+      try {
+        const parsed = typeof rawMeta === 'string' ? JSON.parse(rawMeta) : rawMeta;
+        const ts = parseSafeTimestamp(parsed?.at || sub.gradedAt || sub.fecha);
+        if (ts >= latestMetaTs) {
+          latestMetaTs = ts;
+          latestMeta = parsed;
+        }
+      } catch {}
+    }
+  });
+
+  const usedAttempts = studentSubmissions.length;
+  const totalAllowed = isUnlimited ? 0 : (baseAttempts + extraGranted);
+  const remainingAttempts = isUnlimited ? Infinity : Math.max(0, totalAllowed - usedAttempts);
+  const canTake = isUnlimited ? true : remainingAttempts > 0;
+  const latestSubmission = studentSubmissions[studentSubmissions.length - 1];
+
+  return {
+    usedAttempts,
+    baseAttempts,
+    extraGranted,
+    totalAllowed,
+    remainingAttempts,
+    canTake,
+    isUnlimited,
+    hasTeacherGrant: extraGranted > 0,
+    grantReason: latestMeta?.reason,
+    grantedBy: latestMeta?.by,
+    grantedAt: latestMeta?.at,
+    studentSubmissions,
+    latestSubmission,
+  };
+}
+
 export const SEMESTRES_OFICIALES = [
   'Semestre I',
   'Semestre II',
@@ -1426,7 +1532,9 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
                     if (allowedQuestions.has(qId)) finalScores[qId] = val as number;
                   });
                   Object.entries(mergedComments).forEach(([qId, val]) => {
-                    if (allowedQuestions.has(qId)) finalComments[qId] = val as string;
+                    if (allowedQuestions.has(qId) || qId === EXTRA_ATTEMPTS_KEY || qId === EXTRA_ATTEMPTS_META_KEY) {
+                      finalComments[qId] = val as string;
+                    }
                   });
                 } else {
                   finalScores = mergedScores;

@@ -11,11 +11,13 @@ import {
   getStudentAssignedSubjects,
   sortExamsBySubjectAndSequence,
   resolveExamSubjectName,
-  extractPartialSequenceNumber
+  extractPartialSequenceNumber,
+  getStudentExamAttemptStatus
 } from '../lib/db';
 
 interface MisExamenesTakeProps {
   currentUser: User;
+  users?: User[];
   exams: Exam[];
   submissions: Submission[];
   subjects?: Subject[];
@@ -26,6 +28,7 @@ interface MisExamenesTakeProps {
 
 export default function MisExamenesTake({
   currentUser,
+  users = [],
   exams,
   submissions,
   subjects = [],
@@ -42,6 +45,12 @@ export default function MisExamenesTake({
   const [verificationError, setVerificationError] = useState('');
 
   const handleInitiateExam = (examId: string) => {
+    const targetExam = exams.find(ex => ex.id === examId);
+    if (!targetExam) return;
+    if (currentUser.rol === 'estudiante') {
+      const status = getStudentExamAttemptStatus(currentUser, targetExam, submissions, users);
+      if (!status.canTake) return;
+    }
     setSelectedExamId(examId);
     setVerificationCode('');
     setVerificationError('');
@@ -89,8 +98,6 @@ export default function MisExamenesTake({
     // Agrupar siempre por asignatura y ordenar Parcial 1 / Evaluación I antes que Parcial 2 / Evaluación II
     return sortExamsBySubjectAndSequence(filtered, subjects, parciales);
   }, [exams, currentUser.rol, myAssignedSubjects.length, assignedIds, assignedNames, subjects, parciales, searchQuery]);
-
-  const mySubs = submissions.filter(s => s.estudianteId === currentUser.id);
 
   // Reset page to 1 when a search/filter search is entered
   React.useEffect(() => {
@@ -235,8 +242,8 @@ export default function MisExamenesTake({
               if (targetSeq <= 1 || targetSeq >= 999) return false;
               return group.exams.some(other => {
                 const otherSeq = extractPartialSequenceNumber(other, parciales, subjects);
-                const otherAttempts = mySubs.filter(s => s.examenId === other.id);
-                return otherSeq < targetSeq && otherAttempts.length === 0;
+                const otherStatus = getStudentExamAttemptStatus(currentUser, other, submissions, users);
+                return otherSeq < targetSeq && otherStatus.usedAttempts === 0;
               });
             };
 
@@ -256,9 +263,10 @@ export default function MisExamenesTake({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {group.exams.map(e => {
-                    const myAttempts = mySubs.filter(s => s.examenId === e.id);
-                    const canTake = e.intentos === 0 || myAttempts.length < e.intentos;
-                    const lastAttempt = myAttempts[myAttempts.length - 1];
+                    const attemptStatus = getStudentExamAttemptStatus(currentUser, e, submissions, users);
+                    const myAttempts = attemptStatus.studentSubmissions;
+                    const canTake = currentUser.rol !== 'estudiante' || attemptStatus.canTake;
+                    const lastAttempt = attemptStatus.latestSubmission;
                     const seqNum = extractPartialSequenceNumber(e, parciales, subjects);
                     const showOrderHint = canTake && hasPendingEarlierExam(seqNum);
 
@@ -319,8 +327,16 @@ export default function MisExamenesTake({
                             </div>
                             <div className="flex items-center gap-1.5">
                               <RefreshCw className="w-3.5 h-3.5 text-slate-450" />
-                              <span>Intentos: {myAttempts.length} / {e.intentos === 0 ? 'ilimitados' : e.intentos}</span>
+                              <span>
+                                Intentos: {attemptStatus.usedAttempts} / {attemptStatus.isUnlimited ? 'ilimitados' : attemptStatus.totalAllowed}
+                              </span>
                             </div>
+                            {canTake && attemptStatus.hasTeacherGrant && (
+                              <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold w-fit">
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>Intento adicional autorizado por el docente</span>
+                              </div>
+                            )}
                           </div>
 
                           {e.descripcion && (
@@ -340,12 +356,15 @@ export default function MisExamenesTake({
                             Presentar examen →
                           </button>
                         ) : (
-                          <button 
-                            disabled
-                            className="w-full p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 font-bold block text-sm select-none cursor-not-allowed mt-2"
-                          >
-                            Intentos agotados
-                          </button>
+                          <div className="mt-2 p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-left space-y-1 select-none">
+                            <div className="flex items-center gap-1.5 text-xs font-extrabold text-amber-900">
+                              <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                              <span>Intento utilizado · Evaluación bloqueada</span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 font-medium leading-snug">
+                              Ya utilizaste tu intento permitido. Comunícate con tu docente para analizar la causa si necesitas que te habilite otro intento.
+                            </p>
+                          </div>
                         )}
                       </div>
                     );

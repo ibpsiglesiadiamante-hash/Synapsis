@@ -449,3 +449,32 @@ export async function fetchCollectionFromSupabase<T>(table: string): Promise<T[]
   }
 }
 
+/**
+ * Fetches submissions for a specific exam and set of matching user IDs directly from Supabase
+ * to prevent duplicate exam attempts across tabs or devices.
+ */
+export async function fetchSubmissionsForExamAndUsers(
+  examenId: string,
+  userIds: string[]
+): Promise<Submission[]> {
+  if (!examenId || !userIds || userIds.length === 0) return [];
+  try {
+    const cleanIds = Array.from(new Set(userIds.filter(Boolean)));
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('*')
+      .eq('examenId', examenId)
+      .in('estudianteId', cleanIds);
+
+    if (error) {
+      console.warn('fetchSubmissionsForExamAndUsers warning:', error.message);
+      return [];
+    }
+    const deletedIds = getDeletedIds();
+    return ((data || []) as Submission[]).filter(s => s && s.id && !deletedIds.has(s.id));
+  } catch (err) {
+    console.warn('fetchSubmissionsForExamAndUsers error:', err);
+    return [];
+  }
+}
+

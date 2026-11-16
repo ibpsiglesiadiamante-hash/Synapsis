@@ -70,7 +70,9 @@ import {
   unmarkAsDeleted,
   getPendingSubmissionIds,
   addPendingSubmissionId,
-  removePendingSubmissionId
+  removePendingSubmissionId,
+  getAllMatchingUserIds,
+  getStudentExamAttemptStatus
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import { 
@@ -93,6 +95,7 @@ import {
 } from './lib/firebase';
 import {
   fetchFullStateFromSupabase,
+  fetchSubmissionsForExamAndUsers,
   pushAllStateToSupabase,
   testSupabaseConnection,
   saveDocToSupabase,
@@ -338,6 +341,19 @@ export default function App() {
       localStorage.removeItem('synapsis_activeTakeExamId');
     }
   }, [activeTakeExamId]);
+
+  // If a student reloads/restores activeTakeExamId after exhausting attempts, clear it immediately
+  useEffect(() => {
+    if (!activeTakeExamId || !currentUser || currentUser.rol !== 'estudiante') return;
+    const targetExam = db.exams.find(e => e.id === activeTakeExamId);
+    if (!targetExam) return;
+    const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, db.submissions, db.users);
+    if (!localStatus.canTake) {
+      localStorage.removeItem('synapsis_activeTakeExamId');
+      setActiveTakeExamId(null);
+      showToast('Ya utilizaste tu intento en esta evaluación. Comunícate con tu docente si necesitas otro intento.', 'warning');
+    }
+  }, [activeTakeExamId, currentUser, db.exams, db.submissions, db.users]);
 
   useEffect(() => {
     if (activeEditExamId) {
@@ -926,6 +942,57 @@ export default function App() {
     };
   };
 
+  // Guarded handler whenever a student (or preview user) initiates an exam from ANY module
+  const handleRequestStartExam = async (examId: string) => {
+    if (!currentUser) return;
+    const latestDb = currentDbRef.current;
+    const targetExam = (latestDb.exams || []).find(e => e.id === examId);
+    if (!targetExam) {
+      showToast('No se encontró la evaluación solicitada.', 'error');
+      return;
+    }
+
+    if (currentUser.rol === 'estudiante') {
+      if (targetExam.estado !== 'activo') {
+        showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
+        return;
+      }
+
+      const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, latestDb.submissions || [], latestDb.users || []);
+      if (!localStatus.canTake) {
+        localStorage.removeItem('synapsis_activeTakeExamId');
+        showToast('Ya utilizaste tu intento permitido en esta evaluación. Comunícate con tu docente para analizar la causa y habilitar otro intento.', 'warning');
+        return;
+      }
+
+      // Live Supabase check against multi-device / multi-tab bypasses
+      try {
+        const matchingIds = getAllMatchingUserIds(currentUser, latestDb.users || []);
+        const remoteSubs = await fetchSubmissionsForExamAndUsers(examId, matchingIds);
+        if (remoteSubs.length > 0) {
+          const remoteMap = new Map(remoteSubs.map(r => [r.id, r]));
+          const existingIds = new Set((currentDbRef.current.submissions || []).map(s => s.id));
+          const mergedSubs = [
+            ...(currentDbRef.current.submissions || []).map(s => remoteMap.get(s.id) || s),
+            ...remoteSubs.filter(r => !existingIds.has(r.id))
+          ];
+          updateStateField('submissions', mergedSubs);
+
+          const liveStatus = getStudentExamAttemptStatus(currentUser, targetExam, mergedSubs, currentDbRef.current.users || []);
+          if (!liveStatus.canTake) {
+            localStorage.removeItem('synapsis_activeTakeExamId');
+            showToast('Ya existe un intento registrado para esta evaluación. Comunícate con tu docente para analizar la causa.', 'warning');
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo validar intentos en vivo antes de iniciar:', e);
+      }
+    }
+
+    setActiveTakeExamId(examId);
+  };
+
   const handleDeduplicateSemesters = () => {
     const { state: updatedDb, duplicateIds, report } = deduplicateSemesters(currentDbRef.current);
     if (duplicateIds.length === 0) {
@@ -1357,7 +1424,7 @@ export default function App() {
               setActiveTab(page);
               setActiveEditExamId(null);
             }}
-            onTakeExam={(examId) => setActiveTakeExamId(examId)}
+            onTakeExam={handleRequestStartExam}
           />
         );
       case 'examenes':
@@ -1399,20 +1466,22 @@ export default function App() {
             semesters={db.semesters}
             users={db.users}
             exams={db.exams}
+            submissions={db.submissions}
             onNavigate={(tab) => setActiveTab(tab)}
-            onTakeExam={(id) => setActiveTakeExamId(id)}
+            onTakeExam={handleRequestStartExam}
           />
         );
       case 'misExamenesTake':
         return (
           <MisExamenesTake
             currentUser={currentUser}
+            users={db.users}
             exams={db.exams}
             submissions={db.submissions}
             subjects={db.subjects}
             semesters={db.semesters}
             parciales={db.parciales}
-            onTakeExam={(id) => setActiveTakeExamId(id)}
+            onTakeExam={handleRequestStartExam}
           />
         );
       case 'miHistorial':
@@ -1611,6 +1680,7 @@ export default function App() {
         return (
           <CentroNotificaciones
             currentUser={currentUser}
+            users={db.users}
             exams={db.exams}
             assignments={db.assignments}
             assignmentSubmissions={db.assignmentSubmissions || []}
@@ -1621,7 +1691,7 @@ export default function App() {
               setActiveTab(tab);
               setActiveEditExamId(null);
             }}
-            onTakeExam={(id) => setActiveTakeExamId(id)}
+            onTakeExam={handleRequestStartExam}
             toast={showToast}
           />
         );
@@ -2122,13 +2192,50 @@ export default function App() {
               parciales={db.parciales}
               subjects={db.subjects}
               semesters={db.semesters}
+              submissions={db.submissions}
+              users={db.users}
               currentUser={currentUser}
               onExit={() => {
+                localStorage.removeItem('synapsis_activeTakeExamId');
                 setActiveTakeExamId(null);
                 setDashboardCategory('estudiante');
                 try { localStorage.setItem('synapsis_dash_cat', 'estudiante'); } catch(e) {}
               }}
               onSubmit={async (sub) => {
+                localStorage.removeItem('synapsis_activeTakeExamId');
+                const targetExam = (currentDbRef.current.exams || []).find(e => e.id === sub.examenId);
+
+                // Verificación estricta de intentos (local + Supabase en tiempo real) antes de aceptar un nuevo envío
+                if (currentUser?.rol === 'estudiante' && targetExam) {
+                  let combinedSubs = currentDbRef.current.submissions || [];
+                  const allUsers = currentDbRef.current.users || [];
+                  try {
+                    const matchingIds = getAllMatchingUserIds(currentUser, allUsers);
+                    const remoteSubs = await fetchSubmissionsForExamAndUsers(sub.examenId, matchingIds);
+                    if (remoteSubs.length > 0) {
+                      const remoteMap = new Map(remoteSubs.map(r => [r.id, r]));
+                      const existingIds = new Set(combinedSubs.map(s => s.id));
+                      combinedSubs = [
+                        ...combinedSubs.map(s => remoteMap.get(s.id) || s),
+                        ...remoteSubs.filter(r => !existingIds.has(r.id))
+                      ];
+                    }
+                  } catch (e) {
+                    console.warn('Live duplicate attempt check warning:', e);
+                  }
+
+                  const liveStatus = getStudentExamAttemptStatus(currentUser, targetExam, combinedSubs, allUsers);
+                  const alreadyInThisSubId = combinedSubs.some(s => s.id === sub.id);
+                  if (!alreadyInThisSubId && !liveStatus.canTake) {
+                    updateStateField('submissions', combinedSubs);
+                    return {
+                      remoteSynced: false,
+                      blocked: true,
+                      error: 'Ya existe un intento registrado para este parcial. Comunícate con tu docente para analizar la causa.'
+                    };
+                  }
+                }
+
                 // Marcar en cola de respaldo local mientras confirmamos persistencia remota
                 addPendingSubmissionId(sub.id);
                 const latestSubs = currentDbRef.current.submissions || [];

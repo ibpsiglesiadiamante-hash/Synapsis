@@ -8,14 +8,16 @@ import {
   GraduationCap, BookOpen, Calendar, 
   FileText, CheckCircle, Search, ArrowRight, ShieldCheck, BarChart3, Layers
 } from 'lucide-react';
-import { User, Subject, Semester, Exam } from '../types';
+import { User, Subject, Semester, Exam, Submission } from '../types';
 import { 
   getUserAssignedSubjects, 
   getAllMatchingUserIds, 
   resolveStudentSemester, 
   normalizeString,
   avatarColor, 
-  avatarLetter 
+  avatarLetter,
+  getStudentExamAttemptStatus,
+  sortExamsBySubjectAndSequence
 } from '../lib/db';
 
 interface MisMateriasProps {
@@ -24,6 +26,7 @@ interface MisMateriasProps {
   semesters: Semester[];
   users: User[];
   exams: Exam[];
+  submissions?: Submission[];
   onNavigate: (tab: string) => void;
   onTakeExam?: (examId: string) => void;
 }
@@ -34,6 +37,7 @@ export default function MisMaterias({
   semesters = [],
   users = [],
   exams = [],
+  submissions = [],
   onNavigate,
   onTakeExam,
 }: MisMateriasProps) {
@@ -355,22 +359,44 @@ export default function MisMaterias({
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeSubExams.length > 0 && onTakeExam) {
-                          onTakeExam(activeSubExams[0].id);
-                        } else {
-                          onNavigate('misExamenesTake');
-                        }
-                      }}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer group-hover:translate-x-0.5 transition"
-                    >
-                      <span>{activeSubExams.length > 0 ? 'Presentar' : 'Ver exámenes'}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  ) : (() => {
+                    const orderedActive = sortExamsBySubjectAndSequence(activeSubExams, subjects);
+                    const availableSubExams = orderedActive.filter(
+                      ex => getStudentExamAttemptStatus(currentUser, ex, submissions, users).canTake
+                    );
+                    const allCompleted = orderedActive.length > 0 && availableSubExams.length === 0;
+
+                    if (allCompleted) {
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('misExamenesTake')}
+                          className="text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer transition"
+                          title="Ya utilizaste tu intento en las evaluaciones activas. Comunícate con tu docente si necesitas otro intento."
+                        >
+                          <span>Intento usado · Ver estado</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (availableSubExams.length > 0 && onTakeExam) {
+                            onTakeExam(availableSubExams[0].id);
+                          } else {
+                            onNavigate('misExamenesTake');
+                          }
+                        }}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer group-hover:translate-x-0.5 transition"
+                      >
+                        <span>{availableSubExams.length > 0 ? 'Presentar' : 'Ver exámenes'}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             );

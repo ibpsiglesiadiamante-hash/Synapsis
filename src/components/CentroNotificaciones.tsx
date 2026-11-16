@@ -14,10 +14,11 @@ import {
   Layers
 } from 'lucide-react';
 import { User, Exam, Assignment, AssignmentSubmission, Submission, Subject, Parcial } from '../types';
-import { sortExamsBySubjectAndSequence } from '../lib/db';
+import { sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus } from '../lib/db';
 
 interface CentroNotificacionesProps {
   currentUser: User;
+  users?: User[];
   exams: Exam[];
   assignments: Assignment[];
   assignmentSubmissions: AssignmentSubmission[];
@@ -49,6 +50,7 @@ interface AcademicNotification {
 
 export default function CentroNotificaciones({
   currentUser,
+  users = [],
   exams = [],
   assignments = [],
   assignmentSubmissions = [],
@@ -113,9 +115,11 @@ export default function CentroNotificaciones({
     return names;
   }, [myAssignedSubjects, subjects]);
 
+  const matchingUserIds = useMemo(() => new Set(getAllMatchingUserIds(currentUser, users)), [currentUser, users]);
+
   const studentSubsList = useMemo(() => {
-    return (submissions || []).filter(s => s.estudianteId === currentUser.id);
-  }, [submissions, currentUser.id]);
+    return (submissions || []).filter(s => matchingUserIds.has(s.estudianteId));
+  }, [submissions, matchingUserIds]);
 
   // 1. Exam notifications
   const examNotifications: AcademicNotification[] = useMemo(() => {
@@ -141,13 +145,16 @@ export default function CentroNotificaciones({
         const subjName = matchingSubj?.nombre || exam.materia || 'Asignatura';
         const parc = (parciales || []).find(p => p.id === exam.parcialId);
         
-        const myAttempts = studentSubsList.filter(s => s.examenId === exam.id).length;
-        const hasRemaining = exam.intentos === 0 || myAttempts < exam.intentos;
-        if (rol === 'estudiante' && !hasRemaining) return null;
+        const attemptStatus = getStudentExamAttemptStatus(currentUser, exam, submissions, users);
+        if (rol === 'estudiante' && !attemptStatus.canTake) return null;
 
         const isNew = exam.creado ? (Date.now() - new Date(exam.creado).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
         const urgency: 'urgent' | 'upcoming' | 'normal' = isNew ? 'urgent' : 'upcoming';
-        const badgeText = isNew ? '¡Nuevo Examen!' : (exam.intentos > 0 ? `${exam.intentos - myAttempts} intento(s) disp.` : 'Examen Disponible');
+        const badgeText = attemptStatus.hasTeacherGrant && attemptStatus.canTake
+          ? '+1 Intento habilitado'
+          : isNew
+            ? '¡Nuevo Examen!'
+            : (!attemptStatus.isUnlimited ? `${attemptStatus.remainingAttempts} intento(s) disp.` : 'Examen Disponible');
         const subtitle = parc ? `Corte / Parcial: ${parc.nombre}` : (exam.descripcion ? exam.descripcion : 'Evaluación activa en la plataforma');
 
         return {
@@ -169,12 +176,12 @@ export default function CentroNotificaciones({
             }
           },
           timeLimit: exam.tiempo,
-          attemptsLeft: exam.intentos > 0 ? (exam.intentos - myAttempts) : undefined,
+          attemptsLeft: attemptStatus.isUnlimited ? undefined : attemptStatus.remainingAttempts,
           rawDate: exam.creado
         };
       })
       .filter(Boolean) as AcademicNotification[];
-  }, [exams, rol, myAssignedSubjects, assignedIds, assignedNames, subjects, currentUser.semestre, parciales, studentSubsList, onTakeExam, onNavigate]);
+  }, [exams, rol, myAssignedSubjects, assignedIds, assignedNames, subjects, currentUser, parciales, submissions, users, onTakeExam, onNavigate]);
 
   // 2. Task notifications
   const taskNotifications: AcademicNotification[] = useMemo(() => {

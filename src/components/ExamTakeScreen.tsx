@@ -6,10 +6,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ChevronLeft, Check, AlertTriangle, 
-  Clock, GraduationCap, School, Milestone 
+  Clock, GraduationCap, School, Milestone, Lock 
 } from 'lucide-react';
-import { Exam, Question, Submission, Institution, Parcial, Subject, Semester } from '../types';
-import { uid, now } from '../lib/db';
+import { Exam, Question, Submission, Institution, Parcial, Subject, Semester, User } from '../types';
+import { uid, now, getStudentExamAttemptStatus } from '../lib/db';
 import { normalizeQuestion, normalizeExamQuestions } from '../lib/questionAdapter';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 
@@ -20,19 +20,25 @@ interface ExamTakeScreenProps {
   parciales: Parcial[];
   subjects: Subject[];
   semesters: Semester[];
+  submissions?: Submission[];
+  users?: User[];
   currentUser: any;
   onExit: () => void;
-  onSubmit: (sub: Submission) => Promise<{ remoteSynced?: boolean; error?: string } | void> | void;
+  onSubmit: (sub: Submission) => Promise<{ remoteSynced?: boolean; error?: string; blocked?: boolean } | void> | void;
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
 export default function ExamTakeScreen({ 
   examId, exams, institutions, parciales, subjects, semesters, 
-  currentUser, onExit, onSubmit, toast 
+  submissions = [], users = [], currentUser, onExit, onSubmit, toast 
 }: ExamTakeScreenProps) {
 
   const exam = exams.find(e => e.id === examId);
   if (!exam) return null;
+
+  const attemptStatus = getStudentExamAttemptStatus(currentUser, exam, submissions, users);
+  const [resultsState, setResultsState] = useState<Submission | null>(null);
+  const isBlockedByAttemptLimit = currentUser?.rol === 'estudiante' && !attemptStatus.canTake && !resultsState;
 
   // Question lists (supports shuffling)
   const [questions, setQuestions] = useState<Question[]>(() => {
@@ -95,7 +101,6 @@ export default function ExamTakeScreen({
   // Modals & submission lock states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
-  const [resultsState, setResultsState] = useState<Submission | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [remoteSyncStatus, setRemoteSyncStatus] = useState<'saving' | 'synced' | 'queued'>('saving');
@@ -138,9 +143,17 @@ export default function ExamTakeScreen({
     localStorage.setItem(storageKeyTime, timeLeft.toString());
   }, [timeLeft, examId, exam.tiempo, currentUser?.id]);
 
+  // Clear stale draft if attempt limit is already reached
+  useEffect(() => {
+    if (isBlockedByAttemptLimit) {
+      localStorage.removeItem('synapsis_activeTakeExamId');
+      clearPersistedData();
+    }
+  }, [isBlockedByAttemptLimit, examId]);
+
   // Timers tick
   useEffect(() => {
-    if (exam.tiempo === 0) return;
+    if (exam.tiempo === 0 || isBlockedByAttemptLimit || resultsState) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -156,7 +169,7 @@ export default function ExamTakeScreen({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [examId, exam.tiempo]);
+  }, [examId, exam.tiempo, isBlockedByAttemptLimit, resultsState]);
 
   const handleAutoSubmit = () => {
     toast('Tiempo agotado. El examen se enviará de manera automática.', 'warning');
@@ -204,6 +217,15 @@ export default function ExamTakeScreen({
 
   const processSubmitPayload = async () => {
     if (hasSubmittedRef.current || isSubmitting) return;
+
+    if (currentUser?.rol === 'estudiante' && !attemptStatus.canTake) {
+      localStorage.removeItem('synapsis_activeTakeExamId');
+      clearPersistedData();
+      toast('Ya utilizaste tu intento permitido en esta evaluación. Comunícate con tu docente para analizar la causa.', 'warning');
+      onExit();
+      return;
+    }
+
     hasSubmittedRef.current = true;
     setIsSubmitting(true);
     setRemoteSyncStatus('saving');
@@ -403,6 +425,7 @@ export default function ExamTakeScreen({
     };
 
     // Persistir inmediatamente tanto en memoria/localStorage como en Supabase antes o mientras se muestra el modal
+    localStorage.removeItem('synapsis_activeTakeExamId');
     clearPersistedData();
     setResultsState(submission);
     setShowConfirmModal(false);
@@ -411,8 +434,18 @@ export default function ExamTakeScreen({
       setShowResultModal(true);
     }
 
+    let blockedByRemote = false;
     try {
       const result = await onSubmit(submission);
+      if (result && (result as any).blocked) {
+        blockedByRemote = true;
+        setShowResultModal(false);
+        setResultsState(null);
+        hasSubmittedRef.current = false;
+        toast(result.error || 'Ya existe un intento registrado para este parcial. Comunícate con tu docente.', 'warning');
+        onExit();
+        return;
+      }
       if (result && result.remoteSynced === false) {
         setRemoteSyncStatus('queued');
       } else {
@@ -425,7 +458,7 @@ export default function ExamTakeScreen({
       setIsSubmitting(false);
     }
 
-    if (!exam.mostrarNota) {
+    if (!exam.mostrarNota && !blockedByRemote) {
       toast('Examen enviado exitosamente ✓', 'success');
       onExit();
     }
@@ -457,6 +490,39 @@ export default function ExamTakeScreen({
   const inst = institutions[0] || { nombre: 'Instituto Synapsis' };
   const parcial = exam.parcialId ? parciales.find(p => p.id === exam.parcialId) : null;
   const subject = parcial ? subjects.find(s => s.id === parcial.asignatura) : null;
+
+  if (isBlockedByAttemptLimit) {
+    return (
+      <div id="examTakeScreen" className="fixed inset-0 bg-[#f0ebf8] z-[100] flex items-center justify-center p-4 text-slate-800">
+        <div className="bg-white border border-amber-200 border-t-8 border-t-amber-500 rounded-2xl shadow-xl max-w-md w-full p-7 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mx-auto text-amber-600">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-black text-slate-900">Intento ya utilizado</h3>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">{exam.titulo}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 leading-relaxed text-left">
+            <p className="font-bold mb-1">
+              Intentos registrados: {attemptStatus.usedAttempts} / {attemptStatus.totalAllowed}
+            </p>
+            <p>
+              Ya utilizaste tu intento permitido para esta evaluación y no está habilitada la opción de volver a presentarla. Si tuviste algún inconveniente, comunícate directamente con tu docente para analizar la causa y solicitar un nuevo intento.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem('synapsis_activeTakeExamId');
+              clearPersistedData();
+              onExit();
+            }}
+            className="w-full py-2.5 px-4 bg-[#673ab7] hover:bg-[#58319d] text-white font-bold text-sm rounded-xl shadow cursor-pointer transition"
+          >
+            Volver al portal
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="examTakeScreen" className="fixed inset-0 bg-[#f0ebf8] z-[100] overflow-y-auto block text-slate-800 pb-20">
@@ -1339,6 +1405,11 @@ export default function ExamTakeScreen({
             <p className="text-xs text-slate-500 mt-3 leading-relaxed max-w-sm">
               Tu examen ha sido registrado. Nota mínima requerida para aprobar: {exam.aprobacion}%
             </p>
+            {!attemptStatus.isUnlimited && (
+              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2.5 leading-relaxed max-w-sm">
+                Has completado este intento. Si tuviste algún problema técnico y necesitas solicitar otro intento, comunícate con tu docente.
+              </p>
+            )}
 
             {/* Cloud sync verification pill */}
             <div className={`mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${
