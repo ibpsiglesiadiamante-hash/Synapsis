@@ -99,7 +99,9 @@ import {
   pushAllStateToSupabase,
   testSupabaseConnection,
   saveDocToSupabase,
-  deleteDocFromSupabase
+  deleteDocFromSupabase,
+  markDeletedInSupabase,
+  unmarkDeletedInSupabase
 } from './lib/supabase';
 
 import Header from './components/Header';
@@ -1074,21 +1076,27 @@ export default function App() {
       nextDb.users = (nextDb.users || []).filter(u => u.id !== item.id);
       deleteDocFromFirestore('users', item.id).catch(() => {});
       deleteDocFromSupabase('users', item.id).catch(() => {});
+      markDeletedInSupabase(item.id, 'users').catch(() => {});
     } else if (tipo === 'parcial') {
       nextDb.parciales = (nextDb.parciales || []).filter(p => p.id !== item.id);
       deleteDocFromFirestore('parciales', item.id).catch(() => {});
       deleteDocFromSupabase('parciales', item.id).catch(() => {});
+      markDeletedInSupabase(item.id, 'parciales').catch(() => {});
     } else if (tipo === 'examen') {
       nextDb.exams = (nextDb.exams || []).filter(e => e.id !== item.id);
       deleteDocFromFirestore('exams', item.id).catch(() => {});
+      deleteDocFromSupabase('exams', item.id).catch(() => {});
+      markDeletedInSupabase(item.id, 'exams').catch(() => {});
     } else if (tipo === 'materia') {
       nextDb.subjects = (nextDb.subjects || []).filter(s => s.id !== item.id);
       deleteDocFromFirestore('subjects', item.id).catch(() => {});
       deleteDocFromSupabase('subjects', item.id).catch(() => {});
+      markDeletedInSupabase(item.id, 'subjects').catch(() => {});
     } else if (tipo === 'semestre') {
       nextDb.semesters = (nextDb.semesters || []).filter(s => s.id !== item.id);
       deleteDocFromFirestore('semesters', item.id).catch(() => {});
       deleteDocFromSupabase('semesters', item.id).catch(() => {});
+      markDeletedInSupabase(item.id, 'semesters').catch(() => {});
     }
 
     currentDbRef.current = nextDb;
@@ -1104,6 +1112,7 @@ export default function App() {
     deleteRecycleItemFromFirestore(item.id).catch(err => console.warn('Delete recycle Firestore error:', err));
     unmarkAsDeleted(item.originalId);
     unRegisterDeletedId(item.originalId);
+    unmarkDeletedInSupabase(item.originalId).catch(() => {});
 
     let nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
     const payload = item.data || item.payload;
@@ -1137,13 +1146,25 @@ export default function App() {
     showToast(`"${item.titulo}" fue restaurado con éxito ✓`, 'success');
   };
 
+  const mapRecycleTipoToTable = (tipo: string): string | undefined => {
+    if (tipo === 'examen') return 'exams';
+    if (tipo === 'estudiante') return 'users';
+    if (tipo === 'parcial') return 'parciales';
+    if (tipo === 'materia') return 'subjects';
+    if (tipo === 'semestre') return 'semesters';
+    return undefined;
+  };
+
   const handlePermanentDelete = (itemId: string, originalId: string, tipo: string) => {
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
     const nextRecycle = currentRecycle.filter(r => r.id !== itemId);
     saveRecycleBin(nextRecycle);
     deleteRecycleItemFromFirestore(itemId).catch(err => console.warn('Delete recycle Firestore error:', err));
-    registerDeletedId(originalId);
+    const tableName = mapRecycleTipoToTable(tipo);
+    registerDeletedId(originalId, tableName);
     markAsDeleted(originalId);
+    if (tableName) deleteDocFromSupabase(tableName, originalId).catch(() => {});
+    markDeletedInSupabase(originalId, tableName).catch(() => {});
 
     const nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
     currentDbRef.current = nextDb;
@@ -1156,8 +1177,11 @@ export default function App() {
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
     currentRecycle.forEach(it => {
       deleteRecycleItemFromFirestore(it.id).catch(() => {});
-      registerDeletedId(it.originalId);
+      const tableName = mapRecycleTipoToTable(it.tipo);
+      registerDeletedId(it.originalId, tableName);
       markAsDeleted(it.originalId);
+      if (tableName) deleteDocFromSupabase(tableName, it.originalId).catch(() => {});
+      markDeletedInSupabase(it.originalId, tableName).catch(() => {});
     });
     saveRecycleBin([]);
     const nextDb = { ...currentDbRef.current, recycleBin: [] };
@@ -1453,6 +1477,8 @@ export default function App() {
             submissions={db.submissions}
             subjects={db.subjects}
             parciales={db.parciales}
+            recycleBin={db.recycleBin}
+            onRestoreRecycleItem={handleRestoreFromRecycle}
             onUpdateSubmissions={updateSubmissions}
             onRefreshSubmissions={() => refreshRemoteData(true)}
             toast={showToast}

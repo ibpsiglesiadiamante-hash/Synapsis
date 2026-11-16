@@ -7,7 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { AppState, User, Subject, Semester, Parcial, Exam, Submission, GradeRecord, Institution, Assignment, AssignmentSubmission } from '../types';
-import { getDeletedIds, markAsDeleted, PROTECTED_IDS } from './db';
+import { getDeletedIds, markAsDeleted, unmarkAsDeleted, PROTECTED_IDS } from './db';
 
 // Supabase configuration provided by the user
 export const SUPABASE_URL = (((import.meta as any).env?.VITE_SUPABASE_URL as string) || 'https://hbkgtsqeeudpwewopazy.supabase.co')
@@ -211,6 +211,29 @@ export async function deleteDocFromSupabase(table: string, id: string): Promise<
   }
 }
 
+export async function markDeletedInSupabase(id: string, tableName?: string): Promise<void> {
+  if (!id || PROTECTED_IDS.has(id)) return;
+  try {
+    await supabase.from('deleted_records').upsert({
+      id,
+      table_name: tableName || null,
+      deletedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('markDeletedInSupabase warning:', err);
+  }
+}
+
+export async function unmarkDeletedInSupabase(id: string): Promise<void> {
+  if (!id) return;
+  unmarkAsDeleted(id);
+  try {
+    await supabase.from('deleted_records').delete().eq('id', id);
+  } catch (err) {
+    console.warn('unmarkDeletedInSupabase warning:', err);
+  }
+}
+
 /**
  * Cleans object properties before writing to Supabase
  */
@@ -279,6 +302,7 @@ export async function fetchFullStateFromSupabase(): Promise<Partial<AppState> | 
       { data: gradeRecords },
       { data: assignments },
       { data: assignmentSubmissions },
+      { data: remoteDeletedRows },
     ] = await Promise.all([
       fetchAllRowsFromTable<User>('users'),
       fetchAllRowsFromTable<Subject>('subjects'),
@@ -290,7 +314,15 @@ export async function fetchFullStateFromSupabase(): Promise<Partial<AppState> | 
       fetchAllRowsFromTable<GradeRecord>('gradeRecords'),
       fetchAllRowsFromTable<Assignment>('assignments'),
       fetchAllRowsFromTable<AssignmentSubmission>('assignmentSubmissions'),
+      fetchAllRowsFromTable<{ id: string }>('deleted_records'),
     ]);
+
+    (remoteDeletedRows || []).forEach(r => {
+      if (r && r.id && !PROTECTED_IDS.has(r.id)) {
+        deletedIds.add(r.id);
+        markAsDeleted(r.id);
+      }
+    });
 
     if (errUsers) console.warn('Supabase fetch users warning:', errUsers.message);
     if (errSubjects) console.warn('Supabase fetch subjects warning:', errSubjects.message);

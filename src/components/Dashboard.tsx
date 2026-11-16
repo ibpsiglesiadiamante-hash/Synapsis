@@ -17,7 +17,7 @@ import {
   Flame, Inbox
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
-import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus } from '../lib/db';
+import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus, getRecycleBin } from '../lib/db';
 
 export interface AcademicNotification {
   id: string;
@@ -1199,26 +1199,44 @@ export default function Dashboard({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#0c3e4a]">
-                      {paginatedSubs.map(sub => {
-                        const student = users.find(u => u.id === sub.estudianteId);
-                        const exam = exams.find(e => e.id === sub.examenId);
-                        return (
-                          <tr key={sub.id} className="hover:bg-[#0a3842]/50 transition-colors">
-                            <td className="py-2 px-2.5 font-bold text-white truncate max-w-[140px]">
-                              {student?.nombre || 'Estudiante'}
-                            </td>
-                            <td className="py-2 px-2.5 text-teal-200/80 truncate max-w-[180px]">
-                              {cleanExamTitle(exam?.titulo || 'Evaluación')}
-                            </td>
-                            <td className="py-2 px-2.5 font-black text-cyan-300">
-                              {formatGrade5(sub.puntaje)}
-                            </td>
-                            <td className="py-2 px-2.5 text-[11px] text-teal-300/60 whitespace-nowrap">
-                              {fmtDate(sub.fecha)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {(() => {
+                        const recycleItems = getRecycleBin();
+                        return paginatedSubs.map(sub => {
+                          const student = users.find(u => u.id === sub.estudianteId);
+                          const exam = exams.find(e => e.id === sub.examenId);
+                          const recycledExam = !exam
+                            ? recycleItems.find(r => r.tipo === 'examen' && r.originalId === sub.examenId)
+                            : undefined;
+                          const displayExamTitle = exam
+                            ? cleanExamTitle(exam.titulo)
+                            : recycledExam
+                              ? `${cleanExamTitle((recycledExam.data || recycledExam.payload)?.titulo || recycledExam.titulo)} (Papelera)`
+                              : 'Evaluación (en papelera/eliminada)';
+                          const displayStudentName = student?.nombre || sub.estudianteNombre || 'Estudiante';
+
+                          return (
+                            <tr
+                              key={sub.id}
+                              onClick={() => !exam && onNavigate('resultados')}
+                              className={`hover:bg-[#0a3842]/50 transition-colors ${!exam ? 'cursor-pointer' : ''}`}
+                              title={!exam ? 'El examen no está en tu lista activa. Haz clic para revisarlo o administrarlo en Resultados.' : undefined}
+                            >
+                              <td className="py-2 px-2.5 font-bold text-white truncate max-w-[140px]">
+                                {displayStudentName}
+                              </td>
+                              <td className={`py-2 px-2.5 truncate max-w-[180px] ${!exam ? 'text-amber-300/90 font-semibold' : 'text-teal-200/80'}`}>
+                                {displayExamTitle}
+                              </td>
+                              <td className="py-2 px-2.5 font-black text-cyan-300">
+                                {formatGrade5(sub.puntaje)}
+                              </td>
+                              <td className="py-2 px-2.5 text-[11px] text-teal-300/60 whitespace-nowrap">
+                                {fmtDate(sub.fecha)}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>

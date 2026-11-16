@@ -9,12 +9,12 @@ import {
   ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
   Download, Copy, FileText, RotateCcw, ShieldCheck
 } from 'lucide-react';
-import { User, Exam, Submission, Subject, Parcial } from '../types';
+import { User, Exam, Submission, Subject, Parcial, RecycleItem } from '../types';
 import { 
   avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5, sortExamsBySubjectAndSequence,
-  EXTRA_ATTEMPTS_KEY, EXTRA_ATTEMPTS_META_KEY, getStudentExamAttemptStatus, StudentExamAttemptStatus
+  EXTRA_ATTEMPTS_KEY, EXTRA_ATTEMPTS_META_KEY, getStudentExamAttemptStatus, StudentExamAttemptStatus, getRecycleBin
 } from '../lib/db';
-import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions } from '../lib/questionAdapter';
+import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions, SubmissionIntegrityResult } from '../lib/questionAdapter';
 
 interface ResultadosProps {
   currentUser: User;
@@ -23,6 +23,8 @@ interface ResultadosProps {
   submissions: Submission[];
   subjects?: Subject[];
   parciales?: Parcial[];
+  recycleBin?: RecycleItem[];
+  onRestoreRecycleItem?: (item: RecycleItem) => void;
   onUpdateSubmissions: (
     updated: Submission[], 
     forceIds?: string[]
@@ -38,7 +40,7 @@ interface ResultadosProps {
 }
 
 export default function Resultados({ 
-  currentUser, users, exams, submissions, subjects = [], parciales = [], onUpdateSubmissions, onRefreshSubmissions, toast 
+  currentUser, users, exams, submissions, subjects = [], parciales = [], recycleBin, onRestoreRecycleItem, onUpdateSubmissions, onRefreshSubmissions, toast 
 }: ResultadosProps) {
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
@@ -233,14 +235,77 @@ export default function Resultados({
 
   const myExams = sortExamsBySubjectAndSequence(filteredExams, subjects, parciales);
 
+  const effectiveRecycleBin = recycleBin && recycleBin.length > 0 ? recycleBin : getRecycleBin();
+  const activeExamIdsSet = new Set(exams.map(e => e.id));
+
+  // Entregas registradas en la BD cuyo examen fue eliminado o enviado a la papelera localmente
+  const orphanSubmissions = [...submissions]
+    .filter(s => !activeExamIdsSet.has(s.examenId))
+    .filter(s => {
+      const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
+      const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
+      if (currentUser.rol !== 'admin') {
+        if (!recycledExam) return false;
+        const belongsToDocente =
+          (recycledExam.docenteId && (recycledExam.docenteId === currentUser.id || allMyUserIds.includes(recycledExam.docenteId))) ||
+          (recycledExam.materia && userAsignaturas.includes(recycledExam.materia));
+        if (!belongsToDocente) return false;
+      }
+
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      const student = users.find(u => u.id === s.estudianteId);
+      const stName = (student?.nombre || s.estudianteNombre || '').toLowerCase();
+      const cedula = (student?.cedula || '').toLowerCase();
+      const recTitle = (recycledExam?.titulo || recycledItem?.titulo || '').toLowerCase();
+      return (
+        stName.includes(q) ||
+        cedula.includes(q) ||
+        recTitle.includes(q) ||
+        (s.examenId || '').toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
   const examsPerPage = 10;
   const totalPages = Math.ceil(myExams.length / examsPerPage) || 1;
   const currentActivePage = Math.min(currentPage, totalPages);
   const paginatedExams = myExams.slice((currentActivePage - 1) * examsPerPage, currentActivePage * examsPerPage);
   
   const activeSub = submissions.find(s => s.id === activeSubId);
-  const activeExam = exams.find(e => e.id === activeSub?.examenId);
-  const activeOrphanStatus = detectOrphanAnswers(activeSub, activeExam);
+  const activeExamFromList = exams.find(e => e.id === activeSub?.examenId);
+  const activeRecycledItem = activeSub ? effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === activeSub.examenId) : undefined;
+  const activeRecycledExam = (activeRecycledItem?.data || activeRecycledItem?.payload) as Exam | undefined;
+  const activeExam: Exam | undefined = activeExamFromList || activeRecycledExam || (activeSub ? {
+    id: activeSub.examenId,
+    titulo: 'Evaluación eliminada o en papelera',
+    materia: 'Sin asignatura',
+    docenteId: '',
+    estado: 'cerrado',
+    tiempo: 0,
+    intentos: 1,
+    aprobacion: 60,
+    aleatorio: false,
+    mostrarNota: false,
+    preguntas: [],
+    creado: activeSub.fecha || ''
+  } : undefined);
+  const activeOrphanStatus: SubmissionIntegrityResult = activeExamFromList
+    ? detectOrphanAnswers(activeSub, activeExam)
+    : {
+        hasOrphans: false,
+        orphanKeys: [],
+        examQuestionIds: [],
+        isExamEmpty: !activeRecycledExam,
+        isMissingAnswersWithGrade: false,
+        hasOutOfRangeAnswers: false,
+        outOfRangeDetails: [],
+        isBlocked: true,
+        isWarning: false,
+        reason: activeRecycledExam
+          ? 'Esta entrega corresponde a un examen que se encuentra en la Papelera de Reciclaje. Se muestra en modo lectura protegida (puedes restaurar el examen si deseas editar o recalificar).'
+          : 'Esta entrega corresponde a un examen eliminado o no encontrado en tu dispositivo. Se muestra en modo lectura protegida.'
+      };
   const activeNormalizedQuestions = normalizeExamQuestions(activeExam);
   const grName = activeSub ? (users.find(u => u.id === activeSub.estudianteId)?.nombre || activeSub.estudianteNombre) : '';
 
@@ -651,7 +716,136 @@ export default function Resultados({
         </div>
       )}
 
-      {myExams.length === 0 ? (
+      {orphanSubmissions.length > 0 && (
+        <div className="mb-6 bg-amber-50/60 border border-amber-200 rounded-2xl p-5 shadow-xs animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-amber-200/70">
+            <div>
+              <h3 className="text-base font-extrabold text-amber-950 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Entregas de evaluaciones eliminadas o en Papelera ({orphanSubmissions.length})</span>
+              </h3>
+              <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">
+                Estas entregas se encuentran guardadas en la nube, pero su examen fue enviado a la Papelera o eliminado en este navegador (por eso aparecían como «Evaluación» en el Dashboard). Puedes revisar sus respuestas, restaurar el examen o eliminar los intentos que no necesites.
+              </p>
+            </div>
+          </div>
+
+          <div className="table-wrap overflow-hidden border border-amber-200 rounded-xl bg-white">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead>
+                <tr className="bg-amber-50/70 text-amber-900/70 font-semibold text-xs uppercase tracking-wider border-b border-amber-200">
+                  <th className="py-2.5 px-4">Estudiante</th>
+                  <th className="py-2.5 px-4">Examen / Origen</th>
+                  <th className="py-2.5 px-4">Nota</th>
+                  <th className="py-2.5 px-4">Fecha</th>
+                  <th className="py-2.5 px-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {orphanSubmissions.map(s => {
+                  const student = users.find(u => u.id === s.estudianteId);
+                  const stName = student?.nombre || s.estudianteNombre || 'Estudiante';
+                  const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
+                  const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
+                  const examLabel = recycledExam?.titulo || recycledItem?.titulo;
+
+                  return (
+                    <tr key={s.id} className="hover:bg-amber-50/30">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
+                            style={{ backgroundColor: avatarColor(stName) }}
+                          >
+                            {avatarLetter(stName)}
+                          </div>
+                          <span className="text-slate-800 font-semibold">{stName}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-xs font-bold text-slate-800">
+                          {examLabel ? cleanExamTitle(examLabel) : 'Examen eliminado / no local'}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          {recycledItem ? `En Papelera · ID: ${s.examenId}` : `ID examen: ${s.examenId}`}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold border rounded-full ${
+                          s.aprobado
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
+                          <span>{formatGrade5(s.puntaje)}</span>
+                          <span className="text-[10px] font-medium opacity-70">({s.puntaje}%)</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
+                        {fmtDate(s.fecha)} {fmtTime(s.fecha)}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {recycledItem && onRestoreRecycleItem && (
+                            <button
+                              type="button"
+                              onClick={() => onRestoreRecycleItem(recycledItem)}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1"
+                              title="Restaurar este examen desde la Papelera"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restaurar examen</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenGradingModal(s.id)}
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs"
+                          >
+                            Ver respuestas
+                          </button>
+                          {deletingSubId === s.id ? (
+                            <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg shadow-xs animate-fade-in">
+                              <span className="text-[11px] font-bold text-rose-700">¿Eliminar?</span>
+                              <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => handleDeleteSubmission(s.id, stName)}
+                                className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded transition cursor-pointer disabled:opacity-50"
+                              >
+                                {isDeleting ? '...' : 'Sí'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setDeletingSubId(null)}
+                                className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded transition cursor-pointer"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setDeletingSubId(s.id)}
+                              className="px-2 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                              title={`Eliminar este intento de ${stName}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Eliminar</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {myExams.length === 0 && orphanSubmissions.length === 0 ? (
         <div className="card bg-white p-8 border rounded-2xl text-center flex flex-col items-center justify-center">
           <Search className="w-10 h-10 text-slate-350 mb-3" />
           <h4 className="font-bold text-slate-700">
