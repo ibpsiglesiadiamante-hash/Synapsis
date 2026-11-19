@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, CheckSquare, Users, Award, 
   HelpCircle, XCircle, TrendingUp, Sparkles, FileSpreadsheet,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
 import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus, getRecycleBin } from '../lib/db';
+import { fetchExamsByIdsFromSupabase } from '../lib/supabase';
 
 export interface AcademicNotification {
   id: string;
@@ -116,6 +117,10 @@ export default function Dashboard({
       return [];
     }
   });
+
+  // Recuperación de nombres reales desde Supabase cuando un examen falta localmente
+  const [cloudRecoveredExams, setCloudRecoveredExams] = useState<Record<string, Exam>>({});
+  const attemptedCloudExamIdsRef = useRef<Set<string>>(new Set());
 
   // Sync with initialCategory when navigating back from a module
   useEffect(() => {
@@ -391,6 +396,35 @@ export default function Dashboard({
   const totalSubsPages = Math.ceil(sortedSubs.length / 8) || 1;
   const currentSubsPage = Math.min(subsPage, totalSubsPages);
   const paginatedSubs = sortedSubs.slice((currentSubsPage - 1) * 8, currentSubsPage * 8);
+
+  const missingVisibleExamIds = Array.from(
+    new Set(
+      paginatedSubs
+        .map(s => s.examenId)
+        .filter(id => Boolean(id) && !exams.some(e => e.id === id) && !cloudRecoveredExams[id] && !attemptedCloudExamIdsRef.current.has(id))
+    )
+  );
+  const missingVisibleExamIdsKey = missingVisibleExamIds.join(',');
+
+  useEffect(() => {
+    if (!missingVisibleExamIdsKey) return;
+    const idsToFetch = missingVisibleExamIdsKey.split(',').filter(Boolean);
+    idsToFetch.forEach(id => attemptedCloudExamIdsRef.current.add(id));
+    let cancelled = false;
+    fetchExamsByIdsFromSupabase(idsToFetch).then(fetched => {
+      if (cancelled || !fetched || fetched.length === 0) return;
+      setCloudRecoveredExams(prev => {
+        const next = { ...prev };
+        fetched.forEach(ex => {
+          if (ex && ex.id) next[ex.id] = ex;
+        });
+        return next;
+      });
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [missingVisibleExamIdsKey]);
 
   const totalExamsPages = Math.ceil(sortedExams.length / 4) || 1;
   const currentExamsPage = Math.min(examsPage, totalExamsPages);
@@ -1207,11 +1241,18 @@ export default function Dashboard({
                           const recycledExam = !exam
                             ? recycleItems.find(r => r.tipo === 'examen' && r.originalId === sub.examenId)
                             : undefined;
+                          const cloudExam = !exam ? cloudRecoveredExams[sub.examenId] : undefined;
+
+                          const rawMissingTitle =
+                            (recycledExam ? (recycledExam.data || recycledExam.payload)?.titulo || recycledExam.titulo : '') ||
+                            cloudExam?.titulo ||
+                            '';
+
                           const displayExamTitle = exam
                             ? cleanExamTitle(exam.titulo)
-                            : recycledExam
-                              ? `${cleanExamTitle((recycledExam.data || recycledExam.payload)?.titulo || recycledExam.titulo)} (Papelera)`
-                              : 'Evaluación (en papelera/eliminada)';
+                            : rawMissingTitle
+                              ? `${cleanExamTitle(rawMissingTitle)} (${recycledExam ? 'examen en papelera' : 'examen oculto aquí'})`
+                              : 'Examen no visible en este PC (ver Resultados)';
                           const displayStudentName = student?.nombre || sub.estudianteNombre || 'Estudiante';
 
                           return (
@@ -1219,12 +1260,12 @@ export default function Dashboard({
                               key={sub.id}
                               onClick={() => !exam && onNavigate('resultados')}
                               className={`hover:bg-[#0a3842]/50 transition-colors ${!exam ? 'cursor-pointer' : ''}`}
-                              title={!exam ? 'El examen no está en tu lista activa. Haz clic para revisarlo o administrarlo en Resultados.' : undefined}
+                              title={!exam ? 'La entrega del estudiante está intacta, pero este examen figura oculto o en papelera en tu navegador (aunque siga activo en la nube). Haz clic para restaurarlo o gestionarlo en Resultados.' : undefined}
                             >
                               <td className="py-2 px-2.5 font-bold text-white truncate max-w-[140px]">
                                 {displayStudentName}
                               </td>
-                              <td className={`py-2 px-2.5 truncate max-w-[180px] ${!exam ? 'text-amber-300/90 font-semibold' : 'text-teal-200/80'}`}>
+                              <td className={`py-2 px-2.5 truncate max-w-[195px] ${!exam ? 'text-amber-300/90 font-semibold' : 'text-teal-200/80'}`}>
                                 {displayExamTitle}
                               </td>
                               <td className="py-2 px-2.5 font-black text-cyan-300">

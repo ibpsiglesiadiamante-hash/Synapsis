@@ -11,6 +11,7 @@ import {
 import { Exam, Question, Parcial, Subject, Semester } from '../types';
 import { uid } from '../lib/db';
 import { saveDocToFirestore } from '../lib/firebase';
+import { saveDocToSupabase } from '../lib/supabase';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 import { getDefaultExamTitle, getBibleVerseForSubject } from '../lib/examPresets';
 
@@ -141,7 +142,7 @@ export default function ExamBuilder({
 
   // Local Form States (initialized from active exam with standard IBPS presets if unset)
   const initialStandardTitle = () => {
-    if (exam.titulo && (exam.titulo.includes('\n') || exam.titulo.toUpperCase().includes('IBPS'))) {
+    if (exam.titulo && exam.titulo.trim()) {
       return exam.titulo;
     }
     const parc = parciales.find(p => p.id === exam.parcialId);
@@ -163,6 +164,7 @@ export default function ExamBuilder({
   const [aprobacion, setAprobacion] = useState(exam.aprobacion !== undefined ? exam.aprobacion : 60);
   const [aleatorio, setAleatorio] = useState(exam.aleatorio ?? false);
   const [mostrarNota, setMostrarNota] = useState(exam.mostrarNota ?? true);
+  const [examStatus, setExamStatus] = useState<'borrador' | 'activo' | 'cerrado'>(exam.estado || 'borrador');
   const [questions, setQuestions] = useState<Question[]>(() => ensureValidQuestions(exam.preguntas || []));
   const [bannerUrl, setBannerUrl] = useState(exam.bannerUrl || PRESET_BANNERS[0].url);
 
@@ -265,7 +267,7 @@ export default function ExamBuilder({
     mostrarNota,
     questions,
     bannerUrl,
-    estado: exam.estado || 'borrador',
+    estado: examStatus || exam.estado || 'borrador',
     docenteId: exam.docenteId,
     creado: exam.creado,
     actualizado: exam.actualizado,
@@ -286,7 +288,7 @@ export default function ExamBuilder({
     mostrarNota,
     questions,
     bannerUrl,
-    estado: exam.estado || 'borrador',
+    estado: examStatus || exam.estado || 'borrador',
     docenteId: exam.docenteId,
     creado: exam.creado,
     actualizado: exam.actualizado,
@@ -316,6 +318,7 @@ export default function ExamBuilder({
         setAprobacion(currentExam.aprobacion);
         setAleatorio(currentExam.aleatorio);
         setMostrarNota(currentExam.mostrarNota);
+        setExamStatus(currentExam.estado || 'borrador');
         const normQs = ensureValidQuestions(currentExam.preguntas || []);
         setQuestions(normQs);
         setBannerUrl(currentExam.bannerUrl || PRESET_BANNERS[0].url);
@@ -337,10 +340,16 @@ export default function ExamBuilder({
     }
   }, [examId]);
 
-  const saveCurrentExamImmediate = async (overrideEstado?: 'borrador' | 'activo'): Promise<Exam> => {
+  const saveCurrentExamImmediate = async (overrideEstado?: 'borrador' | 'activo' | 'cerrado'): Promise<Exam> => {
     const cur = latestDataRef.current;
     const currentBase = examsRef.current.find(e => e.id === cur.examId) || exam;
     const nowIso = new Date().toISOString();
+    const resolvedEstado = overrideEstado || cur.estado || currentBase.estado || 'borrador';
+
+    if (overrideEstado) {
+      setExamStatus(resolvedEstado);
+      latestDataRef.current = { ...latestDataRef.current, estado: resolvedEstado };
+    }
 
     const updatedExam: Exam = {
       ...currentBase,
@@ -356,7 +365,7 @@ export default function ExamBuilder({
       aprobacion: cur.aprobacion,
       aleatorio: cur.aleatorio,
       mostrarNota: cur.mostrarNota,
-      estado: overrideEstado || cur.estado || currentBase.estado || 'borrador',
+      estado: resolvedEstado,
       preguntas: cur.questions,
       bannerUrl: cur.bannerUrl,
       creado: cur.creado || currentBase.creado || nowIso,
@@ -384,11 +393,15 @@ export default function ExamBuilder({
       console.warn('Error backing up exam to localStorage:', e);
     }
 
-    // 2. Direct Cloud Firestore persistence
+    // 2. Direct Supabase persistence (and sync cache)
     try {
+      const res = await saveDocToSupabase('exams', updatedExam);
+      if (!res.success) {
+        console.warn('Direct Supabase exam save warning:', res.error);
+      }
       await saveDocToFirestore('exams', updatedExam);
     } catch (err) {
-      console.error('Error direct saving to Firestore:', err);
+      console.error('Error direct saving exam to cloud:', err);
     }
 
     return updatedExam;
@@ -1393,16 +1406,22 @@ export default function ExamBuilder({
     });
   };
 
-  const handleSave = async (estado: 'borrador' | 'activo') => {
+  const handleSave = async (overrideEstado?: 'borrador' | 'activo' | 'cerrado') => {
     setSaveStatus('saving');
-    await saveCurrentExamImmediate(estado);
+    const saved = await saveCurrentExamImmediate(overrideEstado);
     setSaveStatus('saved');
-    toast(
-      estado === 'activo' 
-        ? 'Examen publicado exitosamente ✓. Puedes continuar editando o volver cuando lo desees.' 
-        : 'Progreso guardado exitosamente en la nube ✓', 
-      'success'
-    );
+    if (saved.estado === 'activo') {
+      toast(
+        overrideEstado === 'activo'
+          ? 'Examen publicado exitosamente ✓. Permanecerá ACTIVO hasta que decidas cerrarlo.'
+          : 'Cambios guardados en la nube ✓. El examen permanece ACTIVO.',
+        'success'
+      );
+    } else if (saved.estado === 'cerrado') {
+      toast('Cambios guardados ✓ (estado actual: Cerrado).', 'success');
+    } else {
+      toast('Progreso guardado exitosamente en la nube ✓ (Borrador).', 'success');
+    }
   };
 
   const handleBack = async () => {
@@ -1416,7 +1435,7 @@ export default function ExamBuilder({
   return (
     <div className="page-builder animate-fade-in pb-12">
       {/* Editor top action bar */}
-      <div className="page-header flex items-center justify-between gap-3 mb-6 border-b border-slate-200 pb-3">
+      <div className="page-header flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-slate-200 pb-3">
         <button 
           onClick={handleBack}
           className="btn btn-secondary flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-250 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs cursor-pointer shadow-xs"
@@ -1424,7 +1443,19 @@ export default function ExamBuilder({
           <ArrowLeft className="w-4 h-4 text-teal-600" />
           <span>Volver a Docente</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`text-[11px] px-2.5 py-1.5 rounded-lg font-extrabold border uppercase tracking-wider select-none ${
+              examStatus === 'activo'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : examStatus === 'cerrado'
+                  ? 'bg-slate-100 text-slate-600 border-slate-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}
+            title="Estado actual de visibilidad para los estudiantes"
+          >
+            ● {examStatus}
+          </span>
           {saveStatus === 'saving' && (
             <span className="text-[11px] text-amber-600 bg-amber-50/85 border border-amber-200 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 animate-pulse select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
@@ -1438,19 +1469,30 @@ export default function ExamBuilder({
             </span>
           )}
           <button 
-            onClick={() => handleSave('borrador')}
+            onClick={() => handleSave()}
             className="btn btn-secondary px-4 py-1.5 rounded-lg text-indigo-700 bg-indigo-50/80 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer text-xs font-bold flex items-center gap-1"
-            title="Guardar todos los cambios en Firebase"
+            title="Guardar cambios en la nube manteniendo el estado actual del examen"
           >
             💾 Guardar cambios
           </button>
-          <button 
-            onClick={() => handleSave('activo')}
-            className="btn btn-primary px-4 py-1.5 rounded-lg text-white font-bold hover:opacity-90 transition cursor-pointer text-xs"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >
-            Publicar examen
-          </button>
+          {examStatus !== 'activo' ? (
+            <button 
+              onClick={() => handleSave('activo')}
+              className="btn btn-primary px-4 py-1.5 rounded-lg text-white font-bold hover:opacity-90 transition cursor-pointer text-xs"
+              style={{ backgroundColor: 'var(--primary)' }}
+            >
+              Publicar / Activar examen
+            </button>
+          ) : (
+            <button 
+              onClick={() => handleSave('activo')}
+              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition cursor-pointer text-xs flex items-center gap-1 shadow-xs"
+              title="El examen ya está activo para estudiantes; haz clic para guardar y confirmar"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Publicado (Activo)</span>
+            </button>
+          )}
         </div>
       </div>
 

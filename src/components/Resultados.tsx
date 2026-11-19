@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart3, Users, Award, Percent, Calendar, 
   ChevronRight, CalendarDays, Clock, Check, X, AlertCircle, RefreshCw, Trash2, Settings, Search,
@@ -14,6 +14,7 @@ import {
   avatarColor, avatarLetter, fmtDate, fmtTime, now, cleanExamTitle, formatGrade5, sortExamsBySubjectAndSequence,
   EXTRA_ATTEMPTS_KEY, EXTRA_ATTEMPTS_META_KEY, getStudentExamAttemptStatus, StudentExamAttemptStatus, getRecycleBin
 } from '../lib/db';
+import { fetchExamsByIdsFromSupabase } from '../lib/supabase';
 import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions, SubmissionIntegrityResult } from '../lib/questionAdapter';
 
 interface ResultadosProps {
@@ -25,6 +26,8 @@ interface ResultadosProps {
   parciales?: Parcial[];
   recycleBin?: RecycleItem[];
   onRestoreRecycleItem?: (item: RecycleItem) => void;
+  onRestoreExamFromCloud?: (exam: Exam) => Promise<void> | void;
+  onDeleteExamFromCloud?: (examId: string, examTitle: string) => Promise<void> | void;
   onUpdateSubmissions: (
     updated: Submission[], 
     forceIds?: string[]
@@ -40,7 +43,7 @@ interface ResultadosProps {
 }
 
 export default function Resultados({ 
-  currentUser, users, exams, submissions, subjects = [], parciales = [], recycleBin, onRestoreRecycleItem, onUpdateSubmissions, onRefreshSubmissions, toast 
+  currentUser, users, exams, submissions, subjects = [], parciales = [], recycleBin, onRestoreRecycleItem, onRestoreExamFromCloud, onDeleteExamFromCloud, onUpdateSubmissions, onRefreshSubmissions, toast 
 }: ResultadosProps) {
 
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
@@ -68,6 +71,12 @@ export default function Resultados({
   } | null>(null);
   const [grantReason, setGrantReason] = useState('');
   const [isSavingGrant, setIsSavingGrant] = useState(false);
+
+  // Cloud metadata recovery for exams missing locally (e.g. cached in ep_deleted_ids or recycleBin)
+  const [cloudOrphanExams, setCloudOrphanExams] = useState<Record<string, Exam>>({});
+  const attemptedCloudIdsRef = useRef<Set<string>>(new Set());
+  const [confirmDeleteCloudExamId, setConfirmDeleteCloudExamId] = useState<string | null>(null);
+  const [isMutatingCloudExam, setIsMutatingCloudExam] = useState(false);
 
   const handleDeleteSubmission = async (subId: string, studentName: string) => {
     try {
@@ -238,17 +247,50 @@ export default function Resultados({
   const effectiveRecycleBin = recycleBin && recycleBin.length > 0 ? recycleBin : getRecycleBin();
   const activeExamIdsSet = new Set(exams.map(e => e.id));
 
-  // Entregas registradas en la BD cuyo examen fue eliminado o enviado a la papelera localmente
+  const missingOrphanExamIds = Array.from(
+    new Set(
+      submissions
+        .filter(s => Boolean(s.examenId) && !activeExamIdsSet.has(s.examenId))
+        .map(s => s.examenId)
+        .filter(id => !cloudOrphanExams[id] && !attemptedCloudIdsRef.current.has(id))
+    )
+  );
+  const missingOrphanExamIdsKey = missingOrphanExamIds.join(',');
+
+  useEffect(() => {
+    if (!missingOrphanExamIdsKey) return;
+    const idsToFetch = missingOrphanExamIdsKey.split(',').filter(Boolean);
+    idsToFetch.forEach(id => attemptedCloudIdsRef.current.add(id));
+    let cancelled = false;
+    fetchExamsByIdsFromSupabase(idsToFetch).then(fetched => {
+      if (cancelled || !fetched || fetched.length === 0) return;
+      setCloudOrphanExams(prev => {
+        const next = { ...prev };
+        fetched.forEach(ex => {
+          if (ex && ex.id) next[ex.id] = ex;
+        });
+        return next;
+      });
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [missingOrphanExamIdsKey]);
+
+  // Entregas registradas en la BD cuyo examen fue enviado a la papelera u ocultado localmente
   const orphanSubmissions = [...submissions]
     .filter(s => !activeExamIdsSet.has(s.examenId))
     .filter(s => {
       const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
       const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
+      const cloudExam = cloudOrphanExams[s.examenId];
+      const refExam = recycledExam || cloudExam;
+
       if (currentUser.rol !== 'admin') {
-        if (!recycledExam) return false;
+        if (!refExam) return false;
         const belongsToDocente =
-          (recycledExam.docenteId && (recycledExam.docenteId === currentUser.id || allMyUserIds.includes(recycledExam.docenteId))) ||
-          (recycledExam.materia && userAsignaturas.includes(recycledExam.materia));
+          (refExam.docenteId && (refExam.docenteId === currentUser.id || allMyUserIds.includes(refExam.docenteId))) ||
+          (refExam.materia && userAsignaturas.includes(refExam.materia));
         if (!belongsToDocente) return false;
       }
 
@@ -257,7 +299,7 @@ export default function Resultados({
       const student = users.find(u => u.id === s.estudianteId);
       const stName = (student?.nombre || s.estudianteNombre || '').toLowerCase();
       const cedula = (student?.cedula || '').toLowerCase();
-      const recTitle = (recycledExam?.titulo || recycledItem?.titulo || '').toLowerCase();
+      const recTitle = (refExam?.titulo || recycledItem?.titulo || '').toLowerCase();
       return (
         stName.includes(q) ||
         cedula.includes(q) ||
@@ -276,9 +318,10 @@ export default function Resultados({
   const activeExamFromList = exams.find(e => e.id === activeSub?.examenId);
   const activeRecycledItem = activeSub ? effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === activeSub.examenId) : undefined;
   const activeRecycledExam = (activeRecycledItem?.data || activeRecycledItem?.payload) as Exam | undefined;
-  const activeExam: Exam | undefined = activeExamFromList || activeRecycledExam || (activeSub ? {
+  const activeCloudExam = activeSub ? cloudOrphanExams[activeSub.examenId] : undefined;
+  const activeExam: Exam | undefined = activeExamFromList || activeRecycledExam || activeCloudExam || (activeSub ? {
     id: activeSub.examenId,
-    titulo: 'Evaluación eliminada o en papelera',
+    titulo: 'Examen oculto o eliminado localmente',
     materia: 'Sin asignatura',
     docenteId: '',
     estado: 'cerrado',
@@ -296,15 +339,17 @@ export default function Resultados({
         hasOrphans: false,
         orphanKeys: [],
         examQuestionIds: [],
-        isExamEmpty: !activeRecycledExam,
+        isExamEmpty: !activeRecycledExam && !activeCloudExam,
         isMissingAnswersWithGrade: false,
         hasOutOfRangeAnswers: false,
         outOfRangeDetails: [],
         isBlocked: true,
         isWarning: false,
         reason: activeRecycledExam
-          ? 'Esta entrega corresponde a un examen que se encuentra en la Papelera de Reciclaje. Se muestra en modo lectura protegida (puedes restaurar el examen si deseas editar o recalificar).'
-          : 'Esta entrega corresponde a un examen eliminado o no encontrado en tu dispositivo. Se muestra en modo lectura protegida.'
+          ? 'La entrega del estudiante está guardada correctamente, pero este examen figura en tu Papelera de Reciclaje. Se muestra en modo lectura protegida (puedes restaurar el examen si deseas editar o recalificar).'
+          : activeCloudExam
+            ? `La entrega está guardada correctamente. El examen "${cleanExamTitle(activeCloudExam.titulo)}" existe en Supabase (${activeCloudExam.estado === 'activo' ? 'activo para estudiantes' : 'cerrado'}), pero estaba oculto en la caché local de este navegador. Se muestra en modo lectura protegida (puedes restaurarlo a tu lista o eliminarlo de la nube).`
+            : 'Esta entrega corresponde a un examen que ya no se encuentra en tu dispositivo ni en la nube. Se muestra en modo lectura protegida.'
       };
   const activeNormalizedQuestions = normalizeExamQuestions(activeExam);
   const grName = activeSub ? (users.find(u => u.id === activeSub.estudianteId)?.nombre || activeSub.estudianteNombre) : '';
@@ -722,10 +767,10 @@ export default function Resultados({
             <div>
               <h3 className="text-base font-extrabold text-amber-950 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Entregas de evaluaciones eliminadas o en Papelera ({orphanSubmissions.length})</span>
+                <span>Entregas vinculadas a exámenes ocultos o en Papelera ({orphanSubmissions.length})</span>
               </h3>
               <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">
-                Estas entregas se encuentran guardadas en la nube, pero su examen fue enviado a la Papelera o eliminado en este navegador (por eso aparecían como «Evaluación» en el Dashboard). Puedes revisar sus respuestas, restaurar el examen o eliminar los intentos que no necesites.
+                <strong>Tus entregas no fueron eliminadas:</strong> están guardadas correctamente en la nube. Lo que figura en Papelera o eliminado en caché local de este navegador es el <strong>examen</strong> correspondiente (aunque siga activo en Supabase y visible para estudiantes). Puedes restaurar el examen a tu lista o eliminarlo definitivamente de la nube si es un examen antiguo/duplicado.
               </p>
             </div>
           </div>
@@ -735,7 +780,7 @@ export default function Resultados({
               <thead>
                 <tr className="bg-amber-50/70 text-amber-900/70 font-semibold text-xs uppercase tracking-wider border-b border-amber-200">
                   <th className="py-2.5 px-4">Estudiante</th>
-                  <th className="py-2.5 px-4">Examen / Origen</th>
+                  <th className="py-2.5 px-4">Examen / Estado en Nube</th>
                   <th className="py-2.5 px-4">Nota</th>
                   <th className="py-2.5 px-4">Fecha</th>
                   <th className="py-2.5 px-4 text-right">Acción</th>
@@ -747,7 +792,9 @@ export default function Resultados({
                   const stName = student?.nombre || s.estudianteNombre || 'Estudiante';
                   const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
                   const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
-                  const examLabel = recycledExam?.titulo || recycledItem?.titulo;
+                  const cloudExam = cloudOrphanExams[s.examenId];
+                  const examLabel = recycledExam?.titulo || recycledItem?.titulo || cloudExam?.titulo;
+                  const cleanTitle = examLabel ? cleanExamTitle(examLabel) : 'Examen no encontrado en la nube';
 
                   return (
                     <tr key={s.id} className="hover:bg-amber-50/30">
@@ -763,11 +810,25 @@ export default function Resultados({
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-xs font-bold text-slate-800">
-                          {examLabel ? cleanExamTitle(examLabel) : 'Examen eliminado / no local'}
+                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
+                          <span>{cleanTitle}</span>
+                          {cloudExam && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              cloudExam.estado === 'activo'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {cloudExam.estado === 'activo' ? 'Activo en Supabase (oculto aquí)' : 'Cerrado en Supabase'}
+                            </span>
+                          )}
+                          {recycledItem && !cloudExam && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
+                              En Papelera local
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                          {recycledItem ? `En Papelera · ID: ${s.examenId}` : `ID examen: ${s.examenId}`}
+                          ID examen: {s.examenId}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -785,7 +846,7 @@ export default function Resultados({
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {recycledItem && onRestoreRecycleItem && (
+                          {recycledItem && onRestoreRecycleItem ? (
                             <button
                               type="button"
                               onClick={() => onRestoreRecycleItem(recycledItem)}
@@ -795,7 +856,72 @@ export default function Resultados({
                               <RotateCcw className="w-3.5 h-3.5" />
                               <span>Restaurar examen</span>
                             </button>
+                          ) : cloudExam && onRestoreExamFromCloud ? (
+                            <button
+                              type="button"
+                              disabled={isMutatingCloudExam}
+                              onClick={async () => {
+                                setIsMutatingCloudExam(true);
+                                try {
+                                  await onRestoreExamFromCloud(cloudExam);
+                                } finally {
+                                  setIsMutatingCloudExam(false);
+                                }
+                              }}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
+                              title="Volver a mostrar este examen en tu lista de Mis Exámenes y Resultados"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restaurar a mi lista</span>
+                            </button>
+                          ) : null}
+
+                          {currentUser.rol === 'admin' && cloudExam && onDeleteExamFromCloud && (
+                            confirmDeleteCloudExamId === s.id ? (
+                              <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-lg shadow-xs animate-fade-in">
+                                <span className="text-[11px] font-bold text-amber-900">¿Borrar examen de la nube?</span>
+                                <button
+                                  type="button"
+                                  disabled={isMutatingCloudExam}
+                                  onClick={async () => {
+                                    setIsMutatingCloudExam(true);
+                                    try {
+                                      await onDeleteExamFromCloud(cloudExam.id, cleanTitle);
+                                      setCloudOrphanExams(prev => {
+                                        const next = { ...prev };
+                                        delete next[cloudExam.id];
+                                        return next;
+                                      });
+                                    } finally {
+                                      setIsMutatingCloudExam(false);
+                                      setConfirmDeleteCloudExamId(null);
+                                    }
+                                  }}
+                                  className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded transition cursor-pointer disabled:opacity-50"
+                                >
+                                  {isMutatingCloudExam ? '...' : 'Sí, borrar examen'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isMutatingCloudExam}
+                                  onClick={() => setConfirmDeleteCloudExamId(null)}
+                                  className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded transition cursor-pointer"
+                                >
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteCloudExamId(s.id)}
+                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs"
+                                title="Eliminar este examen viejo/duplicado de Supabase para que ningún estudiante vuelva a presentarlo (las entregas se conservan)"
+                              >
+                                Eliminar examen de la nube
+                              </button>
+                            )
                           )}
+
                           <button
                             type="button"
                             onClick={() => handleOpenGradingModal(s.id)}
@@ -828,10 +954,10 @@ export default function Resultados({
                               type="button"
                               onClick={() => setDeletingSubId(s.id)}
                               className="px-2 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                              title={`Eliminar este intento de ${stName}`}
+                              title={`Eliminar esta entrega de ${stName}`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>Eliminar</span>
+                              <span>Eliminar entrega</span>
                             </button>
                           )}
                         </div>

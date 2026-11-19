@@ -341,15 +341,24 @@ export default function MisExamenes({
   };
 
   const toggleExamStatus = (id: string) => {
+    const timestamp = now();
+    let updatedTarget: Exam | undefined;
     const nextExams = exams.map(e => {
       if (e.id === id) {
         const nextState: 'activo' | 'borrador' | 'cerrado' = e.estado === 'activo' ? 'cerrado' : 'activo';
-        return { ...e, estado: nextState };
+        updatedTarget = { ...e, estado: nextState, actualizado: timestamp };
+        return updatedTarget;
       }
       return e;
     });
     onUpdateExams(nextExams);
-    toast('Estado del examen actualizado', 'success');
+    if (updatedTarget?.estado === 'activo') {
+      toast(`"${cleanExamTitle(updatedTarget.titulo)}" ACTIVADO y guardado en la nube ✓`, 'success');
+    } else if (updatedTarget) {
+      toast(`"${cleanExamTitle(updatedTarget.titulo)}" CERRADO ✓`, 'info');
+    } else {
+      toast('Estado del examen actualizado', 'success');
+    }
   };
 
   const handleDeleteExam = (exam: Exam) => {
@@ -852,7 +861,7 @@ export default function MisExamenes({
                                       type="button"
                                       onClick={() => toggleExamStatus(e.id)}
                                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition cursor-pointer ${statusColor}`}
-                                      title="Haz clic para alternar estado"
+                                      title={e.estado === 'activo' ? 'Activo y visible para estudiantes. Haz clic para cerrar.' : 'Haz clic para ACTIVAR y publicar para estudiantes'}
                                     >
                                       {e.estado}
                                     </button>
@@ -1016,7 +1025,7 @@ export default function MisExamenes({
                                       type="button"
                                       onClick={() => toggleExamStatus(e.id)}
                                       className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase transition cursor-pointer ${statusColor}`}
-                                      title="Haz clic para alternar estado"
+                                      title={e.estado === 'activo' ? 'Activo y visible para estudiantes. Haz clic para cerrar.' : 'Haz clic para ACTIVAR y publicar para estudiantes'}
                                     >
                                       {e.estado}
                                     </button>

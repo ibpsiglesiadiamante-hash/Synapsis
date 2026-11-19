@@ -855,7 +855,47 @@ export default function App() {
   const updateSubjects = (next: Subject[]) => updateStateField('subjects', next, 'subjects');
   const updateSemesters = (next: Semester[]) => updateStateField('semesters', next, 'semesters');
   const updateParciales = (next: Parcial[]) => updateStateField('parciales', next, 'parciales');
-  const updateExams = (next: Exam[]) => updateStateField('exams', next, 'exams');
+  const updateExams = (next: Exam[]) => {
+    const prevExams = currentDbRef.current.exams || [];
+    const updated = updateStateField('exams', next, 'exams');
+
+    const prevMap = new Map(prevExams.map(e => [e.id, e]));
+    const changedExams = (next || []).filter(ex => {
+      if (!ex || !ex.id) return false;
+      const prev = prevMap.get(ex.id);
+      if (!prev) return true;
+      return (
+        prev.estado !== ex.estado ||
+        prev.actualizado !== ex.actualizado ||
+        prev.titulo !== ex.titulo ||
+        prev.subtitulo !== ex.subtitulo ||
+        prev.materia !== ex.materia ||
+        prev.parcialId !== ex.parcialId ||
+        prev.semestre !== ex.semestre ||
+        prev.tiempo !== ex.tiempo ||
+        prev.intentos !== ex.intentos ||
+        prev.aprobacion !== ex.aprobacion ||
+        prev.aleatorio !== ex.aleatorio ||
+        prev.mostrarNota !== ex.mostrarNota ||
+        prev.bannerUrl !== ex.bannerUrl ||
+        prev.descripcion !== ex.descripcion ||
+        (prev.preguntas?.length || 0) !== (ex.preguntas?.length || 0) ||
+        JSON.stringify(prev.preguntas || []) !== JSON.stringify(ex.preguntas || [])
+      );
+    });
+
+    changedExams.forEach(ex => {
+      saveDocToSupabase('exams', ex)
+        .then(res => {
+          if (!res.success) {
+            console.warn(`No se pudo sincronizar examen "${ex.titulo}" en Supabase:`, res.error);
+          }
+        })
+        .catch(() => {});
+    });
+
+    return updated;
+  };
   const updateGradeRecords = (next: GradeRecord[]) => updateStateField('gradeRecords', next, 'gradeRecords');
   const updateAssignments = (next: Assignment[]) => updateStateField('assignments', next, 'assignments');
   const updateAssignmentSubmissions = (next: AssignmentSubmission[]) => updateStateField('assignmentSubmissions', next, 'assignmentSubmissions');
@@ -1144,6 +1184,71 @@ export default function App() {
     saveState(nextDb);
     setDb(nextDb);
     showToast(`"${item.titulo}" fue restaurado con éxito ✓`, 'success');
+  };
+
+  const handleRestoreExamFromCloud = async (exam: Exam) => {
+    if (!exam || !exam.id) return;
+    unmarkAsDeleted(exam.id);
+    unRegisterDeletedId(exam.id);
+    await unmarkDeletedInSupabase(exam.id).catch(() => {});
+
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    const removedRecycleItems = currentRecycle.filter(r => r.tipo === 'examen' && r.originalId === exam.id);
+    const nextRecycle = currentRecycle.filter(r => !(r.tipo === 'examen' && r.originalId === exam.id));
+    if (removedRecycleItems.length > 0) {
+      saveRecycleBin(nextRecycle);
+      removedRecycleItems.forEach(item => {
+        deleteRecycleItemFromFirestore(item.id).catch(() => {});
+      });
+    }
+
+    const nextExams = [exam, ...(currentDbRef.current.exams || []).filter(e => e.id !== exam.id)];
+    const nextDb: AppState = {
+      ...currentDbRef.current,
+      exams: nextExams,
+      recycleBin: nextRecycle
+    };
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+
+    saveDocToFirestore('exams', exam).catch(() => {});
+    saveDocToSupabase('exams', exam).catch(() => {});
+    showToast(`El examen "${exam.titulo}" fue restaurado a tu lista ✓`, 'success');
+  };
+
+  const handleDeleteCloudExam = async (examId: string, examTitle: string) => {
+    if (!examId) return;
+    markAsDeleted(examId);
+    registerDeletedId(examId, 'exams');
+    await markDeletedInSupabase(examId, 'exams').catch(() => {});
+    await deleteDocFromFirestore('exams', examId).catch(() => {});
+    const supaRes = await deleteDocFromSupabase('exams', examId).catch(() => ({ success: false }));
+
+    const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
+    const removedRecycleItems = currentRecycle.filter(r => r.tipo === 'examen' && r.originalId === examId);
+    const nextRecycle = currentRecycle.filter(r => !(r.tipo === 'examen' && r.originalId === examId));
+    if (removedRecycleItems.length > 0) {
+      saveRecycleBin(nextRecycle);
+      removedRecycleItems.forEach(item => {
+        deleteRecycleItemFromFirestore(item.id).catch(() => {});
+      });
+    }
+
+    const nextDb: AppState = {
+      ...currentDbRef.current,
+      exams: (currentDbRef.current.exams || []).filter(e => e.id !== examId),
+      recycleBin: nextRecycle
+    };
+    currentDbRef.current = nextDb;
+    saveState(nextDb);
+    setDb(nextDb);
+
+    if (supaRes?.success) {
+      showToast(`El examen "${examTitle}" fue eliminado de la nube ✓ (las entregas de estudiantes se conservan)`, 'success');
+    } else {
+      showToast(`El examen "${examTitle}" quedó oculto/eliminado localmente.`, 'warning');
+    }
   };
 
   const mapRecycleTipoToTable = (tipo: string): string | undefined => {
@@ -1479,6 +1584,8 @@ export default function App() {
             parciales={db.parciales}
             recycleBin={db.recycleBin}
             onRestoreRecycleItem={handleRestoreFromRecycle}
+            onRestoreExamFromCloud={handleRestoreExamFromCloud}
+            onDeleteExamFromCloud={handleDeleteCloudExam}
             onUpdateSubmissions={updateSubmissions}
             onRefreshSubmissions={() => refreshRemoteData(true)}
             toast={showToast}

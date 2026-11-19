@@ -1550,20 +1550,46 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
             }
           }
         } else if (key === 'exams') {
-          // Protección especial para exámenes: preservar preguntas y opciones recién redactadas
+          // Protección especial para exámenes:
+          // 1. La marca temporal (actualizado || creado) define qué versión (incluyendo estado activo/borrador/cerrado) es más reciente.
+          // 2. Un borrador antiguo con más preguntas o sin timestamp nunca debe degradar un examen activo más reciente.
           const localQs = Array.isArray(localItem.preguntas) ? localItem.preguntas : [];
           const remoteQs = Array.isArray(remoteItem.preguntas) ? remoteItem.preguntas : [];
           const localMs = parseSafeTimestamp(localItem.actualizado || localItem.creado);
           const remoteMs = parseSafeTimestamp(remoteItem.actualizado || remoteItem.creado);
 
-          if (localQs.length > remoteQs.length) {
-            itemMap.set(localItem.id, localItem);
-          } else if (remoteQs.length > localQs.length) {
-            itemMap.set(localItem.id, remoteItem);
-          } else if (localMs >= remoteMs) {
-            itemMap.set(localItem.id, localItem);
+          let winner: any;
+          let loser: any;
+
+          if (localMs > remoteMs) {
+            winner = localItem;
+            loser = remoteItem;
+          } else if (remoteMs > localMs) {
+            winner = remoteItem;
+            loser = localItem;
           } else {
-            itemMap.set(localItem.id, remoteItem);
+            // Timestamps iguales o ausentes: si uno está activo y el otro en borrador, SIEMPRE conservar 'activo'
+            if (localItem.estado === 'activo' && remoteItem.estado === 'borrador') {
+              winner = localItem;
+              loser = remoteItem;
+            } else if (remoteItem.estado === 'activo' && localItem.estado === 'borrador') {
+              winner = remoteItem;
+              loser = localItem;
+            } else if (localQs.length >= remoteQs.length) {
+              winner = localItem;
+              loser = remoteItem;
+            } else {
+              winner = remoteItem;
+              loser = localItem;
+            }
+          }
+
+          const winnerQs = Array.isArray(winner.preguntas) ? winner.preguntas : [];
+          const loserQs = Array.isArray(loser.preguntas) ? loser.preguntas : [];
+          if (winnerQs.length === 0 && loserQs.length > 0) {
+            itemMap.set(localItem.id, { ...winner, preguntas: loserQs });
+          } else {
+            itemMap.set(localItem.id, winner);
           }
         } else {
           // Comparación robusta para las demás entidades usando milisegundos numéricos

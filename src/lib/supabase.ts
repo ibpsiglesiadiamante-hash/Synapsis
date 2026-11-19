@@ -510,3 +510,29 @@ export async function fetchSubmissionsForExamAndUsers(
   }
 }
 
+/**
+ * Fetches specific exams by ID directly from Supabase without applying local deletion filters.
+ * Used by Dashboard & Resultados to show real exam titles and allow restoring or purging
+ * cloud-active exams that are hidden/recycled in the current browser.
+ */
+export async function fetchExamsByIdsFromSupabase(examIds: string[]): Promise<Exam[]> {
+  if (!examIds || examIds.length === 0) return [];
+  try {
+    const cleanIds = Array.from(new Set(examIds.filter(Boolean)));
+    if (cleanIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('exams')
+      .select('*')
+      .in('id', cleanIds);
+
+    if (error) {
+      console.warn('fetchExamsByIdsFromSupabase warning:', error.message);
+      return [];
+    }
+    return ((data || []) as Exam[]).filter(e => e && e.id);
+  } catch (err) {
+    console.warn('fetchExamsByIdsFromSupabase error:', err);
+    return [];
+  }
+}
+
