@@ -162,6 +162,73 @@ export default function App() {
     }
   };
 
+  // Protección de estado: si un examen/parcial está 'activo' localmente y la nube intenta
+  // sobreescribirlo hacia 'borrador', priorizar el estado 'activo' local y resincronizarlo.
+  const protectActiveExamStates = (
+    localState: AppState,
+    mergedState: AppState,
+    remoteState?: Partial<AppState> | null
+  ): { protectedState: AppState; protectedExamsToPush: Exam[] } => {
+    const localActiveMap = new Map<string, Exam>();
+    (localState.exams || []).forEach(ex => {
+      if (ex && ex.id && ex.estado === 'activo') {
+        localActiveMap.set(ex.id, ex);
+      }
+    });
+
+    if (localActiveMap.size === 0) {
+      return { protectedState: mergedState, protectedExamsToPush: [] };
+    }
+
+    const remoteExamMap = new Map<string, Exam>();
+    ((remoteState?.exams || []) as Exam[]).forEach(ex => {
+      if (ex && ex.id) remoteExamMap.set(ex.id, ex);
+    });
+
+    const protectedExamsToPush: Exam[] = [];
+    const protectNowIso = now();
+    let changedAny = false;
+
+    const protectedExams = (mergedState.exams || []).map(ex => {
+      if (!ex || !ex.id) return ex;
+      const localActive = localActiveMap.get(ex.id);
+      if (!localActive) return ex;
+
+      const remoteEx = remoteExamMap.get(ex.id);
+      const cloudAttemptedDraft = remoteEx?.estado === 'borrador';
+      const mergedBecameDraft = ex.estado === 'borrador';
+
+      if (mergedBecameDraft || cloudAttemptedDraft) {
+        changedAny = true;
+        console.warn(
+          `[Protección de Estado] Parcial/examen "${ex.titulo}" (${ex.id}) protegido: se bloqueó sobreescritura remota a 'borrador' y se conservó 'activo' local.`
+        );
+        const restoredActiveExam: Exam = {
+          ...ex,
+          estado: 'activo',
+          preguntas:
+            Array.isArray(ex.preguntas) && ex.preguntas.length > 0
+              ? ex.preguntas
+              : localActive.preguntas || [],
+          actualizado: protectNowIso
+        };
+        protectedExamsToPush.push(restoredActiveExam);
+        return restoredActiveExam;
+      }
+
+      return ex;
+    });
+
+    if (!changedAny) {
+      return { protectedState: mergedState, protectedExamsToPush: [] };
+    }
+
+    return {
+      protectedState: { ...mergedState, exams: protectedExams },
+      protectedExamsToPush
+    };
+  };
+
   const refreshRemoteData = async (showFeedback = false) => {
     try {
       // Push any locally pending submissions first so they are preserved on remote
@@ -173,11 +240,22 @@ export default function App() {
       });
 
       if (remoteSupabase) {
-        const mergedDb = mergeStates(currentDbRef.current, remoteSupabase as any);
+        const rawMergedDb = mergeStates(currentDbRef.current, remoteSupabase as any);
+        const { protectedState: mergedDb, protectedExamsToPush } = protectActiveExamStates(
+          currentDbRef.current,
+          rawMergedDb,
+          remoteSupabase
+        );
+
         currentDbRef.current = mergedDb;
         setDb(mergedDb);
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
+
+        // Reafirmar en Supabase cualquier examen protegido como 'activo'
+        for (const protectedEx of protectedExamsToPush) {
+          await saveDocToSupabase('exams', protectedEx).catch(() => {});
+        }
 
         // If local had submissions missing in remote, push them immediately
         const remoteSubIds = new Set((remoteSupabase.submissions || []).map(s => s.id));
@@ -215,8 +293,12 @@ export default function App() {
         });
 
         let mergedDb = localDb;
+        let protectedExamsToPush: Exam[] = [];
         if (remoteSupabase) {
-          mergedDb = mergeStates(mergedDb, remoteSupabase as any);
+          const rawMerged = mergeStates(localDb, remoteSupabase as any);
+          const protectionResult = protectActiveExamStates(localDb, rawMerged, remoteSupabase);
+          mergedDb = protectionResult.protectedState;
+          protectedExamsToPush = protectionResult.protectedExamsToPush;
         }
 
         currentDbRef.current = mergedDb;
@@ -224,6 +306,11 @@ export default function App() {
         saveState(mergedDb);
         initializeSyncCache(mergedDb);
         lastRemoteRefreshRef.current = Date.now();
+
+        // Si se bloqueó una sobreescritura a 'borrador' desde la nube, reafirmar 'activo' de inmediato en Supabase
+        for (const protectedEx of protectedExamsToPush) {
+          await saveDocToSupabase('exams', protectedEx).catch(() => {});
+        }
 
         // Mantener Supabase sincronizado (incluyendo cualquier entrega que hubiera quedado local)
         await pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
@@ -447,11 +534,14 @@ export default function App() {
         return null;
       });
 
-      let mergedDb = db;
+      let mergedDb = currentDbRef.current;
       if (remoteSupabase) {
-        mergedDb = mergeStates(mergedDb, remoteSupabase as any);
+        const rawMerged = mergeStates(currentDbRef.current, remoteSupabase as any);
+        const { protectedState } = protectActiveExamStates(currentDbRef.current, rawMerged, remoteSupabase);
+        mergedDb = protectedState;
       }
 
+      currentDbRef.current = mergedDb;
       setDb(mergedDb);
       saveState(mergedDb);
       initializeSyncCache(mergedDb);
