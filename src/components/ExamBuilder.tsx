@@ -62,13 +62,17 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
     }
     seenIds.add(id);
 
-    const tipo: Question['tipo'] = q?.tipo || 'multiple';
+    const rawTipo = typeof q?.tipo === 'string' ? q.tipo.trim().toLowerCase() : 'multiple';
+    const tipo: Question['tipo'] = (rawTipo === 'opcion_multiple' ? 'multiple' : rawTipo || 'multiple') as Question['tipo'];
     let opciones: string[] = Array.isArray(q?.opciones) ? [...q.opciones] : [];
-    if (opciones.length === 0) {
+    const usesOpciones = tipo === 'multiple' || tipo === 'checkbox' || tipo === 'dropdown' || tipo === 'tf' || tipo === 'matching' || tipo === 'table';
+    if (opciones.length === 0 && usesOpciones) {
       if (tipo === 'tf') opciones = ['Verdadero', 'Falso'];
       else if (tipo === 'matching') opciones = ['Papiro', 'Talmud', 'Masoretas'];
       else if (tipo === 'table') opciones = ['UNGIDO', 'ORGULLO', 'EL EDÉN', 'REBELIÓN'];
       else opciones = ['Opción A', 'Opción B'];
+    } else if (!usesOpciones) {
+      opciones = [];
     }
 
     let enunciados: string[] | undefined = undefined;
@@ -110,6 +114,22 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
       resolvedCorrectas = [Number(q.correcta)];
     }
 
+    let incisos = q?.incisos;
+    let modoIncisos: 'texto' | 'vf' | undefined = q?.modoIncisos === 'texto' || q?.modoIncisos === 'vf' ? q.modoIncisos : undefined;
+    if (tipo === 'incisos') {
+      const rawInc = Array.isArray(q?.incisos) ? q.incisos : [];
+      incisos = rawInc.map((inc: any) => ({
+        ...inc,
+        texto: typeof inc?.texto === 'string' ? inc.texto : '',
+        tipo: inc?.tipo === 'texto' || inc?.tipo === 'vf' ? inc.tipo : undefined,
+        respuestaVF: inc?.respuestaVF === 'F' ? ('F' as const) : (inc?.respuestaVF === 'V' ? ('V' as const) : undefined),
+        respuestaEsperada: typeof inc?.respuestaEsperada === 'string' ? inc.respuestaEsperada : ''
+      }));
+      if (!modoIncisos) {
+        modoIncisos = incisos.length > 0 && incisos.every((i: any) => i.tipo === 'vf') ? 'vf' : 'texto';
+      }
+    }
+
     return {
       ...q,
       id,
@@ -122,6 +142,8 @@ function ensureValidQuestions(rawQuestions: any[]): Question[] {
       enunciados,
       enunciadoIds,
       matchCorrectos,
+      modoIncisos,
+      incisos,
     };
   });
 }
@@ -222,13 +244,22 @@ export default function ExamBuilder({
         tipo: q.tipo,
         texto: (q.texto || '').trim(),
         puntos: q.puntos,
+        maxRespuestas: q.maxRespuestas ?? null,
         opciones: (q.opciones || []).map(o => o.trim()),
         correctas: [...(q.correctas || [])].sort((a, b) => a - b),
         enunciados: (q.enunciados || []).map(e => e.trim()),
         matchCorrectos: q.matchCorrectos || [],
+        columnas: q.columnas || [],
         tableColumns: q.tableColumns || [],
         tableOptions: q.tableOptions || [],
         tableRows: q.tableRows || [],
+        modoIncisos: q.modoIncisos || null,
+        incisos: (q.incisos || []).map(inc => ({
+          texto: (inc.texto || '').trim(),
+          tipo: inc.tipo || null,
+          respuestaVF: inc.respuestaVF || null,
+          respuestaEsperada: (inc.respuestaEsperada || '').trim(),
+        })),
         respuestaEsperada: (q.respuestaEsperada || '').trim(),
         criterioDocente: (q.criterioDocente || '').trim(),
       }))
@@ -522,176 +553,211 @@ export default function ExamBuilder({
   };
 
   const handleChangeQType = (id: string, type: Question['tipo']) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === id) {
-        if (q.tipo === type) return q;
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === id) {
+          if (q.tipo === type) return q;
 
-        let options = Array.isArray(q.opciones) && q.opciones.length > 0 ? [...q.opciones] : [];
-        let enunciados = Array.isArray(q.enunciados) && q.enunciados.length > 0 ? [...q.enunciados] : undefined;
-        let matchCorrectos = Array.isArray(q.matchCorrectos) ? [...q.matchCorrectos] : undefined;
-        let columnas = Array.isArray(q.columnas) && q.columnas.length > 0 ? [...q.columnas] : undefined;
-        let tableRows = Array.isArray(q.tableRows) && q.tableRows.length > 0 ? [...q.tableRows] : undefined;
-        let incisos = Array.isArray(q.incisos) && q.incisos.length > 0 ? [...q.incisos] : undefined;
+          let options = Array.isArray(q.opciones) && q.opciones.length > 0 ? [...q.opciones] : [];
+          let enunciados = Array.isArray(q.enunciados) && q.enunciados.length > 0 ? [...q.enunciados] : undefined;
+          let matchCorrectos = Array.isArray(q.matchCorrectos) ? [...q.matchCorrectos] : undefined;
+          let columnas = Array.isArray(q.columnas) && q.columnas.length > 0 ? [...q.columnas] : undefined;
+          let tableRows = Array.isArray(q.tableRows) && q.tableRows.length > 0 ? [...q.tableRows] : undefined;
+          let incisos = Array.isArray(q.incisos) && q.incisos.length > 0 ? [...q.incisos] : undefined;
 
-        if (type === 'multiple' || type === 'checkbox' || type === 'dropdown') {
-          if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
-            options = ['Opción A', 'Opción B'];
-          }
-        } else if (type === 'tf') {
-          options = ['Verdadero', 'Falso'];
-        } else if (type === 'incisos') {
-          options = [];
-          if (!incisos || incisos.length === 0) {
-            incisos = [
-              { texto: 'Según las NIIF existen por lo menos 5 estados financieros establecidos, de los cuales los 2 más importantes son: 1- _______ 2- _______', respuestaEsperada: 'Estado de situación financiera, Estado de resultados' },
-              { texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.', respuestaEsperada: 'situación, principales, saldos, empresa' },
-              { texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización.', respuestaEsperada: 'rendimiento, evaluar, económica' }
-            ];
-          }
-        } else if (type === 'matching') {
-          if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
-            options = ['Papiro', 'Talmud', 'Masoretas'];
-          }
-          if (!enunciados || enunciados.length === 0) {
-            enunciados = ['Pregunta 1'];
-            matchCorrectos = [0];
+          if (type === 'multiple' || type === 'checkbox' || type === 'dropdown') {
+            if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
+              options = ['Opción A', 'Opción B'];
+            }
+          } else if (type === 'tf') {
+            options = ['Verdadero', 'Falso'];
+          } else if (type === 'incisos') {
+            options = [];
+            if (!incisos || incisos.length === 0) {
+              incisos = [
+                { texto: 'Según las NIIF existen por lo menos 5 estados financieros establecidos, de los cuales los 2 más importantes son: 1- _______ 2- _______', tipo: 'texto', respuestaEsperada: 'Estado de situación financiera, Estado de resultados' },
+                { texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.', tipo: 'texto', respuestaEsperada: 'situación, principales, saldos, empresa' },
+                { texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización.', tipo: 'texto', respuestaEsperada: 'rendimiento, evaluar, económica' }
+              ];
+            }
+          } else if (type === 'matching') {
+            if (options.length === 0 || (options.length === 2 && options[0] === 'Verdadero')) {
+              options = ['Papiro', 'Talmud', 'Masoretas'];
+            }
+            if (!enunciados || enunciados.length === 0) {
+              enunciados = ['Pregunta 1'];
+              matchCorrectos = [0];
+            } else {
+              const maxOpt = Math.max(0, options.length - 1);
+              matchCorrectos = enunciados.map((_, idx) => {
+                const prevMatch = matchCorrectos && matchCorrectos[idx] !== undefined ? matchCorrectos[idx] : 0;
+                return Math.min(Math.max(0, prevMatch), maxOpt);
+              });
+            }
+          } else if (type === 'table') {
+            if (options.length === 0) {
+              options = ['UNGIDO', 'ORGULLO', 'EL EDÉN', 'REBELIÓN'];
+            }
+            if (!columnas || columnas.length === 0) {
+              columnas = ['Privilegios y Corrupción', 'Singular Pecado y destino', 'El momento de la caída'];
+            }
+            if (!tableRows || tableRows.length === 0) {
+              tableRows = [
+                {
+                  cells: [
+                    { tipo: 'blank', valor: '', correctOptionIdx: 0 },
+                    { tipo: 'blank', valor: '', correctOptionIdx: 1 },
+                    { tipo: 'blank', valor: '', correctOptionIdx: 2 }
+                  ]
+                }
+              ];
+            }
           } else {
-            const maxOpt = Math.max(0, options.length - 1);
-            matchCorrectos = enunciados.map((_, idx) => {
-              const prevMatch = matchCorrectos && matchCorrectos[idx] !== undefined ? matchCorrectos[idx] : 0;
-              return Math.min(Math.max(0, prevMatch), maxOpt);
-            });
+            options = [];
           }
-        } else if (type === 'table') {
-          if (options.length === 0) {
-            options = ['UNGIDO', 'ORGULLO', 'EL EDÉN', 'REBELIÓN'];
-          }
-          if (!columnas || columnas.length === 0) {
-            columnas = ['Privilegios y Corrupción', 'Singular Pecado y destino', 'El momento de la caída'];
-          }
-          if (!tableRows || tableRows.length === 0) {
-            tableRows = [
-              {
-                cells: [
-                  { tipo: 'blank', valor: '', correctOptionIdx: 0 },
-                  { tipo: 'blank', valor: '', correctOptionIdx: 1 },
-                  { tipo: 'blank', valor: '', correctOptionIdx: 2 }
-                ]
-              }
-            ];
-          }
-        } else {
-          options = [];
+
+          const opcionIds = options.map((_, i) => `opt_${id}_${i}_${uid()}`);
+          const enunciadoIds = (type === 'matching' && enunciados)
+            ? enunciados.map((_, i) => `enun_${id}_${i}_${uid()}`)
+            : undefined;
+
+          return {
+            ...q,
+            tipo: type,
+            correctas: [],
+            maxRespuestas: type === 'checkbox' ? (q.maxRespuestas || 3) : undefined,
+            opciones: options,
+            opcionIds,
+            enunciados: type === 'matching' ? enunciados : undefined,
+            enunciadoIds,
+            matchCorrectos: type === 'matching' ? matchCorrectos : undefined,
+            columnas: type === 'table' ? columnas : undefined,
+            tableRows: type === 'table' ? tableRows : undefined,
+            modoIncisos: type === 'incisos' ? (q.modoIncisos || 'texto') : undefined,
+            incisos: type === 'incisos' ? incisos : undefined,
+          };
         }
-
-        const opcionIds = options.map((_, i) => `opt_${id}_${i}_${uid()}`);
-        const enunciadoIds = (type === 'matching' && enunciados)
-          ? enunciados.map((_, i) => `enun_${id}_${i}_${uid()}`)
-          : undefined;
-
-        return {
-          ...q,
-          tipo: type,
-          correctas: [],
-          maxRespuestas: type === 'checkbox' ? (q.maxRespuestas || 3) : undefined,
-          opciones: options,
-          opcionIds,
-          enunciados: type === 'matching' ? enunciados : undefined,
-          enunciadoIds,
-          matchCorrectos: type === 'matching' ? matchCorrectos : undefined,
-          columnas: type === 'table' ? columnas : undefined,
-          tableRows: type === 'table' ? tableRows : undefined,
-          modoIncisos: type === 'incisos' ? (q.modoIncisos || 'vf') : undefined,
-          incisos: type === 'incisos' ? incisos : undefined,
-        };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleToggleModoIncisos = (qid: string, modo: 'texto' | 'vf') => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = (q.incisos || []).map(inc => ({
-          ...inc,
-          tipo: modo,
-          respuestaVF: inc.respuestaVF || 'V'
-        }));
-        return {
-          ...q,
-          modoIncisos: modo,
-          incisos: nextIncisos
-        };
-      }
-      return q;
-    }));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = (q.incisos || []).map(inc => ({
+            ...inc,
+            tipo: modo,
+            respuestaVF: inc.respuestaVF || 'V'
+          }));
+          return {
+            ...q,
+            modoIncisos: modo,
+            incisos: nextIncisos
+          };
+        }
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleAddInciso = (qid: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = [...(q.incisos || [])];
-        const nextLetter = String.fromCharCode(97 + nextIncisos.length);
-        const modo = q.modoIncisos || 'vf';
-        nextIncisos.push({ 
-          texto: `Afirmación del literal ${nextLetter}...`, 
-          tipo: modo,
-          respuestaVF: 'V',
-          respuestaEsperada: '' 
-        });
-        return { ...q, incisos: nextIncisos };
-      }
-      return q;
-    }));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = [...(q.incisos || [])];
+          const nextLetter = String.fromCharCode(97 + nextIncisos.length);
+          const modo = q.modoIncisos || 'texto';
+          nextIncisos.push({ 
+            texto: `Afirmación del literal ${nextLetter}...`, 
+            tipo: modo,
+            respuestaVF: 'V',
+            respuestaEsperada: '' 
+          });
+          return { ...q, modoIncisos: modo, incisos: nextIncisos };
+        }
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateIncisoText = (qid: string, idx: number, val: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = [...(q.incisos || [])];
-        if (nextIncisos[idx]) {
-          nextIncisos[idx] = { ...nextIncisos[idx], texto: val };
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = [...(q.incisos || [])];
+          if (nextIncisos[idx]) {
+            nextIncisos[idx] = { ...nextIncisos[idx], texto: val };
+          }
+          return { ...q, incisos: nextIncisos };
         }
-        return { ...q, incisos: nextIncisos };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateIncisoVF = (qid: string, idx: number, val: 'V' | 'F') => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = [...(q.incisos || [])];
-        if (nextIncisos[idx]) {
-          nextIncisos[idx] = { ...nextIncisos[idx], respuestaVF: val, tipo: 'vf' };
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = [...(q.incisos || [])];
+          if (nextIncisos[idx]) {
+            nextIncisos[idx] = { ...nextIncisos[idx], respuestaVF: val, tipo: 'vf' as const };
+          }
+          return { ...q, modoIncisos: 'vf' as const, incisos: nextIncisos };
         }
-        return { ...q, incisos: nextIncisos };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateIncisoExpected = (qid: string, idx: number, val: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = [...(q.incisos || [])];
-        if (nextIncisos[idx]) {
-          nextIncisos[idx] = { ...nextIncisos[idx], respuestaEsperada: val };
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = [...(q.incisos || [])];
+          if (nextIncisos[idx]) {
+            nextIncisos[idx] = { ...nextIncisos[idx], respuestaEsperada: val };
+          }
+          return { ...q, incisos: nextIncisos };
         }
-        return { ...q, incisos: nextIncisos };
-      }
-      return q;
-    }));
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleRemoveInciso = (qid: string, idx: number) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id === qid) {
-        const nextIncisos = (q.incisos || []).filter((_, i) => i !== idx);
-        return { ...q, incisos: nextIncisos };
-      }
-      return q;
-    }));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(q => {
+        if (q.id === qid) {
+          const nextIncisos = (q.incisos || []).filter((_, i) => i !== idx);
+          return { ...q, incisos: nextIncisos };
+        }
+        return q;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
   };
 
   const handleUpdateQExpected = (qid: string, val: string) => {
@@ -713,88 +779,98 @@ export default function ExamBuilder({
   };
 
   const applyIncisosVFPreset = (qid: string) => {
-    setQuestions(prev => prev.map(item => {
-      if (item.id === qid) {
-        return {
-          ...item,
-          tipo: 'incisos' as const,
-          modoIncisos: 'vf' as const,
-          texto: 'Indique si cada una de las siguientes afirmaciones es Verdadera (V) o Falsa (F):',
-          opciones: [],
-          incisos: [
-            {
-              texto: 'Según las NIIF, el Estado de Situación Financiera presenta los activos, pasivos y patrimonio en una fecha determinada.',
-              tipo: 'vf' as const,
-              respuestaVF: 'V' as const
-            },
-            {
-              texto: 'Los activos no corrientes son aquellos que se espera realizar o vender en el ciclo operativo normal (menos de 1 año).',
-              tipo: 'vf' as const,
-              respuestaVF: 'F' as const
-            },
-            {
-              texto: 'El Estado de Resultados Integral refleja los ingresos, gastos y el resultado económico (utilidad o pérdida) del ejercicio.',
-              tipo: 'vf' as const,
-              respuestaVF: 'V' as const
-            },
-            {
-              texto: 'Las obligaciones laborales e impuestos por pagar a corto plazo forman parte del Pasivo Corriente.',
-              tipo: 'vf' as const,
-              respuestaVF: 'V' as const
-            },
-            {
-              texto: 'El patrimonio neto aumenta cuando la organización incurre en pérdidas acumuladas durante el ejercicio contable.',
-              tipo: 'vf' as const,
-              respuestaVF: 'F' as const
-            }
-          ]
-        };
-      }
-      return item;
-    }));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(item => {
+        if (item.id === qid) {
+          return {
+            ...item,
+            tipo: 'incisos' as const,
+            modoIncisos: 'vf' as const,
+            texto: 'Indique si cada una de las siguientes afirmaciones es Verdadera (V) o Falsa (F):',
+            opciones: [],
+            incisos: [
+              {
+                texto: 'Según las NIIF, el Estado de Situación Financiera presenta los activos, pasivos y patrimonio en una fecha determinada.',
+                tipo: 'vf' as const,
+                respuestaVF: 'V' as const
+              },
+              {
+                texto: 'Los activos no corrientes son aquellos que se espera realizar o vender en el ciclo operativo normal (menos de 1 año).',
+                tipo: 'vf' as const,
+                respuestaVF: 'F' as const
+              },
+              {
+                texto: 'El Estado de Resultados Integral refleja los ingresos, gastos y el resultado económico (utilidad o pérdida) del ejercicio.',
+                tipo: 'vf' as const,
+                respuestaVF: 'V' as const
+              },
+              {
+                texto: 'Las obligaciones laborales e impuestos por pagar a corto plazo forman parte del Pasivo Corriente.',
+                tipo: 'vf' as const,
+                respuestaVF: 'V' as const
+              },
+              {
+                texto: 'El patrimonio neto aumenta cuando la organización incurre en pérdidas acumuladas durante el ejercicio contable.',
+                tipo: 'vf' as const,
+                respuestaVF: 'F' as const
+              }
+            ]
+          };
+        }
+        return item;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
     toast('¡Plantilla de afirmaciones Verdadero / Falso (V / F) cargada con éxito!', 'success');
   };
 
   const applyIncisosAccountingPreset = (qid: string) => {
-    setQuestions(prev => prev.map(item => {
-      if (item.id === qid) {
-        return {
-          ...item,
-          tipo: 'incisos' as const,
-          modoIncisos: 'texto' as const,
-          texto: 'Complete cada afirmación con la palabra o término que corresponde:',
-          opciones: [],
-          incisos: [
-            {
-              texto: 'Según las NIIF (Normas Internacionales de Información Financiera) existen por lo menos 5 estados establecidos, de los cuales los 2 más importantes son: 1- ____________________  2- ____________________.',
-              tipo: 'texto' as const,
-              respuestaEsperada: 'Estado de situación financiera, Estado de resultados'
-            },
-            {
-              texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.',
-              tipo: 'texto' as const,
-              respuestaEsperada: 'situación, principales, saldos, empresa'
-            },
-            {
-              texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización, así como una importante guía en el proceso de toma de decisiones gerenciales.',
-              tipo: 'texto' as const,
-              respuestaEsperada: 'rendimiento, evaluar, económica, toma de decisiones'
-            },
-            {
-              texto: 'Las empresas generalmente funcionan con una combinación de recursos propios y préstamos en dinero o bienes.',
-              tipo: 'texto' as const,
-              respuestaEsperada: 'empresas, recursos propios, préstamos'
-            },
-            {
-              texto: 'Las tres formas de financiación estudiadas en el material son: 1- recursos propios  2- préstamos  3- inversiones.',
-              tipo: 'texto' as const,
-              respuestaEsperada: 'recursos propios, préstamos, inversiones'
-            }
-          ]
-        };
-      }
-      return item;
-    }));
+    notifyUserEdit();
+    setQuestions(prev => {
+      const next = prev.map(item => {
+        if (item.id === qid) {
+          return {
+            ...item,
+            tipo: 'incisos' as const,
+            modoIncisos: 'texto' as const,
+            texto: 'Complete cada afirmación con la palabra o término que corresponde:',
+            opciones: [],
+            incisos: [
+              {
+                texto: 'Según las NIIF (Normas Internacionales de Información Financiera) existen por lo menos 5 estados establecidos, de los cuales los 2 más importantes son: 1- ____________________  2- ____________________.',
+                tipo: 'texto' as const,
+                respuestaEsperada: 'Estado de situación financiera, Estado de resultados'
+              },
+              {
+                texto: 'El estado de situación financiera es uno de los estados financieros principales. Muestra los saldos de las cuentas reales de la empresa en una fecha dada.',
+                tipo: 'texto' as const,
+                respuestaEsperada: 'situación, principales, saldos, empresa'
+              },
+              {
+                texto: 'El estado de resultados integral o de rendimiento, es una de las herramientas financieras más importantes para evaluar la gestión económica de una organización, así como una importante guía en el proceso de toma de decisiones gerenciales.',
+                tipo: 'texto' as const,
+                respuestaEsperada: 'rendimiento, evaluar, económica, toma de decisiones'
+              },
+              {
+                texto: 'Las empresas generalmente funcionan con una combinación de recursos propios y préstamos en dinero o bienes.',
+                tipo: 'texto' as const,
+                respuestaEsperada: 'empresas, recursos propios, préstamos'
+              },
+              {
+                texto: 'Las tres formas de financiación estudiadas en el material son: 1- recursos propios  2- préstamos  3- inversiones.',
+                tipo: 'texto' as const,
+                respuestaEsperada: 'recursos propios, préstamos, inversiones'
+              }
+            ]
+          };
+        }
+        return item;
+      });
+      latestDataRef.current = { ...latestDataRef.current, questions: next };
+      return next;
+    });
     toast('¡Plantilla de incisos a, b, c, d, e (NIIF y Estados Financieros) cargada con éxito!', 'success');
   };
 
@@ -3258,6 +3334,68 @@ export default function ExamBuilder({
                                 </tbody>
                               </table>
                             </div>
+                          </div>
+                        )}
+
+                        {q.tipo === 'incisos' && (
+                          <div className="space-y-2 mt-2 text-left">
+                            {(q.incisos || []).length === 0 ? (
+                              <textarea
+                                disabled
+                                rows={2}
+                                placeholder="Espacio de respuesta escrita del estudiante..."
+                                className="w-full bg-white p-2 border border-slate-200 rounded text-[11px]"
+                              />
+                            ) : (
+                              (q.incisos || []).map((inc, iIdx) => {
+                                const letter = String.fromCharCode(97 + iIdx);
+                                const isVF = (q.modoIncisos || 'vf') === 'vf';
+                                return (
+                                  <div key={iIdx} className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1.5">
+                                    <div className="flex items-start gap-1.5">
+                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-900 uppercase shrink-0">
+                                        {letter})
+                                      </span>
+                                      <span className="text-[11px] font-semibold text-slate-800 whitespace-pre-wrap leading-snug">
+                                        {inc.texto}
+                                      </span>
+                                    </div>
+                                    {isVF ? (
+                                      <div className="pl-6 flex items-center gap-2">
+                                        <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${
+                                          previewShowCorrect && (inc.respuestaVF || 'V') === 'V'
+                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                                        }`}>
+                                          ◯ Verdadero (V)
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${
+                                          previewShowCorrect && inc.respuestaVF === 'F'
+                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                                        }`}>
+                                          ◯ Falso (F)
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="pl-6 space-y-1">
+                                        <textarea
+                                          disabled
+                                          rows={1}
+                                          placeholder={`Respuesta del estudiante para el literal ${letter}...`}
+                                          className="w-full bg-slate-50 p-1.5 border border-slate-200 rounded text-[10.5px] text-slate-500"
+                                        />
+                                        {previewShowCorrect && inc.respuestaEsperada && (
+                                          <div className="text-[10px] font-bold text-emerald-700">
+                                            ✓ Guía: {inc.respuestaEsperada}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
                           </div>
                         )}
                       </div>

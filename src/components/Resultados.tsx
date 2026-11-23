@@ -15,7 +15,7 @@ import {
   EXTRA_ATTEMPTS_KEY, EXTRA_ATTEMPTS_META_KEY, getStudentExamAttemptStatus, StudentExamAttemptStatus, getRecycleBin
 } from '../lib/db';
 import { fetchExamsByIdsFromSupabase } from '../lib/supabase';
-import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions, SubmissionIntegrityResult } from '../lib/questionAdapter';
+import { normalizeExamQuestions, detectOrphanAnswers, countCompoundQuestions, SubmissionIntegrityResult, isIncisoItemVF, isQuestionIncisosVF } from '../lib/questionAdapter';
 
 interface ResultadosProps {
   currentUser: User;
@@ -405,7 +405,7 @@ export default function Resultados({
       totalMax += q.puntos;
       const ans = sub.respuestas[q.id];
 
-      if (q.tipo === 'incisos' && (q.modoIncisos === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'))) {
+      if (isQuestionIncisosVF(q)) {
         const userAnsObj = typeof ans === 'object' && ans !== null && !Array.isArray(ans) ? ans : {};
         const incisosList = q.incisos || [];
         let correctVFCount = 0;
@@ -1442,7 +1442,7 @@ export default function Resultados({
 
                     isCorrect = totalBlanksCount > 0 && correctBlanksCount === totalBlanksCount;
                   } else if (q.tipo === 'incisos') {
-                    const isVF = (q.modoIncisos || 'vf') === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf');
+                    const isVF = isQuestionIncisosVF(q);
                     if (isVF) {
                       const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
                       const incisosList = q.incisos || [];
@@ -1454,12 +1454,14 @@ export default function Resultados({
                       });
                       isCorrect = incisosList.length > 0 && correctVFCount === incisosList.length;
                       readableAnsText = `${correctVFCount} de ${incisosList.length} afirmaciones correctas`;
+                    } else if (typeof studentAns === 'string' && studentAns.trim() !== '') {
+                      readableAnsText = studentAns;
                     } else {
                       readableAnsText = 'Respuestas por incisos (Texto libre)';
                     }
                   }
 
-                  const isVFIncisos = q.tipo === 'incisos' && ((q.modoIncisos || 'vf') === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'));
+                  const isVFIncisos = isQuestionIncisosVF(q);
                   const isTextGraded = (q.tipo === 'abierta' || q.tipo === 'escala' || (q.tipo === 'incisos' && !isVFIncisos));
                   let earnedPoints = 0;
                   if (isTextGraded) {
@@ -1685,7 +1687,7 @@ export default function Resultados({
                           <div className="space-y-2">
                             {(q.incisos || []).map((inc, iIdx) => {
                               const letter = String.fromCharCode(97 + iIdx);
-                              const isVF = (q.modoIncisos || 'vf') === 'vf' || inc.tipo === 'vf';
+                              const isVF = isIncisoItemVF(q, inc);
                               const userAnsObj = typeof studentAns === 'object' && !Array.isArray(studentAns) ? studentAns : {};
                               const sVal = userAnsObj[iIdx];
                               const expectedVF = inc.respuestaVF || 'V';

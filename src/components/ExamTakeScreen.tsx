@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ChevronLeft, Check, AlertTriangle, 
   Clock, GraduationCap, School, Milestone, Lock 
 } from 'lucide-react';
 import { Exam, Question, Submission, Institution, Parcial, Subject, Semester, User } from '../types';
 import { uid, now, getStudentExamAttemptStatus } from '../lib/db';
-import { normalizeQuestion, normalizeExamQuestions } from '../lib/questionAdapter';
+import { normalizeExamQuestions, isIncisoItemVF, isQuestionIncisosVF } from '../lib/questionAdapter';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 
 interface ExamTakeScreenProps {
@@ -28,6 +28,17 @@ interface ExamTakeScreenProps {
   toast: (msg: string, type: 'success' | 'error' | 'warning') => void;
 }
 
+function isQuestionAnswered(item: Question, ans: any): boolean {
+  if (ans === undefined || ans === null) return false;
+  if (typeof ans === 'string') return ans.trim() !== '';
+  if (typeof ans === 'number') return !isNaN(ans);
+  if (Array.isArray(ans)) return ans.length > 0;
+  if (typeof ans === 'object') {
+    return Object.values(ans).some(v => v !== undefined && v !== null && String(v).trim() !== '');
+  }
+  return Boolean(ans);
+}
+
 export default function ExamTakeScreen({ 
   examId, exams, institutions, parciales, subjects, semesters, 
   submissions = [], users = [], currentUser, onExit, onSubmit, toast 
@@ -40,27 +51,63 @@ export default function ExamTakeScreen({
   const [resultsState, setResultsState] = useState<Submission | null>(null);
   const isBlockedByAttemptLimit = currentUser?.rol === 'estudiante' && !attemptStatus.canTake && !resultsState;
 
-  // Question lists (supports shuffling)
-  const [questions, setQuestions] = useState<Question[]>(() => {
-    const storageKeyQuestions = `synapsis_exam_questions_${currentUser?.id || 'temp'}_${examId}`;
-    const savedQuestions = localStorage.getItem(storageKeyQuestions);
-    if (savedQuestions) {
-      try {
-        const qList = JSON.parse(savedQuestions);
-        if (Array.isArray(qList) && qList.length > 0) {
-          return qList.map((q: any, idx: number) => normalizeQuestion(q, idx));
+  // Hydrate live normalized questions from exam.preguntas while preserving only the shuffled ID order in localStorage
+  // (avoids serving stale snapshots without options/incisos if the teacher updated the exam).
+  const questions = useMemo<Question[]>(() => {
+    const liveList = normalizeExamQuestions(exam);
+    const userKey = currentUser?.id || 'temp';
+    const legacyKeyQuestions = `synapsis_exam_questions_${userKey}_${examId}`;
+    const orderKey = `synapsis_exam_qorder_${userKey}_${examId}`;
+
+    if (!exam.aleatorio) {
+      try { localStorage.removeItem(legacyKeyQuestions); } catch {}
+      return liveList;
+    }
+
+    let orderedIds: string[] | null = null;
+    try {
+      const savedOrder = localStorage.getItem(orderKey);
+      if (savedOrder) {
+        const parsed = JSON.parse(savedOrder);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          orderedIds = parsed;
         }
-      } catch (e) {
-        // Fallback below
+      } else {
+        const legacySaved = localStorage.getItem(legacyKeyQuestions);
+        if (legacySaved) {
+          const parsedLegacy = JSON.parse(legacySaved);
+          if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+            orderedIds = parsedLegacy.map((q: any) => q?.id).filter(Boolean);
+          }
+          localStorage.removeItem(legacyKeyQuestions);
+        }
       }
+    } catch {
+      orderedIds = null;
     }
-    const qList = normalizeExamQuestions(exam);
-    if (exam.aleatorio) {
-      qList.sort(() => Math.random() - 0.5);
+
+    if (orderedIds && orderedIds.length > 0) {
+      const liveMap = new Map(liveList.map(q => [q.id, q]));
+      const ordered: Question[] = [];
+      const seen = new Set<string>();
+      orderedIds.forEach(id => {
+        const found = liveMap.get(id);
+        if (found && !seen.has(id)) {
+          ordered.push(found);
+          seen.add(id);
+        }
+      });
+      liveList.forEach(q => {
+        if (!seen.has(q.id)) ordered.push(q);
+      });
+      try { localStorage.setItem(orderKey, JSON.stringify(ordered.map(q => q.id))); } catch {}
+      return ordered;
     }
-    localStorage.setItem(storageKeyQuestions, JSON.stringify(qList));
-    return qList;
-  });
+
+    const shuffled = [...liveList].sort(() => Math.random() - 0.5);
+    try { localStorage.setItem(orderKey, JSON.stringify(shuffled.map(q => q.id))); } catch {}
+    return shuffled;
+  }, [exam, examId, currentUser?.id]);
 
   const [currentQIdx, setCurrentQIdx] = useState<number>(() => {
     const storageKeyQIdx = `synapsis_exam_qidx_${currentUser?.id || 'temp'}_${examId}`;
@@ -113,12 +160,15 @@ export default function ExamTakeScreen({
 
   // Helper to remove all cached local drafts
   const clearPersistedData = () => {
-    const storageKeyQuestions = `synapsis_exam_questions_${currentUser?.id || 'temp'}_${examId}`;
-    const storageKeyAnswers = `synapsis_exam_answers_${currentUser?.id || 'temp'}_${examId}`;
-    const storageKeyTime = `synapsis_exam_time_${currentUser?.id || 'temp'}_${examId}`;
-    const storageKeyQIdx = `synapsis_exam_qidx_${currentUser?.id || 'temp'}_${examId}`;
+    const userKey = currentUser?.id || 'temp';
+    const storageKeyQuestions = `synapsis_exam_questions_${userKey}_${examId}`;
+    const storageKeyOrder = `synapsis_exam_qorder_${userKey}_${examId}`;
+    const storageKeyAnswers = `synapsis_exam_answers_${userKey}_${examId}`;
+    const storageKeyTime = `synapsis_exam_time_${userKey}_${examId}`;
+    const storageKeyQIdx = `synapsis_exam_qidx_${userKey}_${examId}`;
 
     localStorage.removeItem(storageKeyQuestions);
+    localStorage.removeItem(storageKeyOrder);
     localStorage.removeItem(storageKeyAnswers);
     localStorage.removeItem(storageKeyTime);
     localStorage.removeItem(storageKeyQIdx);
@@ -203,7 +253,7 @@ export default function ExamTakeScreen({
 
   const calculateAnswersPercentage = () => {
     if (questions.length === 0) return 0;
-    const answeredCount = Object.keys(answers).filter(k => answers[k] !== undefined && answers[k] !== '').length;
+    const answeredCount = questions.filter(q => isQuestionAnswered(q, answers[q.id])).length;
     return Math.round((answeredCount / questions.length) * 100);
   };
 
@@ -245,7 +295,7 @@ export default function ExamTakeScreen({
       maxPtsSum += q.puntos;
       const ans = latestAnswers[q.id];
 
-      if (q.tipo === 'incisos' && (q.modoIncisos === 'vf' || (q.incisos || []).every(i => i.tipo === 'vf'))) {
+      if (isQuestionIncisosVF(q)) {
         const userAnsObj = typeof ans === 'object' && ans !== null && !Array.isArray(ans) ? ans : {};
         const incisosList = q.incisos || [];
         let correctVFCount = 0;
@@ -686,7 +736,7 @@ export default function ExamTakeScreen({
           <div className="flex flex-wrap gap-1.5">
             {questions.map((item, idx) => {
               const isCurrent = idx === currentQIdx;
-              const isAnswered = answers[item.id] !== undefined && answers[item.id] !== '';
+              const isAnswered = isQuestionAnswered(item, answers[item.id]);
 
               return (
                 <button
@@ -740,30 +790,44 @@ export default function ExamTakeScreen({
                   
                   {/* Radio Multiple Choice & True/False */}
                   {(qItem.tipo === 'multiple' || (qItem.tipo as string) === 'opcion_multiple' || qItem.tipo === 'tf') && (
-                    (qItem.tipo === 'tf' ? ['Verdadero', 'Falso'] : qItem.opciones).map((opt, oIdx) => {
-                      const isChecked = answers[qItem.id] === oIdx;
-                      return (
-                        <div 
-                          key={oIdx}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSetAnswer(qItem.id, oIdx);
-                          }}
-                          className="flex items-center gap-2.5 py-2 px-2 hover:bg-slate-100/70 rounded-md transition duration-150 cursor-pointer group"
-                        >
-                          <div className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
-                            isChecked 
-                              ? 'border-[#673ab7]' 
-                              : 'border-slate-400 group-hover:border-slate-800'
-                          }`}>
-                            {isChecked && (
-                              <div className="w-2 h-2 rounded-full bg-[#673ab7]" />
-                            )}
+                    (qItem.tipo === 'tf' && (!qItem.opciones || qItem.opciones.length === 0) ? ['Verdadero', 'Falso'] : qItem.opciones).length > 0 ? (
+                      (qItem.tipo === 'tf' && (!qItem.opciones || qItem.opciones.length === 0) ? ['Verdadero', 'Falso'] : qItem.opciones).map((opt, oIdx) => {
+                        const isChecked = answers[qItem.id] === oIdx;
+                        return (
+                          <div 
+                            key={oIdx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetAnswer(qItem.id, oIdx);
+                            }}
+                            className="flex items-center gap-2.5 py-2 px-2 hover:bg-slate-100/70 rounded-md transition duration-150 cursor-pointer group"
+                          >
+                            <div className={`w-4.5 h-4.5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
+                              isChecked 
+                                ? 'border-[#673ab7]' 
+                                : 'border-slate-400 group-hover:border-slate-800'
+                            }`}>
+                              {isChecked && (
+                                <div className="w-2 h-2 rounded-full bg-[#673ab7]" />
+                              )}
+                            </div>
+                            <span className="text-slate-900 text-[13.5px] leading-relaxed font-semibold whitespace-pre-wrap">{opt}</span>
                           </div>
-                          <span className="text-slate-900 text-[13.5px] leading-relaxed font-semibold whitespace-pre-wrap">{opt}</span>
-                        </div>
-                      );
-                    })
+                        );
+                      })
+                    ) : (
+                      <div className="mt-2">
+                        <AutoExpandingTextarea
+                          value={typeof answers[qItem.id] === 'string' ? answers[qItem.id] : ''}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={e => handleSetAnswer(qItem.id, e.target.value)}
+                          placeholder="Escribe aquí tu respuesta..."
+                          rows={2}
+                          minHeight={52}
+                          className="w-full bg-white border-2 border-slate-300 focus:border-indigo-600 rounded-lg p-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition font-sans block"
+                        />
+                      </div>
+                    )
                   )}
 
                   {/* Checkboxes items list */}
@@ -1185,95 +1249,119 @@ export default function ExamTakeScreen({
                   {/* Incisos multi-part question: V/F or free text */}
                   {qItem.tipo === 'incisos' && (
                     <div className="space-y-4 mt-3 text-left">
-                      {(qItem.incisos || []).map((inc, iIdx) => {
-                        const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
-                        const isVF = (qItem.modoIncisos || 'vf') === 'vf' || inc.tipo === 'vf';
-                        const currentAnswers = answers[qItem.id] || {};
-                        const val = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
-                          ? (currentAnswers[iIdx] || '') 
-                          : '';
+                      {(qItem.incisos || []).length === 0 ? (
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            ✍️ Escribe aquí tu respuesta:
+                          </label>
+                          <AutoExpandingTextarea
+                            value={
+                              typeof answers[qItem.id] === 'string'
+                                ? answers[qItem.id]
+                                : (typeof answers[qItem.id] === 'object' && answers[qItem.id] !== null ? (answers[qItem.id][0] || '') : '')
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={e => handleSetAnswer(qItem.id, e.target.value)}
+                            placeholder="Escribe aquí tu respuesta completa..."
+                            rows={3}
+                            minHeight={64}
+                            className="w-full bg-white border-2 border-slate-300 focus:border-indigo-600 rounded-lg p-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
+                          />
+                        </div>
+                      ) : (
+                        (qItem.incisos || []).map((inc, iIdx) => {
+                          const letter = String.fromCharCode(97 + iIdx); // a, b, c, d, e...
+                          const isVF = isIncisoItemVF(qItem, inc);
+                          const currentAnswers = answers[qItem.id] || {};
+                          const val = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                            ? (currentAnswers[iIdx] || '') 
+                            : '';
 
-                        return (
-                          <div key={iIdx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
-                            <div className="flex items-start gap-2.5">
-                              <span className="text-xs font-black px-2.5 py-0.5 rounded-md bg-white text-slate-900 border border-slate-300 shrink-0 uppercase tracking-wide shadow-2xs">
-                                {letter})
-                              </span>
-                              <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
-                                {inc.texto}
-                              </p>
+                          return (
+                            <div key={iIdx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                              <div className="flex items-start gap-2.5">
+                                <span className="text-xs font-black px-2.5 py-0.5 rounded-md bg-white text-slate-900 border border-slate-300 shrink-0 uppercase tracking-wide shadow-2xs">
+                                  {letter})
+                                </span>
+                                <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">
+                                  {inc.texto}
+                                </p>
+                              </div>
+
+                              {/* Clean V/F Pill Buttons */}
+                              {isVF ? (
+                                <div className="pl-0 sm:pl-7 flex flex-wrap items-center gap-3 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                        ? { ...currentAnswers, [iIdx]: 'V' } 
+                                        : { [iIdx]: 'V' };
+                                      handleSetAnswer(qItem.id, nextAnswers);
+                                    }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                                      val === 'V'
+                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/30'
+                                        : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
+                                    }`}
+                                  >
+                                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
+                                      val === 'V' ? 'border-white bg-white text-emerald-700' : 'border-slate-400'
+                                    }`}>
+                                      {val === 'V' && '✓'}
+                                    </span>
+                                    <span>Verdadero (V)</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                        ? { ...currentAnswers, [iIdx]: 'F' } 
+                                        : { [iIdx]: 'F' };
+                                      handleSetAnswer(qItem.id, nextAnswers);
+                                    }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
+                                      val === 'F'
+                                        ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-400/30'
+                                        : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
+                                    }`}
+                                  >
+                                    <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
+                                      val === 'F' ? 'border-white bg-white text-rose-700' : 'border-slate-400'
+                                    }`}>
+                                      {val === 'F' && '✕'}
+                                    </span>
+                                    <span>Falso (F)</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="pl-0 sm:pl-7 space-y-1.5">
+                                  <label className="text-[11px] font-bold text-indigo-800 block">
+                                    ✍️ Respuesta para el literal {letter}:
+                                  </label>
+                                  <AutoExpandingTextarea
+                                    value={val}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={e => {
+                                      const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
+                                        ? { ...currentAnswers, [iIdx]: e.target.value } 
+                                        : { [iIdx]: e.target.value };
+                                      handleSetAnswer(qItem.id, nextAnswers);
+                                    }}
+                                    placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
+                                    rows={2}
+                                    minHeight={56}
+                                    className="w-full bg-white border-2 border-slate-300 focus:border-indigo-600 rounded-lg p-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
+                                  />
+                                </div>
+                              )}
                             </div>
-
-                            {/* Clean V/F Pill Buttons */}
-                            {isVF ? (
-                              <div className="pl-0 sm:pl-7 flex flex-wrap items-center gap-3 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
-                                      ? { ...currentAnswers, [iIdx]: 'V' } 
-                                      : { [iIdx]: 'V' };
-                                    handleSetAnswer(qItem.id, nextAnswers);
-                                  }}
-                                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
-                                    val === 'V'
-                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-400/30'
-                                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
-                                  }`}
-                                >
-                                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
-                                    val === 'V' ? 'border-white bg-white text-emerald-700' : 'border-slate-400'
-                                  }`}>
-                                    {val === 'V' && '✓'}
-                                  </span>
-                                  <span>Verdadero (V)</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
-                                      ? { ...currentAnswers, [iIdx]: 'F' } 
-                                      : { [iIdx]: 'F' };
-                                    handleSetAnswer(qItem.id, nextAnswers);
-                                  }}
-                                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
-                                    val === 'F'
-                                      ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-400/30'
-                                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-500 shadow-2xs'
-                                  }`}
-                                >
-                                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center text-[9px] ${
-                                    val === 'F' ? 'border-white bg-white text-rose-700' : 'border-slate-400'
-                                  }`}>
-                                    {val === 'F' && '✕'}
-                                  </span>
-                                  <span>Falso (F)</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="pl-0 sm:pl-7">
-                                <AutoExpandingTextarea
-                                  value={val}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={e => {
-                                    const nextAnswers = typeof currentAnswers === 'object' && !Array.isArray(currentAnswers) 
-                                      ? { ...currentAnswers, [iIdx]: e.target.value } 
-                                      : { [iIdx]: e.target.value };
-                                    handleSetAnswer(qItem.id, nextAnswers);
-                                  }}
-                                  placeholder={`Escribe aquí tu respuesta para el literal ${letter}...`}
-                                  rows={1}
-                                  minHeight={38}
-                                  className="w-full bg-white border border-slate-300 focus:border-indigo-600 rounded-lg p-2.5 text-xs sm:text-sm text-slate-900 placeholder-slate-400 outline-none transition shadow-2xs font-sans block"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   )}
 
@@ -1346,7 +1434,7 @@ export default function ExamTakeScreen({
             
             {/* Warning if unanswered exits */}
             {(() => {
-              const unansweredCount = questions.filter(item => answers[item.id] === undefined || answers[item.id] === '').length;
+              const unansweredCount = questions.filter(item => !isQuestionAnswered(item, answers[item.id])).length;
               return unansweredCount > 0 ? (
                 <div className="space-y-2 mt-2">
                   <p className="text-sm font-medium text-slate-700 leading-relaxed">

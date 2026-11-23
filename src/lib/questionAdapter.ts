@@ -27,9 +27,10 @@ export function normalizeQuestion(raw: any, fallbackIdx: number = 0): Question {
   // Preservar ID existente intacto (NUNCA Math.random para evitar desincronizar respuestas)
   const id = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : `q_legacy_${fallbackIdx}`;
 
-  // Mapear tipo de pregunta
-  let tipo: Question['tipo'] = raw.tipo || 'multiple';
-  if ((raw.tipo as string) === 'opcion_multiple') {
+  // Mapear tipo de pregunta de manera segura
+  const rawTipo = typeof raw.tipo === 'string' ? raw.tipo.trim().toLowerCase() : 'multiple';
+  let tipo: Question['tipo'] = (rawTipo || 'multiple') as Question['tipo'];
+  if (rawTipo === 'opcion_multiple') {
     tipo = 'multiple';
   }
 
@@ -60,6 +61,53 @@ export function normalizeQuestion(raw: any, fallbackIdx: number = 0): Question {
     correctas = [Number(raw.correcta)];
   }
 
+  // Normalizar incisos (soporta arreglo, mapa numérico {0: ..., 1: ...} o string JSON legacy)
+  let rawIncisos: any = raw.incisos;
+  if (typeof rawIncisos === 'string') {
+    try {
+      rawIncisos = JSON.parse(rawIncisos);
+    } catch {
+      rawIncisos = undefined;
+    }
+  } else if (rawIncisos && typeof rawIncisos === 'object' && !Array.isArray(rawIncisos)) {
+    rawIncisos = Object.keys(rawIncisos)
+      .sort((a, b) => Number(a) - Number(b))
+      .map(k => rawIncisos[k]);
+  }
+
+  const normalizedIncisos = Array.isArray(rawIncisos)
+    ? rawIncisos
+        .filter((inc: any) => inc !== null && inc !== undefined)
+        .map((inc: any) => {
+          if (typeof inc === 'string') {
+            return { texto: inc, tipo: 'texto' as const, respuestaEsperada: '' };
+          }
+          const incTipo: 'texto' | 'vf' | undefined =
+            inc.tipo === 'texto' || inc.tipo === 'vf' ? inc.tipo : undefined;
+          return {
+            ...inc,
+            texto: typeof inc.texto === 'string' ? inc.texto : (typeof inc.enunciado === 'string' ? inc.enunciado : ''),
+            tipo: incTipo,
+            respuestaVF: inc.respuestaVF === 'F' ? ('F' as const) : (inc.respuestaVF === 'V' ? ('V' as const) : undefined),
+            respuestaEsperada: typeof inc.respuestaEsperada === 'string' ? inc.respuestaEsperada : ''
+          };
+        })
+    : undefined;
+
+  // Normalizar modoIncisos explícito o inferido sin forzar V/F cuando los incisos son de texto libre
+  let modoIncisos: 'texto' | 'vf' | undefined =
+    raw.modoIncisos === 'texto' || raw.modoIncisos === 'vf' ? raw.modoIncisos : undefined;
+  if (tipo === 'incisos' && !modoIncisos) {
+    if (normalizedIncisos && normalizedIncisos.length > 0) {
+      const hasExplicitTexto = normalizedIncisos.some(
+        i => i.tipo === 'texto' || (i.respuestaEsperada && i.respuestaEsperada.trim() !== '' && !i.respuestaVF)
+      );
+      modoIncisos = hasExplicitTexto ? 'texto' : (normalizedIncisos.every(i => i.tipo === 'vf') ? 'vf' : 'texto');
+    } else {
+      modoIncisos = 'texto';
+    }
+  }
+
   return {
     ...raw,
     id,
@@ -79,7 +127,36 @@ export function normalizeQuestion(raw: any, fallbackIdx: number = 0): Question {
     tableOptions: Array.isArray(raw.tableOptions) ? [...raw.tableOptions] : undefined,
     palabrasCaja: Array.isArray(raw.palabrasCaja) ? [...raw.palabrasCaja] : undefined,
     maxRespuestas: typeof raw.maxRespuestas === 'number' ? raw.maxRespuestas : undefined,
+    modoIncisos,
+    incisos: normalizedIncisos,
   };
+}
+
+/**
+ * Determina de manera consistente si un literal individual de una pregunta 'incisos'
+ * debe mostrarse y calificarse como Verdadero/Falso (V/F) o como Texto Libre.
+ */
+export function isIncisoItemVF(
+  q: Pick<Question, 'modoIncisos' | 'incisos'>,
+  inc?: { tipo?: 'texto' | 'vf'; respuestaVF?: 'V' | 'F'; respuestaEsperada?: string }
+): boolean {
+  if (q.modoIncisos === 'texto') return false;
+  if (q.modoIncisos === 'vf') return true;
+  if (inc?.tipo === 'texto') return false;
+  if (inc?.tipo === 'vf') return true;
+  if (inc?.respuestaEsperada && inc.respuestaEsperada.trim() !== '' && !inc.respuestaVF) return false;
+  return false;
+}
+
+/**
+ * Determina si toda la pregunta 'incisos' se califica automáticamente como Verdadero/Falso (V/F).
+ */
+export function isQuestionIncisosVF(q: Pick<Question, 'tipo' | 'modoIncisos' | 'incisos'>): boolean {
+  if (q.tipo !== 'incisos') return false;
+  if (q.modoIncisos === 'texto') return false;
+  if (q.modoIncisos === 'vf') return true;
+  const list = q.incisos || [];
+  return list.length > 0 && list.every(i => isIncisoItemVF(q, i));
 }
 
 /**
@@ -317,6 +394,8 @@ export function countCompoundQuestions(exam?: Exam | null): CompositeQuestionCou
       itemsInQ = blanks > 0 ? blanks : 1;
     } else if (q.tipo === 'table_matching') {
       itemsInQ = (q.tableRows && q.tableRows.length > 0) ? q.tableRows.length : 1;
+    } else if (q.tipo === 'incisos') {
+      itemsInQ = (q.incisos && q.incisos.length > 0) ? q.incisos.length : 1;
     }
 
     totalEvaluableItems += itemsInQ;

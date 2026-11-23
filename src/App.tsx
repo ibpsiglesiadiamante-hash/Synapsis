@@ -96,6 +96,7 @@ import {
 import {
   fetchFullStateFromSupabase,
   fetchSubmissionsForExamAndUsers,
+  fetchExamsByIdsFromSupabase,
   pushAllStateToSupabase,
   testSupabaseConnection,
   saveDocToSupabase,
@@ -1078,31 +1079,55 @@ export default function App() {
   const handleRequestStartExam = async (examId: string) => {
     if (!currentUser) return;
     const latestDb = currentDbRef.current;
-    const targetExam = (latestDb.exams || []).find(e => e.id === examId);
+    let targetExam = (latestDb.exams || []).find(e => e.id === examId);
     if (!targetExam) {
       showToast('No se encontró la evaluación solicitada.', 'error');
       return;
     }
 
-    if (currentUser.rol === 'estudiante') {
-      if (targetExam.estado !== 'activo') {
-        showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
-        return;
+    // Hydrate latest exam structure (preguntas, incisos, opciones) from Supabase so students never take a stale cached copy
+    try {
+      const [remoteExamList, remoteSubs] = await Promise.all([
+        fetchExamsByIdsFromSupabase([examId]).catch((): Exam[] => []),
+        currentUser.rol === 'estudiante'
+          ? fetchSubmissionsForExamAndUsers(examId, getAllMatchingUserIds(currentUser, latestDb.users || [])).catch((): Submission[] => [])
+          : Promise.resolve([] as Submission[])
+      ]);
+
+      const remoteExam = remoteExamList[0];
+      if (remoteExam && Array.isArray(remoteExam.preguntas) && remoteExam.preguntas.length > 0) {
+        const toMs = (iso?: string) => {
+          const t = iso ? new Date(iso).getTime() : 0;
+          return Number.isFinite(t) ? t : 0;
+        };
+        const localMs = toMs(targetExam.actualizado || targetExam.creado);
+        const remoteMs = toMs(remoteExam.actualizado || remoteExam.creado);
+        const shouldRefreshQuestions =
+          remoteMs >= localMs ||
+          JSON.stringify(remoteExam.preguntas) !== JSON.stringify(targetExam.preguntas || []);
+
+        if (shouldRefreshQuestions) {
+          const mergedExam: Exam = {
+            ...targetExam,
+            ...remoteExam,
+            // Proteger estado activo local si la nube intentara degradarlo a borrador
+            estado: targetExam.estado === 'activo' && remoteExam.estado === 'borrador' ? 'activo' : remoteExam.estado,
+            preguntas: remoteExam.preguntas
+          };
+          targetExam = mergedExam;
+          const nextExams = (currentDbRef.current.exams || []).map(ex => ex.id === examId ? mergedExam : ex);
+          updateStateField('exams', nextExams, 'exams');
+        }
       }
 
-      const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, latestDb.submissions || [], latestDb.users || []);
-      if (!localStatus.canTake) {
-        localStorage.removeItem('synapsis_activeTakeExamId');
-        showToast('Ya utilizaste tu intento permitido en esta evaluación. Comunícate con tu docente para analizar la causa y habilitar otro intento.', 'warning');
-        return;
-      }
+      if (currentUser.rol === 'estudiante') {
+        if (targetExam.estado !== 'activo') {
+          showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
+          return;
+        }
 
-      // Live Supabase check against multi-device / multi-tab bypasses
-      try {
-        const matchingIds = getAllMatchingUserIds(currentUser, latestDb.users || []);
-        const remoteSubs = await fetchSubmissionsForExamAndUsers(examId, matchingIds);
         if (remoteSubs.length > 0) {
-          const remoteMap = new Map(remoteSubs.map(r => [r.id, r]));
+          const remoteMap = new Map<string, Submission>(remoteSubs.map((r): [string, Submission] => [r.id, r]));
           const existingIds = new Set((currentDbRef.current.submissions || []).map(s => s.id));
           const mergedSubs = [
             ...(currentDbRef.current.submissions || []).map(s => remoteMap.get(s.id) || s),
@@ -1116,9 +1141,28 @@ export default function App() {
             showToast('Ya existe un intento registrado para esta evaluación. Comunícate con tu docente para analizar la causa.', 'warning');
             return;
           }
+        } else {
+          const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, currentDbRef.current.submissions || [], currentDbRef.current.users || []);
+          if (!localStatus.canTake) {
+            localStorage.removeItem('synapsis_activeTakeExamId');
+            showToast('Ya utilizaste tu intento permitido en esta evaluación. Comunícate con tu docente para analizar la causa y habilitar otro intento.', 'warning');
+            return;
+          }
         }
-      } catch (e) {
-        console.warn('No se pudo validar intentos en vivo antes de iniciar:', e);
+      }
+    } catch (e) {
+      console.warn('No se pudo actualizar el examen o validar intentos en vivo antes de iniciar:', e);
+      if (currentUser.rol === 'estudiante') {
+        if (targetExam.estado !== 'activo') {
+          showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
+          return;
+        }
+        const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, latestDb.submissions || [], latestDb.users || []);
+        if (!localStatus.canTake) {
+          localStorage.removeItem('synapsis_activeTakeExamId');
+          showToast('Ya utilizaste tu intento permitido en esta evaluación. Comunícate con tu docente para analizar la causa y habilitar otro intento.', 'warning');
+          return;
+        }
       }
     }
 
