@@ -5,11 +5,12 @@
 
 import React, { useState } from 'react';
 import { 
-  Users, Award, BookOpen, Clock, FileSpreadsheet, 
-  Search, ChevronRight, CheckCircle, Percent, ShieldCheck 
+  Users, BookOpen, FileSpreadsheet, 
+  Search, ChevronRight, Percent, FileDown, Loader2
 } from 'lucide-react';
-import { User, Exam, Submission, GradeRecord, Subject, Parcial } from '../types';
+import { User, Exam, Submission, GradeRecord, Subject, Parcial, Institution } from '../types';
 import { avatarColor, avatarLetter, fmtDate } from '../lib/db';
+import { generateStudentHistoryPDF } from '../lib/pdfReport';
 
 interface HistorialAcademicoProps {
   users: User[];
@@ -18,19 +19,28 @@ interface HistorialAcademicoProps {
   gradeRecords: GradeRecord[];
   subjects: Subject[];
   parciales: Parcial[];
+  institutions?: Institution[];
+  toast?: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 export default function HistorialAcademico({ 
-  users, exams, submissions, gradeRecords, subjects, parciales 
+  users, exams, submissions, gradeRecords, subjects, parciales, institutions = [], toast 
 }: HistorialAcademicoProps) {
   const estudiantes = users.filter(u => u.rol === 'estudiante');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => estudiantes[0]?.id || null);
   const [query, setQuery] = useState('');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  const filteredEstudiantes = estudiantes.filter(e => 
-    e.nombre.toLowerCase().includes(query.toLowerCase()) || 
-    e.email.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredEstudiantes = estudiantes.filter(e => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (e.nombre || '').toLowerCase().includes(q) || 
+      (e.email || '').toLowerCase().includes(q) ||
+      (e.cedula || '').toLowerCase().includes(q) ||
+      (e.codigo || '').toLowerCase().includes(q)
+    );
+  });
 
   const activeStudent = estudiantes.find(e => e.id === selectedStudentId);
 
@@ -59,6 +69,29 @@ export default function HistorialAcademico({
     const sum = gradesList.reduce((acc, c) => acc + c, 0);
     overallAvg = Math.round((sum / gradesList.length) * 10) / 10; // decimal rounded
   }
+
+  const handleDownloadPDF = () => {
+    if (!activeStudent || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      const fileName = generateStudentHistoryPDF({
+        student: activeStudent,
+        exams,
+        submissions: studentSubs,
+        gradeRecords: studentGrades,
+        subjects,
+        parciales,
+        overallAvg,
+        institution: institutions[0] || null,
+      });
+      toast?.(`Reporte descargado: ${fileName}`, 'success');
+    } catch (err) {
+      console.error('Error generating student history PDF:', err);
+      toast?.('No se pudo generar el reporte PDF. Inténtalo nuevamente.', 'error');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   return (
     <div className="page-historialAcademico animate-fade-in pb-12">
@@ -134,7 +167,7 @@ export default function HistorialAcademico({
               <div className="card bg-white p-5 rounded-2xl border border-slate-201 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 theme-bg-surface theme-border">
                 <div className="flex items-center gap-3.5 text-left self-start">
                   <div 
-                    className="w-13 h-13 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow"
+                    className="w-13 h-13 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow shrink-0"
                     style={{ backgroundColor: avatarColor(activeStudent.nombre) }}
                   >
                     {avatarLetter(activeStudent.nombre)}
@@ -160,19 +193,36 @@ export default function HistorialAcademico({
                   </div>
                 </div>
 
-                <div className="flex gap-4 self-stretch md:self-auto font-sans">
-                  <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
-                    <span className="block text-xl font-black text-indigo-700">{overallAvg > 0 ? overallAvg.toFixed(1) : '—'}</span>
-                    <span className="text-[10px] font-semibold text-slate-500">Promedio</span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-stretch md:self-auto font-sans">
+                  <div className="flex gap-3">
+                    <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 sm:flex-none">
+                      <span className="block text-xl font-black text-indigo-700">{overallAvg > 0 ? overallAvg.toFixed(1) : '—'}</span>
+                      <span className="text-[10px] font-semibold text-slate-500">Promedio</span>
+                    </div>
+                    <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 sm:flex-none">
+                      <span className="block text-xl font-bold text-slate-705">{studentSubs.length}</span>
+                      <span className="text-[10px] font-semibold text-slate-500">Exámenes</span>
+                    </div>
+                    <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 sm:flex-none">
+                      <span className="block text-xl font-bold text-slate-705">{studentGrades.length}</span>
+                      <span className="text-[10px] font-semibold text-slate-500">Notas Reg</span>
+                    </div>
                   </div>
-                  <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
-                    <span className="block text-xl font-bold text-slate-705">{studentSubs.length}</span>
-                    <span className="text-[10px] font-semibold text-slate-500">Exámenes</span>
-                  </div>
-                  <div className="border border-slate-105 p-2.5 rounded-xl text-center bg-slate-50 min-w-[70px] flex-1 md:flex-none">
-                    <span className="block text-xl font-bold text-slate-705">{studentGrades.length}</span>
-                    <span className="text-[10px] font-semibold text-slate-500">Notas Reg</span>
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    disabled={isGeneratingPdf}
+                    className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 whitespace-nowrap shrink-0"
+                    title="Descargar reporte resumido del historial de notas en PDF"
+                  >
+                    {isGeneratingPdf ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <FileDown className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>{isGeneratingPdf ? 'Generando...' : 'Descargar PDF'}</span>
+                  </button>
                 </div>
               </div>
 

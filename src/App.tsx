@@ -1871,6 +1871,8 @@ export default function App() {
             gradeRecords={db.gradeRecords}
             subjects={db.subjects}
             parciales={db.parciales}
+            institutions={db.institutions}
+            toast={showToast}
           />
         );
       case 'estudiantes':
