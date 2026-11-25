@@ -6,8 +6,19 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Award, BookOpen, Clock, CheckCircle, XCircle, Search, 
-  Printer, Sparkles, GraduationCap, FileCheck, ShieldCheck, Layers
+  Printer, Sparkles, GraduationCap, FileCheck, ShieldCheck, Layers, TrendingUp
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  Legend
+} from 'recharts';
 import { User, Exam, Submission, GradeRecord, Subject, Parcial, Semester, Assignment, AssignmentSubmission } from '../types';
 import { 
   fmtDate, 
@@ -259,6 +270,119 @@ export default function MiHistorial({
   const paginatedTrabajos = filteredAssignmentSubmissions.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
   const paginatedSubs = filteredExamSubs.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
+  // 4. Semester Progress Data for Recharts LineChart
+  const semesterProgressData = useMemo(() => {
+    const romanMap: Record<string, { order: number; shortLabel: string; fullLabel: string }> = {
+      semestre_1: { order: 1, shortLabel: 'Sem. I', fullLabel: 'SEMESTRE I' },
+      semestre_2: { order: 2, shortLabel: 'Sem. II', fullLabel: 'SEMESTRE II' },
+      semestre_3: { order: 3, shortLabel: 'Sem. III', fullLabel: 'SEMESTRE III' },
+      semestre_4: { order: 4, shortLabel: 'Sem. IV', fullLabel: 'SEMESTRE IV' },
+      semestre_5: { order: 5, shortLabel: 'Sem. V', fullLabel: 'SEMESTRE V' },
+      semestre_6: { order: 6, shortLabel: 'Sem. VI', fullLabel: 'SEMESTRE VI' },
+      semestre_7: { order: 7, shortLabel: 'Sem. VII', fullLabel: 'SEMESTRE VII' },
+      semestre_8: { order: 8, shortLabel: 'Sem. VIII', fullLabel: 'SEMESTRE VIII' },
+      semestre_9: { order: 9, shortLabel: 'Sem. IX', fullLabel: 'SEMESTRE IX' },
+    };
+
+    const resolveSemMeta = (rawSem?: string) => {
+      const semObj = rawSem
+        ? semesters.find(s => s.id === rawSem || normalizeString(s.nombre) === normalizeString(rawSem))
+        : undefined;
+      const rawName = (semObj?.nombre || rawSem || currentUser.semestre || 'General').trim();
+      const canonical = normalizeSemesterCanonicalKey(rawName);
+      if (canonical && romanMap[canonical]) {
+        return { key: canonical, ...romanMap[canonical] };
+      }
+      const fallbackKey = normalizeString(rawName) || 'general';
+      return {
+        key: fallbackKey,
+        order: 99,
+        shortLabel: rawName.length > 14 ? `${rawName.slice(0, 12)}…` : rawName,
+        fullLabel: rawName.toUpperCase(),
+      };
+    };
+
+    interface SemBucket {
+      key: string;
+      order: number;
+      shortLabel: string;
+      fullLabel: string;
+      officialGrades: number[];
+      examGrades: number[];
+      assignmentGrades: number[];
+    }
+
+    const buckets = new Map<string, SemBucket>();
+    const getBucket = (rawSem?: string): SemBucket => {
+      const meta = resolveSemMeta(rawSem);
+      let existing = buckets.get(meta.key);
+      if (!existing) {
+        existing = {
+          ...meta,
+          officialGrades: [],
+          examGrades: [],
+          assignmentGrades: [],
+        };
+        buckets.set(meta.key, existing);
+      }
+      return existing;
+    };
+
+    scopedGradeRecords.forEach(rec => {
+      if (rec.nota == null || isNaN(Number(rec.nota))) return;
+      const sub = resolveSubjectByAnyRef(rec.asignaturaId);
+      const bucket = getBucket(sub?.semestre);
+      bucket.officialGrades.push(Number(rec.nota));
+    });
+
+    scopedExamSubs.forEach(s => {
+      if (s.estado === 'pendiente') return;
+      const exam = exams.find(e => e.id === s.examenId);
+      const subObj = resolveSubjectByAnyRef(exam?.materia);
+      const bucket = getBucket(subObj?.semestre || exam?.semestre);
+      bucket.examGrades.push(Number(((Number(s.puntaje) || 0) / 20).toFixed(2)));
+    });
+
+    scopedAssignmentSubs.forEach(item => {
+      if (item.scaled5 == null) return;
+      const bucket = getBucket(item.subject?.semestre || item.assignment?.semestre);
+      bucket.assignmentGrades.push(item.scaled5);
+    });
+
+    const avg = (arr: number[]) =>
+      arr.length > 0 ? Number((arr.reduce((sum, v) => sum + v, 0) / arr.length).toFixed(2)) : null;
+
+    return Array.from(buckets.values())
+      .sort((a, b) => a.order - b.order || a.fullLabel.localeCompare(b.fullLabel))
+      .map(b => {
+        const officialAvg = avg(b.officialGrades);
+        const examAvg = avg(b.examGrades);
+        const combinedFallback = avg([...b.examGrades, ...b.assignmentGrades]);
+        const promedio = officialAvg !== null ? officialAvg : combinedFallback;
+        return {
+          semestre: b.shortLabel,
+          semestreCompleto: b.fullLabel,
+          promedio,
+          evaluaciones: examAvg,
+          totalRegistros: b.officialGrades.length + b.examGrades.length + b.assignmentGrades.length,
+        };
+      })
+      .filter(point => point.promedio !== null);
+  }, [scopedGradeRecords, scopedExamSubs, scopedAssignmentSubs, exams, subjects, semesters, currentUser.semestre]);
+
+  const hasExamSeries = useMemo(
+    () => semesterProgressData.some(d => d.evaluaciones !== null),
+    [semesterProgressData]
+  );
+
+  const semesterTrendDelta = useMemo(() => {
+    if (semesterProgressData.length < 2) return null;
+    const prev = semesterProgressData[semesterProgressData.length - 2]?.promedio;
+    const curr = semesterProgressData[semesterProgressData.length - 1]?.promedio;
+    if (prev == null || curr == null) return null;
+    return Number((curr - prev).toFixed(2));
+  }, [semesterProgressData]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -391,6 +515,142 @@ export default function MiHistorial({
             <div className="text-[10px] text-slate-400 mt-0.5">Cuestionarios en plataforma</div>
           </div>
         </div>
+      </div>
+
+      {/* SEMESTER GRADE PROGRESS LINE CHART (RECHARTS) */}
+      <div className="mb-6 bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm theme-bg-surface theme-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2" style={{ color: 'var(--gray-900)' }}>
+              <TrendingUp className="w-5 h-5 text-indigo-600 shrink-0" />
+              <span>{isStaff ? 'Evolución de Notas por Semestre' : 'Mi Progreso de Notas por Semestre'}</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Rendimiento promedio en escala de 0.0 a 5.0 (línea de aprobación mínima: 3.0)
+            </p>
+          </div>
+
+          {semesterTrendDelta !== null && (
+            <div
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border self-start sm:self-auto ${
+                semesterTrendDelta > 0
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : semesterTrendDelta < 0
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              <span>
+                {semesterTrendDelta > 0
+                  ? `▲ +${semesterTrendDelta.toFixed(2)} pts vs. semestre anterior`
+                  : semesterTrendDelta < 0
+                    ? `▼ ${semesterTrendDelta.toFixed(2)} pts vs. semestre anterior`
+                    : 'Estable vs. semestre anterior'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {semesterProgressData.length === 0 ? (
+          <div className="py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 px-4">
+            <TrendingUp className="w-9 h-9 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-slate-600">
+              Aún no hay suficientes calificaciones por semestre para graficar
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Cuando se registren notas definitivas o evaluaciones online, verás aquí la curva de progreso semestral.
+            </p>
+          </div>
+        ) : (
+          <div className="w-full h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={semesterProgressData} margin={{ top: 10, right: 18, left: -12, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="semestre"
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 5]}
+                  ticks={[0, 1, 2, 3, 4, 5]}
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                  axisLine={{ stroke: '#cbd5e1' }}
+                  tickLine={false}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || payload.length === 0) return null;
+                    const row = payload[0].payload as {
+                      semestreCompleto: string;
+                      promedio: number | null;
+                      evaluaciones: number | null;
+                      totalRegistros: number;
+                    };
+                    return (
+                      <div className="bg-slate-900 text-white rounded-xl px-3.5 py-2.5 shadow-xl border border-slate-700 text-xs space-y-1">
+                        <div className="font-extrabold text-cyan-300 tracking-wide">
+                          {row.semestreCompleto}
+                        </div>
+                        {row.promedio !== null && (
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-slate-300">Promedio general:</span>
+                            <span className="font-bold text-white">{row.promedio.toFixed(2)} / 5.0</span>
+                          </div>
+                        )}
+                        {row.evaluaciones !== null && (
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-slate-300">Exámenes online:</span>
+                            <span className="font-bold text-teal-300">{row.evaluaciones.toFixed(2)} / 5.0</span>
+                          </div>
+                        )}
+                        <div className="text-[11px] text-slate-400 pt-0.5 border-t border-slate-800">
+                          {row.totalRegistros} {row.totalRegistros === 1 ? 'registro académico' : 'registros académicos'}
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 600 }} />
+                <ReferenceLine
+                  y={3}
+                  stroke="#10b981"
+                  strokeDasharray="4 4"
+                  label={{
+                    value: 'Mín. 3.0',
+                    position: 'insideTopRight',
+                    fill: '#059669',
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="promedio"
+                  name="Promedio Semestral"
+                  stroke="#4f46e5"
+                  strokeWidth={3}
+                  dot={{ r: 5, fill: '#4f46e5', stroke: '#ffffff', strokeWidth: 2 }}
+                  activeDot={{ r: 7, fill: '#06b6d4', stroke: '#ffffff', strokeWidth: 2 }}
+                  connectNulls
+                />
+                {hasExamSeries && (
+                  <Line
+                    type="monotone"
+                    dataKey="evaluaciones"
+                    name="Exámenes Online (esc. 5.0)"
+                    stroke="#0d9488"
+                    strokeWidth={2}
+                    strokeDasharray="5 4"
+                    dot={{ r: 4, fill: '#0d9488', stroke: '#ffffff', strokeWidth: 1.5 }}
+                    connectNulls
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* ADMIN SCOPE SWITCHER */}
