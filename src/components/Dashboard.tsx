@@ -1251,8 +1251,8 @@ export default function Dashboard({
                           const displayExamTitle = exam
                             ? cleanExamTitle(exam.titulo)
                             : rawMissingTitle
-                              ? `${cleanExamTitle(rawMissingTitle)} (${recycledExam ? 'examen en papelera' : 'examen oculto aquí'})`
-                              : 'Examen no visible en este PC (ver Resultados)';
+                              ? cleanExamTitle(rawMissingTitle)
+                              : 'Evaluación archivada';
                           const displayStudentName = student?.nombre || sub.estudianteNombre || 'Estudiante';
 
                           return (
@@ -1260,7 +1260,7 @@ export default function Dashboard({
                               key={sub.id}
                               onClick={() => !exam && onNavigate('resultados')}
                               className={`hover:bg-[#0a3842]/50 transition-colors ${!exam ? 'cursor-pointer' : ''}`}
-                              title={!exam ? 'La entrega del estudiante está intacta, pero este examen figura oculto o en papelera en tu navegador (aunque siga activo en la nube). Haz clic para restaurarlo o gestionarlo en Resultados.' : undefined}
+                              title={!exam ? 'Evaluación archivada — haz clic para ver en Resultados' : undefined}
                             >
                               <td className="py-2 px-2.5 font-bold text-white truncate max-w-[140px]">
                                 {displayStudentName}

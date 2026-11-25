@@ -77,6 +77,7 @@ export default function Resultados({
   const attemptedCloudIdsRef = useRef<Set<string>>(new Set());
   const [confirmDeleteCloudExamId, setConfirmDeleteCloudExamId] = useState<string | null>(null);
   const [isMutatingCloudExam, setIsMutatingCloudExam] = useState(false);
+  const [showArchivedExams, setShowArchivedExams] = useState(false);
 
   const handleDeleteSubmission = async (subId: string, studentName: string) => {
     try {
@@ -308,6 +309,38 @@ export default function Resultados({
       );
     })
     .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+  const groupedOrphanExams = React.useMemo(() => {
+    const map = new Map<string, {
+      examId: string;
+      cleanTitle: string;
+      recycledItem?: RecycleItem;
+      cloudExam?: Exam;
+      subs: Submission[];
+    }>();
+
+    orphanSubmissions.forEach(s => {
+      const key = s.examenId || 'sin-examen';
+      let group = map.get(key);
+      if (!group) {
+        const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
+        const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
+        const cloudExam = cloudOrphanExams[s.examenId];
+        const rawTitle = recycledExam?.titulo || recycledItem?.titulo || cloudExam?.titulo;
+        group = {
+          examId: s.examenId,
+          cleanTitle: rawTitle ? cleanExamTitle(rawTitle) : 'Evaluación archivada',
+          recycledItem,
+          cloudExam,
+          subs: []
+        };
+        map.set(key, group);
+      }
+      group.subs.push(s);
+    });
+
+    return Array.from(map.values());
+  }, [orphanSubmissions, effectiveRecycleBin, cloudOrphanExams]);
 
   const examsPerPage = 10;
   const totalPages = Math.ceil(myExams.length / examsPerPage) || 1;
@@ -761,216 +794,6 @@ export default function Resultados({
         </div>
       )}
 
-      {orphanSubmissions.length > 0 && (
-        <div className="mb-6 bg-amber-50/60 border border-amber-200 rounded-2xl p-5 shadow-xs animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-amber-200/70">
-            <div>
-              <h3 className="text-base font-extrabold text-amber-950 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Entregas vinculadas a exámenes ocultos o en Papelera ({orphanSubmissions.length})</span>
-              </h3>
-              <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">
-                <strong>Tus entregas no fueron eliminadas:</strong> están guardadas correctamente en la nube. Lo que figura en Papelera o eliminado en caché local de este navegador es el <strong>examen</strong> correspondiente (aunque siga activo en Supabase y visible para estudiantes). Puedes restaurar el examen a tu lista o eliminarlo definitivamente de la nube si es un examen antiguo/duplicado.
-              </p>
-            </div>
-          </div>
-
-          <div className="table-wrap overflow-hidden border border-amber-200 rounded-xl bg-white">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead>
-                <tr className="bg-amber-50/70 text-amber-900/70 font-semibold text-xs uppercase tracking-wider border-b border-amber-200">
-                  <th className="py-2.5 px-4">Estudiante</th>
-                  <th className="py-2.5 px-4">Examen / Estado en Nube</th>
-                  <th className="py-2.5 px-4">Nota</th>
-                  <th className="py-2.5 px-4">Fecha</th>
-                  <th className="py-2.5 px-4 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {orphanSubmissions.map(s => {
-                  const student = users.find(u => u.id === s.estudianteId);
-                  const stName = student?.nombre || s.estudianteNombre || 'Estudiante';
-                  const recycledItem = effectiveRecycleBin.find(r => r.tipo === 'examen' && r.originalId === s.examenId);
-                  const recycledExam = (recycledItem?.data || recycledItem?.payload) as Exam | undefined;
-                  const cloudExam = cloudOrphanExams[s.examenId];
-                  const examLabel = recycledExam?.titulo || recycledItem?.titulo || cloudExam?.titulo;
-                  const cleanTitle = examLabel ? cleanExamTitle(examLabel) : 'Examen no encontrado en la nube';
-
-                  return (
-                    <tr key={s.id} className="hover:bg-amber-50/30">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
-                            style={{ backgroundColor: avatarColor(stName) }}
-                          >
-                            {avatarLetter(stName)}
-                          </div>
-                          <span className="text-slate-800 font-semibold">{stName}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
-                          <span>{cleanTitle}</span>
-                          {cloudExam && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                              cloudExam.estado === 'activo'
-                                ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}>
-                              {cloudExam.estado === 'activo' ? 'Activo en Supabase (oculto aquí)' : 'Cerrado en Supabase'}
-                            </span>
-                          )}
-                          {recycledItem && !cloudExam && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200">
-                              En Papelera local
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[10px] font-mono text-slate-400 mt-0.5">
-                          ID examen: {s.examenId}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold border rounded-full ${
-                          s.aprobado
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
-                          <span>{formatGrade5(s.puntaje)}</span>
-                          <span className="text-[10px] font-medium opacity-70">({s.puntaje}%)</span>
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap">
-                        {fmtDate(s.fecha)} {fmtTime(s.fecha)}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {recycledItem && onRestoreRecycleItem ? (
-                            <button
-                              type="button"
-                              onClick={() => onRestoreRecycleItem(recycledItem)}
-                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1"
-                              title="Restaurar este examen desde la Papelera"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Restaurar examen</span>
-                            </button>
-                          ) : cloudExam && onRestoreExamFromCloud ? (
-                            <button
-                              type="button"
-                              disabled={isMutatingCloudExam}
-                              onClick={async () => {
-                                setIsMutatingCloudExam(true);
-                                try {
-                                  await onRestoreExamFromCloud(cloudExam);
-                                } finally {
-                                  setIsMutatingCloudExam(false);
-                                }
-                              }}
-                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                              title="Volver a mostrar este examen en tu lista de Mis Exámenes y Resultados"
-                            >
-                              <RotateCcw className="w-3.5 h-3.5" />
-                              <span>Restaurar a mi lista</span>
-                            </button>
-                          ) : null}
-
-                          {currentUser.rol === 'admin' && cloudExam && onDeleteExamFromCloud && (
-                            confirmDeleteCloudExamId === s.id ? (
-                              <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-lg shadow-xs animate-fade-in">
-                                <span className="text-[11px] font-bold text-amber-900">¿Borrar examen de la nube?</span>
-                                <button
-                                  type="button"
-                                  disabled={isMutatingCloudExam}
-                                  onClick={async () => {
-                                    setIsMutatingCloudExam(true);
-                                    try {
-                                      await onDeleteExamFromCloud(cloudExam.id, cleanTitle);
-                                      setCloudOrphanExams(prev => {
-                                        const next = { ...prev };
-                                        delete next[cloudExam.id];
-                                        return next;
-                                      });
-                                    } finally {
-                                      setIsMutatingCloudExam(false);
-                                      setConfirmDeleteCloudExamId(null);
-                                    }
-                                  }}
-                                  className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded transition cursor-pointer disabled:opacity-50"
-                                >
-                                  {isMutatingCloudExam ? '...' : 'Sí, borrar examen'}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isMutatingCloudExam}
-                                  onClick={() => setConfirmDeleteCloudExamId(null)}
-                                  className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded transition cursor-pointer"
-                                >
-                                  No
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteCloudExamId(s.id)}
-                                className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs"
-                                title="Eliminar este examen viejo/duplicado de Supabase para que ningún estudiante vuelva a presentarlo (las entregas se conservan)"
-                              >
-                                Eliminar examen de la nube
-                              </button>
-                            )
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => handleOpenGradingModal(s.id)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs"
-                          >
-                            Ver respuestas
-                          </button>
-                          {deletingSubId === s.id ? (
-                            <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg shadow-xs animate-fade-in">
-                              <span className="text-[11px] font-bold text-rose-700">¿Eliminar?</span>
-                              <button
-                                type="button"
-                                disabled={isDeleting}
-                                onClick={() => handleDeleteSubmission(s.id, stName)}
-                                className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded transition cursor-pointer disabled:opacity-50"
-                              >
-                                {isDeleting ? '...' : 'Sí'}
-                              </button>
-                              <button
-                                type="button"
-                                disabled={isDeleting}
-                                onClick={() => setDeletingSubId(null)}
-                                className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded transition cursor-pointer"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setDeletingSubId(s.id)}
-                              className="px-2 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                              title={`Eliminar esta entrega de ${stName}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Eliminar entrega</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {myExams.length === 0 && orphanSubmissions.length === 0 ? (
         <div className="card bg-white p-8 border rounded-2xl text-center flex flex-col items-center justify-center">
           <Search className="w-10 h-10 text-slate-350 mb-3" />
@@ -1261,6 +1084,213 @@ export default function Resultados({
                   Siguiente
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECCIÓN COLAPSADA DE EVALUACIONES ARCHIVADAS / ELIMINADAS CON ENTREGAS CONSERVADAS */}
+      {groupedOrphanExams.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-xs theme-bg-surface theme-border overflow-hidden">
+          <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800" style={{ color: 'var(--gray-900)' }}>
+                Historial de evaluaciones archivadas ({groupedOrphanExams.length})
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {orphanSubmissions.length} entrega{orphanSubmissions.length === 1 ? '' : 's'} conservada{orphanSubmissions.length === 1 ? '' : 's'} de evaluaciones que fueron quitadas de la lista principal.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowArchivedExams(prev => !prev)}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer self-start sm:self-auto shrink-0"
+            >
+              {(showArchivedExams || myExams.length === 0) ? 'Ocultar archivadas' : `Ver archivadas (${orphanSubmissions.length})`}
+            </button>
+          </div>
+
+          {(showArchivedExams || myExams.length === 0) && (
+            <div className="border-t border-slate-100 p-4 space-y-4 bg-slate-50/50">
+              {groupedOrphanExams.map(group => (
+                <div key={group.examId} className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs theme-bg-surface theme-border">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900" style={{ color: 'var(--gray-900)' }}>
+                        {group.cleanTitle}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Evaluación archivada · {group.subs.length} {group.subs.length === 1 ? 'entrega' : 'entregas'}
+                        {group.cloudExam?.estado === 'activo' ? ' · Aún visible para estudiantes' : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {group.recycledItem && onRestoreRecycleItem ? (
+                        <button
+                          type="button"
+                          onClick={() => onRestoreRecycleItem(group.recycledItem!)}
+                          className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Restaurar evaluación</span>
+                        </button>
+                      ) : group.cloudExam && onRestoreExamFromCloud ? (
+                        <button
+                          type="button"
+                          disabled={isMutatingCloudExam}
+                          onClick={async () => {
+                            setIsMutatingCloudExam(true);
+                            try {
+                              await onRestoreExamFromCloud(group.cloudExam!);
+                            } finally {
+                              setIsMutatingCloudExam(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Restaurar a mi lista</span>
+                        </button>
+                      ) : null}
+
+                      {currentUser.rol === 'admin' && group.cloudExam && onDeleteExamFromCloud && (
+                        confirmDeleteCloudExamId === group.examId ? (
+                          <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                            <span className="text-[11px] font-bold text-rose-800">¿Quitar para estudiantes?</span>
+                            <button
+                              type="button"
+                              disabled={isMutatingCloudExam}
+                              onClick={async () => {
+                                setIsMutatingCloudExam(true);
+                                try {
+                                  await onDeleteExamFromCloud(group.cloudExam!.id, group.cleanTitle);
+                                  setCloudOrphanExams(prev => {
+                                    const next = { ...prev };
+                                    delete next[group.cloudExam!.id];
+                                    return next;
+                                  });
+                                } finally {
+                                  setIsMutatingCloudExam(false);
+                                  setConfirmDeleteCloudExamId(null);
+                                }
+                              }}
+                              className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded cursor-pointer disabled:opacity-50"
+                            >
+                              {isMutatingCloudExam ? '...' : 'Sí, quitar'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isMutatingCloudExam}
+                              onClick={() => setConfirmDeleteCloudExamId(null)}
+                              className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded cursor-pointer"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteCloudExamId(group.examId)}
+                            className="px-3 py-1.5 bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-700 text-xs font-bold rounded-lg transition cursor-pointer"
+                            title="Retira esta evaluación antigua para que los estudiantes no vuelvan a verla (las notas se conservan)"
+                          >
+                            Quitar de disponibles
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="table-wrap overflow-x-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-400 font-semibold text-xs uppercase tracking-wider border-b border-slate-200">
+                          <th className="py-2 px-3">Estudiante</th>
+                          <th className="py-2 px-3">Nota</th>
+                          <th className="py-2 px-3">Fecha</th>
+                          <th className="py-2 px-3 text-right">Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {group.subs.map(s => {
+                          const student = users.find(u => u.id === s.estudianteId);
+                          const stName = student?.nombre || s.estudianteNombre || 'Estudiante';
+                          return (
+                            <tr key={s.id} className="hover:bg-slate-50/60">
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
+                                    style={{ backgroundColor: avatarColor(stName) }}
+                                  >
+                                    {avatarLetter(stName)}
+                                  </div>
+                                  <span className="text-slate-800 font-semibold">{stName}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold border rounded-full tabular-nums ${
+                                  s.aprobado
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}>
+                                  <span>{formatGrade5(s.puntaje)}</span>
+                                  <span className="text-[10px] font-medium opacity-70">({s.puntaje}%)</span>
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-xs text-slate-400 whitespace-nowrap">
+                                {fmtDate(s.fecha)} {fmtTime(s.fecha)}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenGradingModal(s.id)}
+                                    className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg transition cursor-pointer shadow-2xs"
+                                  >
+                                    Ver respuestas
+                                  </button>
+                                  {deletingSubId === s.id ? (
+                                    <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-lg">
+                                      <span className="text-[11px] font-bold text-rose-700">¿Eliminar?</span>
+                                      <button
+                                        type="button"
+                                        disabled={isDeleting}
+                                        onClick={() => handleDeleteSubmission(s.id, stName)}
+                                        className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-black rounded cursor-pointer disabled:opacity-50"
+                                      >
+                                        {isDeleting ? '...' : 'Sí'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={isDeleting}
+                                        onClick={() => setDeletingSubId(null)}
+                                        className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[11px] font-bold rounded cursor-pointer"
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingSubId(s.id)}
+                                      className="px-2 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                      title={`Eliminar esta entrega de ${stName}`}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Eliminar</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
