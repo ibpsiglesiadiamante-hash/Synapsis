@@ -30,7 +30,8 @@ import {
   ArrowLeft,
   LayoutGrid,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 import { 
@@ -416,6 +417,43 @@ export default function App() {
   const [regFoto, setRegFoto] = useState('');
   const [regShowPass, setRegShowPass] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [regTouched, setRegTouched] = useState<{ email: boolean; cedula: boolean }>({
+    email: false,
+    cedula: false,
+  });
+
+  const getRegEmailError = (value: string, touched: boolean): string => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return touched ? 'El correo electrónico es obligatorio.' : '';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      return 'Formato de correo inválido (ej: nombre@dominio.com).';
+    }
+    return '';
+  };
+
+  const getRegCedulaError = (value: string, touched: boolean): string => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return touched ? 'El número de cédula es obligatorio.' : '';
+    }
+    if (/\D/.test(trimmed)) {
+      return 'Solo se permiten dígitos numéricos (sin espacios, letras ni guiones).';
+    }
+    if (trimmed.length < 6) {
+      return 'La cédula debe tener al menos 6 dígitos.';
+    }
+    if (trimmed.length > 12) {
+      return 'La cédula no debe superar los 12 dígitos.';
+    }
+    return '';
+  };
+
+  const regEmailError = getRegEmailError(regEmail, regTouched.email);
+  const regCedulaError = getRegCedulaError(regCedula, regTouched.cedula);
+  const isRegEmailValid = regEmail.trim().length > 0 && !getRegEmailError(regEmail, true);
+  const isRegCedulaValid = regCedula.trim().length > 0 && !getRegCedulaError(regCedula, true);
 
   // Persist current active tab and active exam actions
   useEffect(() => {
@@ -796,24 +834,28 @@ export default function App() {
 
   const handleRegisterStudent = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRegTouched({ email: true, cedula: true });
+
     if (!regNombre.trim()) {
       showToast('Por favor escribe tu nombre completo', 'warning');
       return;
     }
-    if (!regEmail.trim()) {
-      showToast('Por favor escribe tu correo electrónico', 'warning');
+    const emailValidationMsg = getRegEmailError(regEmail, true);
+    if (emailValidationMsg) {
+      showToast(emailValidationMsg, 'warning');
       return;
     }
-    if (!regCedula.trim()) {
-      showToast('Por favor escribe tu número de cédula o documento', 'warning');
+    const cedulaValidationMsg = getRegCedulaError(regCedula, true);
+    if (cedulaValidationMsg) {
+      showToast(cedulaValidationMsg, 'warning');
       return;
     }
     if (!regCelular.trim()) {
       showToast('Por favor escribe tu número de celular (campo obligatorio)', 'warning');
       return;
     }
-    if (!regPass.trim()) {
-      showToast('Por favor define una contraseña de acceso', 'warning');
+    if (!regPass.trim() || regPass.trim().length < 6) {
+      showToast('Por favor define una contraseña de al menos 6 caracteres', 'warning');
       return;
     }
 
@@ -863,6 +905,7 @@ export default function App() {
       setRegCelular('');
       setRegPass('');
       setRegFoto('');
+      setRegTouched({ email: false, cedula: false });
 
       // Automatically log in newly registered student
       setCurrentUser(newStudent);
@@ -2161,14 +2204,17 @@ export default function App() {
               </form>
             ) : (
               /* REGISTRO DE NUEVO ESTUDIANTE EN LA MISMA TARJETA */
-              <form onSubmit={handleRegisterStudent} className="w-full mt-5 space-y-3.5 animate-fade-in text-left">
+              <form onSubmit={handleRegisterStudent} noValidate className="w-full mt-5 space-y-3.5 animate-fade-in text-left">
                 <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5 mb-2">
                   <span className="text-xs sm:text-sm font-extrabold text-[#22d3ee] uppercase tracking-wider">
                     Matrícula de Nuevo Estudiante
                   </span>
                   <button 
                     type="button" 
-                    onClick={() => setLoginTab('login')}
+                    onClick={() => {
+                      setLoginTab('login');
+                      setRegTouched({ email: false, cedula: false });
+                    }}
                     className="text-xs sm:text-[13px] font-bold text-[#22d3ee] hover:text-[#67e8f9] hover:underline cursor-pointer shrink-0"
                   >
                     ← Iniciar sesión
@@ -2189,32 +2235,89 @@ export default function App() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                   <div>
-                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
+                    <label htmlFor="reg-email" className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Correo *
                     </label>
-                    <input 
-                      type="email" 
-                      required
-                      value={regEmail}
-                      onChange={e => setRegEmail(e.target.value)}
-                      placeholder="correo@ejemplo.com"
-                      className="w-full min-h-[46px] bg-white rounded-xl px-3.5 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
-                    />
+                    <div className="relative">
+                      <input 
+                        id="reg-email"
+                        type="email" 
+                        required
+                        value={regEmail}
+                        onChange={e => setRegEmail(e.target.value)}
+                        onBlur={() => setRegTouched(prev => ({ ...prev, email: true }))}
+                        aria-invalid={Boolean(regEmailError)}
+                        aria-describedby={regEmailError ? 'reg-email-error' : undefined}
+                        placeholder="correo@ejemplo.com"
+                        className={`w-full min-h-[46px] bg-white rounded-xl pl-3.5 pr-9 py-2.5 text-slate-900 text-base font-medium border-2 outline-none placeholder:text-slate-500 transition-all ${
+                          regEmailError
+                            ? 'border-rose-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/25'
+                            : isRegEmailValid
+                              ? 'border-emerald-400 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)]'
+                              : 'border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)]'
+                        }`}
+                      />
+                      {isRegEmailValid && (
+                        <CheckCircle2
+                          className="w-4 h-4 text-emerald-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    {regEmailError && (
+                      <p
+                        id="reg-email-error"
+                        role="alert"
+                        className="mt-1.5 flex items-start gap-1.5 text-xs font-semibold text-rose-400 leading-snug"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{regEmailError}</span>
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
+                    <label htmlFor="reg-cedula" className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Cédula *
                     </label>
-                    <input 
-                      type="text" 
-                      required
-                      value={regCedula}
-                      onChange={e => setRegCedula(e.target.value)}
-                      placeholder="ej: 1107065653"
-                      className="w-full min-h-[46px] bg-white rounded-xl px-3.5 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
-                    />
+                    <div className="relative">
+                      <input 
+                        id="reg-cedula"
+                        type="text" 
+                        inputMode="numeric"
+                        required
+                        value={regCedula}
+                        onChange={e => setRegCedula(e.target.value)}
+                        onBlur={() => setRegTouched(prev => ({ ...prev, cedula: true }))}
+                        aria-invalid={Boolean(regCedulaError)}
+                        aria-describedby={regCedulaError ? 'reg-cedula-error' : undefined}
+                        placeholder="ej: 1107065653"
+                        className={`w-full min-h-[46px] bg-white rounded-xl pl-3.5 pr-9 py-2.5 text-slate-900 text-base font-medium border-2 outline-none placeholder:text-slate-500 transition-all ${
+                          regCedulaError
+                            ? 'border-rose-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/25'
+                            : isRegCedulaValid
+                              ? 'border-emerald-400 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)]'
+                              : 'border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)]'
+                        }`}
+                      />
+                      {isRegCedulaValid && (
+                        <CheckCircle2
+                          className="w-4 h-4 text-emerald-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </div>
+                    {regCedulaError && (
+                      <p
+                        id="reg-cedula-error"
+                        role="alert"
+                        className="mt-1.5 flex items-start gap-1.5 text-xs font-semibold text-rose-400 leading-snug"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{regCedulaError}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
 
