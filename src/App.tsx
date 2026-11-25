@@ -2060,10 +2060,10 @@ export default function App() {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-2 text-center">
               Synapsis
             </h1>
-            <p className="text-[11px] font-black text-[#22d3ee] tracking-[0.22em] uppercase mt-1 font-mono text-center">
+            <p className="text-xs font-black text-[#22d3ee] tracking-[0.22em] uppercase mt-1 font-mono text-center">
               PORTAL BIO-CÓSMICO
             </p>
-            <p className="text-xs text-slate-400 font-normal text-center max-w-[280px] mt-2 leading-relaxed">
+            <p className="text-sm text-slate-200 font-normal text-center max-w-[300px] mt-2 leading-relaxed">
               Descubre, aprende y evalúa en conexión con el universo y el conocimiento
             </p>
 
@@ -2072,11 +2072,11 @@ export default function App() {
               <form onSubmit={handleLogin} className="w-full mt-6 space-y-4">
                 {/* Field 1: CORREO INSTITUCIONAL */}
                 <div className="w-full">
-                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block mb-1.5 text-left font-sans">
+                  <label htmlFor="email" className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-2 text-left font-sans">
                     CORREO INSTITUCIONAL
                   </label>
-                  <div className="w-full bg-white rounded-2xl flex items-center px-4 py-3 shadow-inner border border-transparent focus-within:border-cyan-500 transition-all">
-                    <UserIcon className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                  <div className="w-full min-h-[48px] bg-white rounded-2xl flex items-center px-4 py-3 shadow-inner border-2 border-slate-300/80 focus-within:border-[#22d3ee] focus-within:ring-4 focus-within:ring-[#22d3ee]/25 focus-within:shadow-[0_0_16px_rgba(34,211,238,0.3)] transition-all">
+                    <UserIcon className="w-5 h-5 text-slate-500 mr-3 shrink-0" />
                     <input 
                       type="text" 
                       name="email"
@@ -2085,27 +2085,27 @@ export default function App() {
                       value={loginEmail}
                       onChange={e => setLoginEmail(e.target.value)}
                       placeholder="ej: correo@synapsis.edu"
-                      className="w-full bg-transparent text-slate-900 text-xs sm:text-sm font-medium outline-none placeholder:text-slate-400"
+                      className="w-full bg-transparent text-slate-900 text-base font-medium outline-none placeholder:text-slate-500"
                     />
                   </div>
                 </div>
 
                 {/* Field 2: CONTRASEÑA ÚNICA */}
                 <div className="w-full">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest font-sans">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label htmlFor="login-password" className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider font-sans">
                       CONTRASEÑA ÚNICA
                     </label>
                     <button
                       type="button"
                       onClick={() => setIsRecuperarModalOpen(true)}
-                      className="text-[11px] text-[#22d3ee] hover:text-[#67e8f9] font-medium transition-colors cursor-pointer"
+                      className="text-xs sm:text-[13px] text-[#22d3ee] hover:text-[#67e8f9] font-semibold transition-colors cursor-pointer whitespace-nowrap"
                     >
                       ¿Olvidaste tu contraseña?
                     </button>
                   </div>
-                  <div className="w-full bg-white rounded-2xl flex items-center px-4 py-3 shadow-inner border border-transparent focus-within:border-cyan-500 transition-all">
-                    <Lock className="w-4 h-4 text-slate-400 mr-2.5 shrink-0" />
+                  <div className="w-full min-h-[48px] bg-white rounded-2xl flex items-center px-4 py-3 shadow-inner border-2 border-slate-300/80 focus-within:border-[#22d3ee] focus-within:ring-4 focus-within:ring-[#22d3ee]/25 focus-within:shadow-[0_0_16px_rgba(34,211,238,0.3)] transition-all">
+                    <Lock className="w-5 h-5 text-slate-500 mr-3 shrink-0" />
                     <input 
                       type={showPassword ? "text" : "password"}
                       name="password"
@@ -2113,16 +2113,16 @@ export default function App() {
                       required
                       value={loginPass}
                       onChange={e => setLoginPass(e.target.value)}
-                      placeholder="........"
-                      className="w-full bg-transparent text-slate-900 text-xs sm:text-sm font-medium outline-none placeholder:text-slate-400"
+                      placeholder="••••••••"
+                      className="w-full bg-transparent text-slate-900 text-base font-medium outline-none placeholder:text-slate-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded cursor-pointer shrink-0 ml-1"
+                      className="text-slate-500 hover:text-slate-800 transition-colors p-1 rounded cursor-pointer shrink-0 ml-1"
                       title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
@@ -2131,7 +2131,7 @@ export default function App() {
                 <button 
                   type="submit" 
                   disabled={isLoggingIn}
-                  className="w-full mt-5 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#00b080] via-[#059669] to-[#0d9488] hover:from-[#059669] hover:to-[#0f766e] text-white font-bold text-sm tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full min-h-[50px] mt-5 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#00b080] via-[#059669] to-[#0d9488] hover:from-[#059669] hover:to-[#0f766e] text-white font-bold text-base tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   {isLoggingIn ? (
                     <>
@@ -2145,22 +2145,22 @@ export default function App() {
               </form>
             ) : (
               /* REGISTRO DE NUEVO ESTUDIANTE EN LA MISMA TARJETA */
-              <form onSubmit={handleRegisterStudent} className="w-full mt-5 space-y-3 animate-fade-in text-left">
-                <div className="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-2">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              <form onSubmit={handleRegisterStudent} className="w-full mt-5 space-y-3.5 animate-fade-in text-left">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5 mb-2">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#22d3ee] uppercase tracking-wider">
                     Matrícula de Nuevo Estudiante
                   </span>
                   <button 
                     type="button" 
                     onClick={() => setLoginTab('login')}
-                    className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
+                    className="text-xs sm:text-[13px] font-bold text-[#22d3ee] hover:text-[#67e8f9] hover:underline cursor-pointer shrink-0"
                   >
                     ← Iniciar sesión
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                  <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                     Nombre Completo *
                   </label>
                   <input 
@@ -2169,13 +2169,13 @@ export default function App() {
                     value={regNombre}
                     onChange={e => setRegNombre(e.target.value)}
                     placeholder="ej: María Carmen Gómez"
-                    className="w-full bg-white rounded-xl px-3.5 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                    className="w-full min-h-[46px] bg-white rounded-xl px-4 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Correo *
                     </label>
                     <input 
@@ -2184,11 +2184,11 @@ export default function App() {
                       value={regEmail}
                       onChange={e => setRegEmail(e.target.value)}
                       placeholder="correo@ejemplo.com"
-                      className="w-full bg-white rounded-xl px-3 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                      className="w-full min-h-[46px] bg-white rounded-xl px-3.5 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Cédula *
                     </label>
                     <input 
@@ -2197,14 +2197,14 @@ export default function App() {
                       value={regCedula}
                       onChange={e => setRegCedula(e.target.value)}
                       placeholder="ej: 1107065653"
-                      className="w-full bg-white rounded-xl px-3 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                      className="w-full min-h-[46px] bg-white rounded-xl px-3.5 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Celular *
                     </label>
                     <input 
@@ -2213,17 +2213,17 @@ export default function App() {
                       value={regCelular}
                       onChange={e => setRegCelular(e.target.value)}
                       placeholder="ej: 3001234567"
-                      className="w-full bg-white rounded-xl px-3.5 py-2 text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                      className="w-full min-h-[46px] bg-white rounded-xl px-3.5 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none placeholder:text-slate-500 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                    <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                       Semestre
                     </label>
                     <select 
                       value={regSemestre}
                       onChange={e => setRegSemestre(e.target.value)}
-                      className="w-full bg-white rounded-xl px-2 py-2 text-slate-900 text-xs font-medium outline-none cursor-pointer"
+                      className="w-full min-h-[46px] bg-white rounded-xl px-3 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none cursor-pointer transition-all"
                     >
                       <option value="SEMESTRE I">SEMESTRE I</option>
                       <option value="SEMESTRE II">SEMESTRE II</option>
@@ -2238,10 +2238,10 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block mb-1">
+                  <label className="text-xs sm:text-[13px] font-extrabold text-white uppercase tracking-wider block mb-1.5">
                     Contraseña *
                   </label>
-                  <div className="w-full bg-white rounded-xl flex items-center px-3.5 py-2">
+                  <div className="w-full min-h-[46px] bg-white rounded-xl flex items-center px-3.5 py-2 border-2 border-slate-300/80 focus-within:border-[#22d3ee] focus-within:ring-4 focus-within:ring-[#22d3ee]/25 focus-within:shadow-[0_0_16px_rgba(34,211,238,0.3)] transition-all">
                     <input 
                       type={regShowPass ? "text" : "password"}
                       required
@@ -2249,15 +2249,15 @@ export default function App() {
                       value={regPass}
                       onChange={e => setRegPass(e.target.value)}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full bg-transparent text-slate-900 text-xs font-medium outline-none placeholder:text-slate-400"
+                      className="w-full bg-transparent text-slate-900 text-base font-medium outline-none placeholder:text-slate-500"
                     />
                     <button
                       type="button"
                       onClick={() => setRegShowPass(!regShowPass)}
-                      className="text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded cursor-pointer shrink-0 ml-1"
+                      className="text-slate-500 hover:text-slate-800 transition-colors p-1 rounded cursor-pointer shrink-0 ml-1"
                       title={regShowPass ? "Ocultar contraseña" : "Ver contraseña"}
                     >
-                      {regShowPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      {regShowPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
@@ -2265,7 +2265,7 @@ export default function App() {
                 <button 
                   type="submit" 
                   disabled={isRegistering}
-                  className="w-full mt-3 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full min-h-[48px] mt-3 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm sm:text-base shadow-md transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isRegistering ? 'Matriculando...' : 'Completar Matrícula y Acceder'}
                 </button>
@@ -2279,7 +2279,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setLoginTab(loginTab === 'login' ? 'register' : 'login')}
-              className="w-full min-h-[42px] px-4 py-2 rounded-xl text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-cyan-500/10 font-semibold transition-colors cursor-pointer select-none flex items-center justify-center gap-1.5"
+              className="w-full min-h-[44px] px-4 py-2.5 rounded-xl text-base text-[#22d3ee] hover:text-[#67e8f9] hover:bg-cyan-500/10 font-semibold transition-colors cursor-pointer select-none flex items-center justify-center gap-1.5"
             >
               {loginTab === 'login' ? (
                 <>
@@ -2296,7 +2296,7 @@ export default function App() {
           </div>
 
           {/* Institutional copyright note */}
-          <p className="mt-5 text-[11px] text-slate-500 font-medium text-center">
+          <p className="mt-5 text-xs text-slate-300 font-medium text-center">
             Synapsis ERP · Sistema Integral Cloud · Conexión Segura SSL
           </p>
         </div>
