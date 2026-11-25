@@ -119,6 +119,8 @@ import Papelera from './components/Papelera';
 import CentroNotificaciones from './components/CentroNotificaciones';
 import ShareAppModal from './components/ShareAppModal';
 import RecuperarPasswordModal from './components/RecuperarPasswordModal';
+import OfflineIndicator from './components/OfflineIndicator';
+import PWAInstallButton from './components/PWAInstallButton';
 
 export default function App() {
   // Database States
@@ -269,8 +271,19 @@ export default function App() {
   useEffect(() => {
     async function loadInitialDatabase() {
       try {
-        console.log('Loading Synapsis portal database from Supabase (PostgreSQL)...');
         const localDb = getInitialState();
+        initializeSyncCache(localDb);
+
+        // Si el usuario está sin conexión o en zona sin cobertura, arrancar de inmediato con localStorage
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          console.info('[Offline] Sin conexión a internet: cargando datos cacheados desde localStorage.');
+          currentDbRef.current = localDb;
+          setDb(localDb);
+          lastRemoteRefreshRef.current = 0;
+          return;
+        }
+
+        console.log('Loading Synapsis portal database from Supabase (PostgreSQL)...');
         await flushPendingSubmissions(localDb.submissions || []);
 
         const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
@@ -301,7 +314,7 @@ export default function App() {
         // Mantener Supabase sincronizado (incluyendo cualquier entrega que hubiera quedado local)
         await pushAllStateToSupabase(mergedDb).catch(e => console.warn('Background Supabase sync:', e));
       } catch (err) {
-        console.error('Error synchronizing database, running standalone with Supabase.', err);
+        console.error('Error synchronizing database, running with localStorage cache.', err);
       } finally {
         hasCompletedInitialLoadRef.current = true;
         setIsCloudLoading(false);
@@ -442,6 +455,7 @@ export default function App() {
   useEffect(() => {
     saveState(db);
     if (!hasCompletedInitialLoadRef.current || isCloudLoading) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     const timer = setTimeout(() => {
       syncStateToSupabase(db);
     }, 1500);
@@ -452,6 +466,7 @@ export default function App() {
   useEffect(() => {
     const triggerThrottledRefresh = () => {
       if (!hasCompletedInitialLoadRef.current) return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       const elapsed = Date.now() - lastRemoteRefreshRef.current;
       if (elapsed < 15000) return;
       lastRemoteRefreshRef.current = Date.now();
@@ -471,8 +486,9 @@ export default function App() {
       triggerThrottledRefresh();
     }
 
-    const handleOnline = () => {
-      flushPendingSubmissions(currentDbRef.current.submissions || []);
+    const handleOnline = async () => {
+      await flushPendingSubmissions(currentDbRef.current.submissions || []);
+      await syncStateToSupabase(currentDbRef.current).catch(() => {});
       triggerThrottledRefresh();
     };
     const handleVisibilityOrFocus = () => {
@@ -2293,6 +2309,10 @@ export default function App() {
                 </>
               )}
             </button>
+
+            <div className="mt-3">
+              <PWAInstallButton variant="login" />
+            </div>
           </div>
 
           {/* Institutional copyright note */}
@@ -2529,6 +2549,9 @@ export default function App() {
           showToast(`¡Contraseña restablecida con éxito para ${updatedUser.nombre}! Ya puedes ingresar.`, 'success');
         }}
       />
+
+      {/* INDICADOR DE CONECTIVIDAD SIN CONEXIÓN (PWA / localStorage) */}
+      <OfflineIndicator />
 
     </div>
   );

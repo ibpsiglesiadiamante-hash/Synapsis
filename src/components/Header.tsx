@@ -20,6 +20,7 @@ import {
 import { User } from '../types';
 import { avatarColor, avatarLetter } from '../lib/db';
 import { bioCosmicSynth } from '../lib/audioEngine';
+import PWAInstallButton from './PWAInstallButton';
 
 interface HeaderProps {
   currentUser: User;
@@ -217,6 +218,9 @@ export default function Header({
               </span>
             </button>
           )}
+
+          {/* Instalar PWA */}
+          <PWAInstallButton variant="header" />
 
           {/* Enlace & QR */}
           {onOpenShareModal && (
@@ -448,6 +452,8 @@ export default function Header({
                   <span>{isMusicPlaying ? 'Silenciar Sintonía' : 'Sintonía Cyber'}</span>
                 </button>
               )}
+
+              <PWAInstallButton variant="menu" />
             </div>
 
             {/* Botón destacado de Cerrar sesión */}

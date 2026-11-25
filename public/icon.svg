@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#0e2947" />
+      <stop offset="65%" stop-color="#070d18" />
+      <stop offset="100%" stop-color="#040810" />
+    </radialGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGlow)" />
+  <circle cx="256" cy="256" r="196" fill="none" stroke="url(#cyanGrad)" stroke-width="6" stroke-dasharray="10 10" opacity="0.55" />
+  <circle cx="256" cy="256" r="174" fill="#071324" stroke="#22d3ee" stroke-width="4" opacity="0.9" />
+  <!-- Graduation cap -->
+  <polygon points="256,126 368,176 256,226 144,176" fill="url(#cyanGrad)" />
+  <path d="M188,196 L188,236 C188,255 218,270 256,270 C294,270 324,255 324,236 L324,196 L256,226 Z" fill="#0284c7" />
+  <line x1="344" y1="186" x2="344" y2="246" stroke="url(#goldGrad)" stroke-width="7" stroke-linecap="round" />
+  <circle cx="344" cy="252" r="9" fill="url(#goldGrad)" />
+  <!-- Open book / synapsis base -->
+  <path d="M148,296 Q202,272 256,300 Q310,272 364,296 L354,358 Q305,336 256,360 Q207,336 158,358 Z" fill="url(#cyanGrad)" opacity="0.95" />
+  <line x1="256" y1="300" x2="256" y2="360" stroke="#071324" stroke-width="5" stroke-linecap="round" />
+</svg>
