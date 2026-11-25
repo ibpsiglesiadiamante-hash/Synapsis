@@ -2330,13 +2330,23 @@ export default function App() {
             {/* Horizontal divider */}
             <div className="w-full border-t border-slate-800/80 my-5" />
 
-            {/* Footer link exact match to image_2728e0a8.png */}
+            {/* Footer link highlighted in bright cyan-blue for mobile readability */}
             <button
               type="button"
               onClick={() => setLoginTab(loginTab === 'login' ? 'register' : 'login')}
-              className="text-xs text-slate-300 hover:text-[#22d3ee] font-medium transition-colors cursor-pointer select-none"
+              className="w-full min-h-[42px] px-4 py-2 rounded-xl text-sm text-[#22d3ee] hover:text-[#67e8f9] hover:bg-cyan-500/10 font-semibold transition-colors cursor-pointer select-none flex items-center justify-center gap-1.5"
             >
-              {loginTab === 'login' ? '¿Eres nuevo? Regístrate aquí' : '¿Ya tienes cuenta? Iniciar sesión aquí'}
+              {loginTab === 'login' ? (
+                <>
+                  <span>¿Eres nuevo?</span>
+                  <span className="underline underline-offset-4 font-bold">Regístrate aquí</span>
+                </>
+              ) : (
+                <>
+                  <span>¿Ya tienes cuenta?</span>
+                  <span className="underline underline-offset-4 font-bold">Iniciar sesión aquí</span>
+                </>
+              )}
             </button>
           </div>
 
