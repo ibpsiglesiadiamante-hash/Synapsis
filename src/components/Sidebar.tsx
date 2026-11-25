@@ -349,7 +349,7 @@ export default function Sidebar({ currentUser, activePage, onPageChange, isOpen,
           type="button"
           onClick={onOpenShareModal}
           className="mt-4 flex items-center justify-center gap-2 p-2.5 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 rounded-xl text-[11px] font-bold tracking-tight transition cursor-pointer select-none border border-indigo-200 shrink-0 shadow-xs"
-          title="Ver enlace oficial synapsis-ec.web.app y código QR"
+          title="Ver enlace oficial synapsis-erp.onrender.com y código QR"
         >
           <QrCode className="w-4 h-4 text-indigo-600 shrink-0" />
           <span>Enlace Oficial & QR</span>

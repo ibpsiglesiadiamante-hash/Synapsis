@@ -1450,7 +1450,7 @@ export function mergeStates(local: AppState, remote: AppState): AppState {
 
     const itemMap = new Map<string, any>();
 
-    // 1. Remote items from Cloud Firestore
+    // 1. Remote items from Supabase (PostgreSQL)
     remoteList.forEach((remoteItem: any) => {
       if (remoteItem && remoteItem.id && !deletedIds.has(remoteItem.id) && !recycleBinIds.has(remoteItem.id)) {
         itemMap.set(remoteItem.id, remoteItem);

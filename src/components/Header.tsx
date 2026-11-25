@@ -29,7 +29,7 @@ interface HeaderProps {
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onOpenShareModal?: () => void;
-  onSyncFirebase?: () => void;
+  onSyncCloud?: () => void;
   isSyncing?: boolean;
   onNavigate?: (pageId: string) => void;
   activeTab?: string;
@@ -43,7 +43,7 @@ export default function Header({
   onThemeChange,
   onLogout,
   onOpenShareModal,
-  onSyncFirebase,
+  onSyncCloud,
   isSyncing = false,
   onNavigate,
   activeTab = 'dashboard',
@@ -224,7 +224,7 @@ export default function Header({
               type="button"
               onClick={onOpenShareModal}
               className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-cyan-500/30 bg-indigo-50/80 dark:bg-cyan-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-cyan-300 text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
-              title="Ver enlace oficial synapsis-ec.web.app y código QR"
+              title="Ver enlace oficial synapsis-erp.onrender.com y código QR"
             >
               <QrCode className="w-4 h-4 text-indigo-600 dark:text-cyan-400 shrink-0" />
               <span className="hidden xl:inline">Enlace &amp; QR</span>
@@ -232,10 +232,10 @@ export default function Header({
           )}
 
           {/* Sincronizar Nube */}
-          {onSyncFirebase && (
+          {onSyncCloud && (
             <button
               type="button"
-              onClick={onSyncFirebase}
+              onClick={onSyncCloud}
               disabled={isSyncing}
               className="flex items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-500/35 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-60 shrink-0 whitespace-nowrap"
               title="Sincronizar datos con Supabase PostgreSQL"
@@ -397,11 +397,11 @@ export default function Header({
                 </button>
               )}
 
-              {onSyncFirebase && (
+              {onSyncCloud && (
                 <button
                   type="button"
                   onClick={() => {
-                    onSyncFirebase();
+                    onSyncCloud();
                   }}
                   disabled={isSyncing}
                   className="flex items-center justify-center gap-2 min-h-[42px] px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/35 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-bold cursor-pointer disabled:opacity-60"

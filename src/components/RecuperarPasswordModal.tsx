@@ -23,7 +23,7 @@ import {
   Check
 } from 'lucide-react';
 import { User } from '../types';
-import { fetchUserByCredentials, resetUserPasswordInCloud } from '../lib/firebase';
+import { fetchUserByCredentials, resetUserPasswordInCloud } from '../lib/supabase';
 
 interface RecuperarPasswordModalProps {
   isOpen: boolean;
@@ -112,7 +112,7 @@ export default function RecuperarPasswordModal({
         return uEmail === cleanLower || uCode === cleanLower || uCedula === cleanLower || uId === cleanLower;
       });
 
-      // 2. Fallback to Cloud Firestore live search
+      // 2. Fallback to Supabase live search
       if (!user) {
         user = await fetchUserByCredentials(cleanId) || undefined;
       }
@@ -541,7 +541,7 @@ export default function RecuperarPasswordModal({
                       ¡Contraseña restablecida con éxito!
                     </h4>
                     <p className="text-xs text-teal-200/90 max-w-sm mx-auto mt-1 leading-relaxed">
-                      La nueva contraseña de <strong>{foundUser.nombre}</strong> ha sido sincronizada en Cloud Firestore y la base de datos.
+                      La nueva contraseña de <strong>{foundUser.nombre}</strong> ha sido sincronizada en Supabase y actualizada en el sistema.
                     </p>
                   </div>
 

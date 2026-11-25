@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { Exam, Question, Parcial, Subject, Semester } from '../types';
 import { uid } from '../lib/db';
-import { saveDocToFirestore } from '../lib/firebase';
 import { saveDocToSupabase } from '../lib/supabase';
 import AutoExpandingTextarea from './AutoExpandingTextarea';
 import { getDefaultExamTitle, getBibleVerseForSubject } from '../lib/examPresets';
@@ -424,15 +423,14 @@ export default function ExamBuilder({
       console.warn('Error backing up exam to localStorage:', e);
     }
 
-    // 2. Direct Supabase persistence (and sync cache)
+    // 2. Direct Supabase persistence
     try {
       const res = await saveDocToSupabase('exams', updatedExam);
       if (!res.success) {
         console.warn('Direct Supabase exam save warning:', res.error);
       }
-      await saveDocToFirestore('exams', updatedExam);
     } catch (err) {
-      console.error('Error direct saving exam to cloud:', err);
+      console.error('Error direct saving exam to Supabase:', err);
     }
 
     return updatedExam;

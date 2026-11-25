@@ -14,7 +14,7 @@ import { SUPABASE_URL, testSupabaseConnection, pushAllStateToSupabase } from '..
 interface ShareAppModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSyncFirebase?: () => Promise<any> | void;
+  onSyncCloud?: () => Promise<any> | void;
   onRestoreBackup?: () => Promise<any> | void;
   onExportBackup?: () => void;
   onImportBackup?: (jsonString: string) => Promise<any> | void;
@@ -36,12 +36,11 @@ export const OFFICIAL_PORTAL_URL = 'https://synapsis-erp.onrender.com';
 export const RENDER_URL = 'https://synapsis-erp.onrender.com';
 export const SHORT_URL = 'https://tinyurl.com/2ad5gh2c';
 export const FULL_URL = 'https://synapsis-erp.onrender.com';
-export const FIREBASE_HOSTING_URL = 'https://synapsis-ec.web.app';
 
 export default function ShareAppModal({ 
   isOpen, 
   onClose,
-  onSyncFirebase,
+  onSyncCloud,
   onRestoreBackup,
   onExportBackup,
   onImportBackup,
@@ -158,10 +157,10 @@ export default function ShareAppModal({
   };
 
   const handleTriggerSync = async () => {
-    if (onSyncFirebase) {
+    if (onSyncCloud) {
       setLocalSyncState('syncing');
       try {
-        const result = await onSyncFirebase();
+        const result = await onSyncCloud();
         if (result && typeof result.pushedCount === 'number') {
           setLastSyncCount(result.pushedCount);
         }
@@ -177,7 +176,7 @@ export default function ShareAppModal({
     if (!qrDataUrl) return;
     const link = document.createElement('a');
     link.href = qrDataUrl;
-    link.download = `codigo-qr-synapsis-ec.png`;
+    link.download = `codigo-qr-synapsis-erp.png`;
     link.click();
   };
 
@@ -320,7 +319,7 @@ export default function ShareAppModal({
         {/* Content */}
         <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto" ref={printAreaRef}>
           
-          {/* Firebase Connection & Target Project Banner */}
+          {/* Supabase Connection & Target Deployment Banner */}
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -452,7 +451,7 @@ export default function ShareAppModal({
             )}
 
             {/* Action 4: Sync to Supabase */}
-            {onSyncFirebase && (
+            {onSyncCloud && (
               <button
                 type="button"
                 onClick={handleTriggerSync}
@@ -585,7 +584,7 @@ export default function ShareAppModal({
             </button>
           </div>
 
-          {/* Active Verified Firebase Hosting URL Section */}
+          {/* Active Verified Render Hosting URL Section */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-indigo-950 font-bold">

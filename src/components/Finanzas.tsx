@@ -12,7 +12,7 @@ import {
 import { User } from '../types';
 import { uid, now, fmtDate } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
-import { saveDocToFirestore, fetchCollectionFromFirestore, deleteDocFromFirestore } from '../lib/firebase';
+import { saveDocToSupabase, fetchCollectionFromSupabase, deleteDocFromSupabase } from '../lib/supabase';
 
 interface PaymentRecord {
   id: string;
@@ -69,12 +69,12 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
   // Initial load + seed data
   useEffect(() => {
     async function loadData() {
-      // 1. Load payment ledger from Firestore
+      // 1. Load payment ledger from Supabase
       let loadedPayments: PaymentRecord[] = [];
       try {
-        loadedPayments = await fetchCollectionFromFirestore<PaymentRecord>('payments');
+        loadedPayments = await fetchCollectionFromSupabase<PaymentRecord>('payments');
       } catch (err) {
-        console.error('Error loading payments from Firestore', err);
+        console.error('Error loading payments from Supabase', err);
       }
 
       if (loadedPayments && loadedPayments.length > 0) {
@@ -86,8 +86,8 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           try {
             const parsed = JSON.parse(savedPayments);
             setPayments(parsed);
-            // Sync to Firestore
-            parsed.forEach((p: any) => saveDocToFirestore('payments', p));
+            // Sync to Supabase
+            parsed.forEach((p: any) => saveDocToSupabase('payments', p));
           } catch (e) {
             console.error('Error parsing local payments', e);
           }
@@ -163,8 +163,8 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
 
             setPayments(seedPayments);
             localStorage.setItem('ep_finanzas', JSON.stringify(seedPayments));
-            // Sync seeds to Firestore
-            seedPayments.forEach(p => saveDocToFirestore('payments', p));
+            // Sync seeds to Supabase
+            seedPayments.forEach(p => saveDocToSupabase('payments', p));
           }
         }
       }
@@ -172,9 +172,9 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
       // 2. Load enrollment statuses
       let loadedStatuses: any[] = [];
       try {
-        loadedStatuses = await fetchCollectionFromFirestore<any>('matriculaStatus');
+        loadedStatuses = await fetchCollectionFromSupabase<any>('matriculaStatus');
       } catch (err) {
-        console.error('Error loading matricula statuses from Firestore', err);
+        console.error('Error loading matricula statuses from Supabase', err);
       }
 
       if (loadedStatuses && loadedStatuses.length > 0) {
@@ -191,7 +191,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
             const parsed = JSON.parse(savedStatus);
             setEnrollmentStatus(parsed);
             Object.entries(parsed).forEach(([stId, status]) => {
-              saveDocToFirestore('matriculaStatus', { id: stId, status });
+              saveDocToSupabase('matriculaStatus', { id: stId, status });
             });
           } catch (e) {
             console.error('Error parsing enrollment status', e);
@@ -200,7 +200,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           const defaultStatus: Record<string, 'Matriculado' | 'Pendiente' | 'Suspendido'> = {};
           students.forEach(st => {
             defaultStatus[st.id] = 'Matriculado';
-            saveDocToFirestore('matriculaStatus', { id: st.id, status: 'Matriculado' });
+            saveDocToSupabase('matriculaStatus', { id: st.id, status: 'Matriculado' });
           });
           setEnrollmentStatus(defaultStatus);
           localStorage.setItem('ep_matricula_status', JSON.stringify(defaultStatus));
@@ -216,7 +216,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
     const nextStatus = { ...enrollmentStatus, [stId]: status };
     setEnrollmentStatus(nextStatus);
     localStorage.setItem('ep_matricula_status', JSON.stringify(nextStatus));
-    saveDocToFirestore('matriculaStatus', { id: stId, status });
+    saveDocToSupabase('matriculaStatus', { id: stId, status });
     toast('Estado de matrícula actualizado correctamente', 'success');
   };
 
@@ -253,7 +253,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
           fechaPago: estado === 'pagado' ? (fechaPago || new Date().toISOString().substring(0, 10)) : undefined,
         };
         nextPayments[idx] = updatedItem;
-        saveDocToFirestore('payments', updatedItem);
+        saveDocToSupabase('payments', updatedItem);
         toast('Registro de cobro actualizado', 'success');
       }
     } else {
@@ -269,7 +269,7 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
         fechaPago: estado === 'pagado' ? (fechaPago || new Date().toISOString().substring(0, 10)) : undefined,
       };
       nextPayments.push(newItem);
-      saveDocToFirestore('payments', newItem);
+      saveDocToSupabase('payments', newItem);
       toast('Nuevo cobro registrado con éxito', 'success');
     }
 
@@ -621,9 +621,9 @@ export default function Finanzas({ currentUser, users, toast }: FinanzasProps) {
                                       setPayments(nextPayments);
                                       localStorage.setItem('ep_finanzas', JSON.stringify(nextPayments));
                                       try {
-                                        await deleteDocFromFirestore('payments', p.id);
+                                        await deleteDocFromSupabase('payments', p.id);
                                       } catch (err) {
-                                        console.error('Failed to delete payment from firestore', err);
+                                        console.error('Failed to delete payment from Supabase', err);
                                       }
                                       toast('Cobro eliminado correctamente', 'success');
                                       setConfirmDeleteId(null);

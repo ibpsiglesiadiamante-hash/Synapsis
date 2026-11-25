@@ -8,7 +8,7 @@ import { Milestone, Plus, Trash2, Edit2, Calendar, Target, Award, ChevronLeft, C
 import { Parcial, Semester, Subject, User, Exam, Submission } from '../types';
 import { uid, now, fmtDate, normalizeParcialPeriod } from '../lib/db';
 import { SearchableSelect } from './SearchableSelect';
-import { saveDocToFirestore, deleteDocFromFirestore } from '../lib/firebase';
+import { saveDocToSupabase, deleteDocFromSupabase } from '../lib/supabase';
 import { createDefaultExamObject } from '../lib/examPresets';
 
 interface ParcialesProps {
@@ -161,7 +161,7 @@ export default function Parciales({
           actualizado: now(),
         };
         nextParciales[idx] = updatedP;
-        saveDocToFirestore('parciales', updatedP);
+        saveDocToSupabase('parciales', updatedP).catch(() => {});
         onUpdateParciales(nextParciales);
         toast('Módulo parcial actualizado correctamente', 'success');
       }
@@ -177,7 +177,7 @@ export default function Parciales({
         porcentaje: Number(porcentaje) || 30,
         creado: now(),
       };
-      saveDocToFirestore('parciales', newParcial);
+      saveDocToSupabase('parciales', newParcial).catch(() => {});
       onUpdateParciales([...nextParciales, newParcial]);
       toast('Nuevo parcial creado exitosamente', 'success');
     }
@@ -191,7 +191,7 @@ export default function Parciales({
       onSendToRecycle(parcial);
       return;
     }
-    deleteDocFromFirestore('parciales', id);
+    deleteDocFromSupabase('parciales', id).catch(() => {});
     const nextParciales = parciales.filter(p => p.id !== id);
     onUpdateParciales(nextParciales);
     toast('Corte o parcial eliminado correctamente', 'success');

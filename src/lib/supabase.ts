@@ -536,3 +536,136 @@ export async function fetchExamsByIdsFromSupabase(examIds: string[]): Promise<Ex
   }
 }
 
+// Local diff cache to prevent redundant Supabase writes on unchanged records
+const supabaseSyncCache = new Map<string, string>();
+let syncCacheInitialized = false;
+
+const SYNCED_APP_STATE_KEYS: (keyof AppState)[] = [
+  'users',
+  'institutions',
+  'subjects',
+  'semesters',
+  'parciales',
+  'exams',
+  'submissions',
+  'gradeRecords',
+  'assignments',
+  'assignmentSubmissions',
+];
+
+export function initializeSyncCache(state: Partial<AppState>): void {
+  supabaseSyncCache.clear();
+  SYNCED_APP_STATE_KEYS.forEach((key) => {
+    const list = state[key] as any[] | undefined;
+    if (Array.isArray(list)) {
+      list.forEach((item) => {
+        if (item && item.id) {
+          supabaseSyncCache.set(`${key}/${item.id}`, JSON.stringify(item));
+        }
+      });
+    }
+  });
+  syncCacheInitialized = true;
+}
+
+/**
+ * Incrementally synchronizes only modified or newly added records from AppState to Supabase.
+ */
+export async function syncStateToSupabase(newState: AppState): Promise<void> {
+  try {
+    if (!syncCacheInitialized) {
+      await pushAllStateToSupabase(newState);
+      initializeSyncCache(newState);
+      return;
+    }
+
+    const deletedIds = getDeletedIds();
+    const pendingWrites: Promise<void>[] = [];
+
+    for (const key of SYNCED_APP_STATE_KEYS) {
+      const list = newState[key] as any[] | undefined;
+      if (!Array.isArray(list)) continue;
+
+      for (const item of list) {
+        if (!item || !item.id || deletedIds.has(item.id)) continue;
+        const cacheKey = `${key}/${item.id}`;
+        const serialized = JSON.stringify(item);
+        if (supabaseSyncCache.get(cacheKey) !== serialized) {
+          pendingWrites.push(
+            saveDocToSupabase(key, item).then((res) => {
+              if (res.success) {
+                supabaseSyncCache.set(cacheKey, serialized);
+              }
+            })
+          );
+        }
+      }
+    }
+
+    if (pendingWrites.length > 0) {
+      await Promise.all(pendingWrites);
+    }
+  } catch (error) {
+    console.error('Error synchronizing incremental AppState changes to Supabase:', error);
+  }
+}
+
+/**
+ * Permanently marks an ID as deleted locally and in Supabase (deleted_records + target table).
+ */
+export async function registerDeletedIdInSupabase(id: string, tableName?: string): Promise<void> {
+  if (!id || PROTECTED_IDS.has(id)) return;
+  markAsDeleted(id);
+  if (tableName) {
+    supabaseSyncCache.delete(`${tableName}/${id}`);
+    await deleteDocFromSupabase(tableName, id).catch(() => {});
+  }
+  await markDeletedInSupabase(id, tableName);
+}
+
+/**
+ * Removes an ID from local and Supabase deleted_records (used when restoring from Recycle Bin).
+ */
+export async function unRegisterDeletedIdInSupabase(id: string): Promise<void> {
+  await unmarkDeletedInSupabase(id);
+}
+
+/**
+ * Batch upsert for subjects in Supabase.
+ */
+export async function uploadSubjectsBatchToSupabase(subjects: Subject[]): Promise<number> {
+  const deletedIds = getDeletedIds();
+  const valid = (subjects || []).filter(s => s && s.id && !deletedIds.has(s.id));
+  let count = 0;
+  for (let i = 0; i < valid.length; i += 25) {
+    const chunk = valid.slice(i, i + 25);
+    const results = await Promise.all(chunk.map(sub => saveDocToSupabase('subjects', sub)));
+    results.forEach((res, idx) => {
+      if (res.success) {
+        count++;
+        supabaseSyncCache.set(`subjects/${chunk[idx].id}`, JSON.stringify(chunk[idx]));
+      }
+    });
+  }
+  return count;
+}
+
+/**
+ * Batch upsert for users/students in Supabase.
+ */
+export async function uploadUsersBatchToSupabase(users: User[]): Promise<number> {
+  const deletedIds = getDeletedIds();
+  const valid = (users || []).filter(u => u && u.id && !deletedIds.has(u.id));
+  let count = 0;
+  for (let i = 0; i < valid.length; i += 25) {
+    const chunk = valid.slice(i, i + 25);
+    const results = await Promise.all(chunk.map(u => saveDocToSupabase('users', u)));
+    results.forEach((res, idx) => {
+      if (res.success) {
+        count++;
+        supabaseSyncCache.set(`users/${chunk[idx].id}`, JSON.stringify(chunk[idx]));
+      }
+    });
+  }
+  return count;
+}

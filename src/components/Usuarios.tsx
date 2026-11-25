@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { UserPlus, Trash2, Edit2, ChevronLeft, ChevronRight, Search, KeyRound, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter } from '../lib/db';
-import { saveDocToFirestore } from '../lib/firebase';
+import { saveDocToSupabase } from '../lib/supabase';
 
 interface UsuariosProps {
   currentUser: User;
@@ -131,12 +131,12 @@ Enlace: ${window.location.origin}`;
           ...(pass.trim() ? { pass: pass.trim() } : {}), // only override if typed
         };
         nextUsers[userIdx] = updatedUser;
-        // Save immediately to Cloud Firestore and Supabase
-        saveDocToFirestore('users', updatedUser, true).catch(err => {
-          console.error('Error saving updated user to cloud:', err);
+        // Save immediately to Supabase
+        saveDocToSupabase('users', updatedUser).catch(err => {
+          console.error('Error saving updated user to Supabase:', err);
         });
         onUpdateUsers(nextUsers);
-        toast(`Usuario ${updatedUser.nombre} actualizado en la nube y sincronizado`, 'success');
+        toast(`Usuario ${updatedUser.nombre} actualizado en Supabase y sincronizado`, 'success');
       }
     } else {
       // Creation Mode
@@ -156,11 +156,11 @@ Enlace: ${window.location.origin}`;
         actualizado: now(),
       };
       targetUserId = newUser.id;
-      saveDocToFirestore('users', newUser, true).catch(err => {
-        console.error('Error creating user in cloud:', err);
+      saveDocToSupabase('users', newUser).catch(err => {
+        console.error('Error creating user in Supabase:', err);
       });
       onUpdateUsers([...nextUsers, newUser]);
-      toast('Usuario registrado y sincronizado en la nube exitosamente', 'success');
+      toast('Usuario registrado y sincronizado en Supabase exitosamente', 'success');
     }
 
     if (targetUserId && onUpdateSubjects) {
@@ -171,13 +171,13 @@ Enlace: ${window.location.origin}`;
         if (selectedSet.has(s.id) && s.docenteId !== targetUserId) {
           subjectsChanged = true;
           const modSub: Subject = { ...s, docenteId: targetUserId, actualizado: now() };
-          saveDocToFirestore('subjects', modSub, true).catch(() => {});
+          saveDocToSupabase('subjects', modSub).catch(() => {});
           return modSub;
         }
         if (!selectedSet.has(s.id) && s.docenteId === targetUserId) {
           subjectsChanged = true;
           const modSub: Subject = { ...s, docenteId: '', actualizado: now() };
-          saveDocToFirestore('subjects', modSub, true).catch(() => {});
+          saveDocToSupabase('subjects', modSub).catch(() => {});
           return modSub;
         }
         return s;

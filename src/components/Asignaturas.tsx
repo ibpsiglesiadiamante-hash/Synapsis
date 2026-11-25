@@ -10,8 +10,7 @@ import {
 } from 'lucide-react';
 import { Subject, User, Semester } from '../types';
 import { uid, now, fmtDate, generateSubjectCode, backupAppState, normalizeSubjectCanonicalKey, normalizeSemesterCanonicalKey, markAsDeleted, unmarkAsDeleted } from '../lib/db';
-import { uploadTheologicalSubjectsToFirestore, saveDocToFirestore, deleteDocFromFirestore, registerDeletedId } from '../lib/firebase';
-import { deleteDocFromSupabase } from '../lib/supabase';
+import { uploadSubjectsBatchToSupabase, saveDocToSupabase, registerDeletedIdInSupabase } from '../lib/supabase';
 
 interface AsignaturasProps {
   subjects: Subject[];
@@ -81,7 +80,7 @@ export default function Asignaturas({
   const [isCodeAuto, setIsCodeAuto] = useState(true);
   const [isSyncingTheological, setIsSyncingTheological] = useState(false);
 
-  // Function to load all 36 biblical subjects from backupAppState and push to Firestore
+  // Function to load all 36 biblical subjects from backupAppState and push to Supabase
   const handleLoadOfficialCurriculum = async () => {
     try {
       setIsSyncingTheological(true);
@@ -108,11 +107,11 @@ export default function Asignaturas({
       });
       const updated = Array.from(map.values());
       onUpdateSubjects(updated);
-      await uploadTheologicalSubjectsToFirestore(updated);
-      toast(`¡Cargadas y sincronizadas exitosamente las 36 materias del pensum teológico en la base de datos!`, 'success');
+      await uploadSubjectsBatchToSupabase(updated);
+      toast(`¡Cargadas y sincronizadas exitosamente las 36 materias del pensum teológico en Supabase!`, 'success');
     } catch (e) {
       console.error('Error loading official curriculum:', e);
-      toast('Error al sincronizar materias con la base de datos', 'error');
+      toast('Error al sincronizar materias con Supabase', 'error');
     } finally {
       setIsSyncingTheological(false);
     }
@@ -225,8 +224,8 @@ export default function Asignaturas({
         unmarkAsDeleted(updatedSub.id);
         nextSubs[idx] = updatedSub;
         onUpdateSubjects(nextSubs);
-        saveDocToFirestore('subjects', updatedSub, true).catch(err => {
-          console.warn('Error saving subject update to Firestore:', err);
+        saveDocToSupabase('subjects', updatedSub).catch(err => {
+          console.warn('Error saving subject update to Supabase:', err);
         });
         toast('Materia o asignatura actualizada con éxito', 'success');
       }
@@ -243,8 +242,8 @@ export default function Asignaturas({
       savedSubId = newSub.id;
       unmarkAsDeleted(newSub.id);
       onUpdateSubjects([...nextSubs, newSub]);
-      saveDocToFirestore('subjects', newSub, true).catch(err => {
-        console.warn('Error saving new subject to Firestore:', err);
+      saveDocToSupabase('subjects', newSub).catch(err => {
+        console.warn('Error saving new subject to Supabase:', err);
       });
       toast(`Asignatura creada satisfactoriamente con código ${finalCode}`, 'success');
     }
@@ -258,7 +257,7 @@ export default function Asignaturas({
           if (!currentAsg.includes(savedSubId)) {
             usersChanged = true;
             const modUser: User = { ...u, asignaturas: [...currentAsg, savedSubId], actualizado: now() };
-            saveDocToFirestore('users', modUser, true).catch(() => {});
+            saveDocToSupabase('users', modUser).catch(() => {});
             return modUser;
           }
         } else if (
@@ -271,7 +270,7 @@ export default function Asignaturas({
             asignaturas: currentAsg.filter(id => id !== savedSubId),
             actualizado: now(),
           };
-          saveDocToFirestore('users', modUser, true).catch(() => {});
+          saveDocToSupabase('users', modUser).catch(() => {});
           return modUser;
         }
         return u;
@@ -288,11 +287,7 @@ export default function Asignaturas({
     const nextSubs = subjects.filter(s => s && s.id !== id);
     onUpdateSubjects(nextSubs);
     markAsDeleted(id);
-    registerDeletedId(id, 'subjects').catch(() => {});
-    deleteDocFromFirestore('subjects', id).catch(err => {
-      console.warn('Error deleting subject from Firestore:', err);
-    });
-    deleteDocFromSupabase('subjects', id).catch(err => {
+    registerDeletedIdInSupabase(id, 'subjects').catch(err => {
       console.warn('Error deleting subject from Supabase:', err);
     });
     toast('Asignatura eliminada del catálogo correctamente y registrada para no reaparecer', 'success');
@@ -396,7 +391,7 @@ export default function Asignaturas({
             onClick={handleLoadOfficialCurriculum}
             disabled={isSyncingTheological}
             className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 font-semibold text-xs shadow-xs cursor-pointer transition-all disabled:opacity-50"
-            title="Cargar y sincronizar con Firestore las 36 materias teológicas oficiales del Instituto"
+            title="Cargar y sincronizar con Supabase las 36 materias teológicas oficiales del Instituto"
           >
             <Sparkles className={`w-3.5 h-3.5 text-emerald-600 ${isSyncingTheological ? 'animate-spin' : ''}`} />
             <span>{isSyncingTheological ? 'Sincronizando...' : 'Cargar 36 Materias'}</span>

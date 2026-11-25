@@ -7,8 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { CalendarDays, Plus, Trash2, Edit2, CheckCircle2, XSquare, ChevronLeft, ChevronRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Semester } from '../types';
 import { uid, now, fmtDate, generateSemesterCode, normalizeSemesterCanonicalKey, markAsDeleted } from '../lib/db';
-import { saveDocToFirestore, deleteDocFromFirestore, registerDeletedId } from '../lib/firebase';
-import { deleteDocFromSupabase } from '../lib/supabase';
+import { saveDocToSupabase, registerDeletedIdInSupabase } from '../lib/supabase';
 
 interface SemestresProps {
   semesters: Semester[];
@@ -133,8 +132,8 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
         };
         nextSems[idx] = updatedSem;
         onUpdateSemesters(nextSems);
-        saveDocToFirestore('semesters', updatedSem).catch(err => {
-          console.warn('Error saving semester update to Firestore:', err);
+        saveDocToSupabase('semesters', updatedSem).catch(err => {
+          console.warn('Error saving semester update to Supabase:', err);
         });
         toast('Semestre actualizado correctamente y re-calculado', 'success');
       }
@@ -148,8 +147,8 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
         creado: now(),
       };
       onUpdateSemesters([...nextSems, newSem]);
-      saveDocToFirestore('semesters', newSem).catch(err => {
-        console.warn('Error saving new semester to Firestore:', err);
+      saveDocToSupabase('semesters', newSem).catch(err => {
+        console.warn('Error saving new semester to Supabase:', err);
       });
       toast(`Nuevo ciclo creado con código ${finalCode}`, 'success');
     }
@@ -161,11 +160,7 @@ export default function Semestres({ semesters, onUpdateSemesters, toast, onDedup
     const nextSems = semesters.filter(s => s && s.id !== id);
     onUpdateSemesters(nextSems);
     markAsDeleted(id);
-    registerDeletedId(id, 'semesters').catch(() => {});
-    deleteDocFromFirestore('semesters', id).catch(err => {
-      console.warn('Error deleting semester from Firestore:', err);
-    });
-    deleteDocFromSupabase('semesters', id).catch(err => {
+    registerDeletedIdInSupabase(id, 'semesters').catch(err => {
       console.warn('Error deleting semester from Supabase:', err);
     });
     toast('Semestre eliminado correctamente y registrado para no reaparecer', 'success');

@@ -75,34 +75,19 @@ import {
   getStudentExamAttemptStatus
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
-import { 
-  fetchFullStateFromFirestore, 
-  seedFirestore, 
-  syncToFirestore, 
-  initializeSyncCache,
-  fullBidirectionalSync,
-  registerDeletedId,
-  unRegisterDeletedId,
-  saveRecycleItemToFirestore,
-  deleteRecycleItemFromFirestore,
-  uploadTheologicalSubjectsToFirestore,
-  uploadAllStudentsToFirestore,
-  uploadAllExamsToFirestore,
-  uploadAllParcialesToFirestore,
-  saveDocToFirestore,
-  deleteDocFromFirestore,
-  fetchUserByCredentials
-} from './lib/firebase';
 import {
   fetchFullStateFromSupabase,
   fetchSubmissionsForExamAndUsers,
   fetchExamsByIdsFromSupabase,
+  fetchUserByCredentials,
   pushAllStateToSupabase,
-  testSupabaseConnection,
+  syncStateToSupabase,
+  initializeSyncCache,
   saveDocToSupabase,
   deleteDocFromSupabase,
   markDeletedInSupabase,
-  unmarkDeletedInSupabase
+  registerDeletedIdInSupabase,
+  unRegisterDeletedIdInSupabase
 } from './lib/supabase';
 
 import Header from './components/Header';
@@ -139,7 +124,7 @@ export default function App() {
   // Database States
   const [db, setDb] = useState(() => getInitialState());
   const currentDbRef = useRef<AppState>(db);
-  const [isFirebaseLoading, setIsFirebaseLoading] = useState(false);
+  const [isCloudLoading, setIsCloudLoading] = useState(false);
   const hasCompletedInitialLoadRef = useRef(false);
   const lastRemoteRefreshRef = useRef<number>(0);
 
@@ -319,7 +304,7 @@ export default function App() {
         console.error('Error synchronizing database, running standalone with Supabase.', err);
       } finally {
         hasCompletedInitialLoadRef.current = true;
-        setIsFirebaseLoading(false);
+        setIsCloudLoading(false);
       }
     }
     loadInitialDatabase();
@@ -453,15 +438,15 @@ export default function App() {
     }
   }, [activeEditExamId]);
 
-  // Persist DB state changes to local storage & debounced background Supabase sync
+  // Persist DB state changes to local storage & debounced incremental Supabase sync
   useEffect(() => {
     saveState(db);
-    if (!hasCompletedInitialLoadRef.current || isFirebaseLoading) return;
+    if (!hasCompletedInitialLoadRef.current || isCloudLoading) return;
     const timer = setTimeout(() => {
-      syncToFirestore(db);
+      syncStateToSupabase(db);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [db, isFirebaseLoading]);
+  }, [db, isCloudLoading]);
 
   // Auto-refresh submissions & flush pending local writes when opening key views or returning online
   useEffect(() => {
@@ -524,10 +509,10 @@ export default function App() {
     }, 4200);
   };
 
-  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   const handleManualSync = async () => {
-    setIsSyncingFirebase(true);
+    setIsSyncingCloud(true);
     try {
       showToast('Sincronizando datos con Supabase (PostgreSQL)...', 'info');
       const remoteSupabase = await fetchFullStateFromSupabase().catch(e => {
@@ -555,13 +540,13 @@ export default function App() {
       console.error('Manual sync failed', err);
       showToast('Error en la sincronización con Supabase.', 'error');
     } finally {
-      setIsSyncingFirebase(false);
+      setIsSyncingCloud(false);
     }
   };
 
   const handleRestoreBackup = async () => {
     try {
-      setIsSyncingFirebase(true);
+      setIsSyncingCloud(true);
       showToast('Restaurando copia de seguridad y sincronizando con Supabase...', 'info');
       const restored = restoreBackupState();
       setDb(restored);
@@ -573,7 +558,7 @@ export default function App() {
       console.error('Failed to restore backup and sync', err);
       showToast('Error al restaurar copia de seguridad', 'error');
     } finally {
-      setIsSyncingFirebase(false);
+      setIsSyncingCloud(false);
     }
   };
 
@@ -589,7 +574,7 @@ export default function App() {
 
   const handleImportBackup = async (jsonString: string) => {
     try {
-      setIsSyncingFirebase(true);
+      setIsSyncingCloud(true);
       showToast('Restaurando copia de seguridad...', 'info');
       const imported = validateAndParseBackup(jsonString);
       setDb(imported);
@@ -602,7 +587,7 @@ export default function App() {
       showToast('El archivo JSON de respaldo no tiene un formato válido', 'error');
       throw err;
     } finally {
-      setIsSyncingFirebase(false);
+      setIsSyncingCloud(false);
     }
   };
 
@@ -851,8 +836,8 @@ export default function App() {
 
       const updatedUsers = [newStudent, ...db.users];
       updateUsers(updatedUsers);
-      await saveDocToFirestore('users', newStudent).catch(err => {
-        console.warn('Could not save registered student directly to Firestore:', err);
+      await saveDocToSupabase('users', newStudent).catch(err => {
+        console.warn('Could not save registered student directly to Supabase:', err);
       });
 
       // Clear register form
@@ -911,14 +896,12 @@ export default function App() {
     showToast('Sesión cerrada correctamente', 'success');
   };
 
-  // State Updates proxies to keep master DB and Firestore in sync, permanently registering any deletions
+  // State Updates proxies to keep master DB and Supabase in sync, permanently registering any deletions
   const syncDeletions = <T extends { id: string }>(collName: string, previousList: T[] = [], newList: T[] = []) => {
     const newIds = new Set(newList.map(item => item.id));
     previousList.forEach(item => {
       if (item && item.id && !newIds.has(item.id)) {
-        registerDeletedId(item.id, collName);
-        deleteDocFromFirestore(collName, item.id).catch(() => {});
-        deleteDocFromSupabase(collName, item.id).catch(() => {});
+        registerDeletedIdInSupabase(item.id, collName).catch(() => {});
       }
     });
   };
@@ -936,9 +919,15 @@ export default function App() {
   };
 
   const updateUsers = (next: User[]) => {
+    const prevUsers = currentDbRef.current.users || [];
+    const prevMap = new Map(prevUsers.map(u => [u.id, u]));
     const updated = updateStateField('users', next, 'users');
     next.forEach(u => {
-      saveDocToFirestore('users', u, true).catch(() => {});
+      if (!u || !u.id) return;
+      const prev = prevMap.get(u.id);
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(u)) {
+        saveDocToSupabase('users', u).catch(() => {});
+      }
     });
     return updated;
   };
@@ -1058,11 +1047,6 @@ export default function App() {
       }
     }
 
-    // 5. Replicar a Firestore en background sin disparar una segunda escritura redundante a Supabase (mirrorToSupabase = false)
-    for (const sub of changed) {
-      saveDocToFirestore('submissions', sub, false).catch(() => {});
-    }
-
     const allSucceeded = failedIds.length === 0;
     return {
       success: allSucceeded,
@@ -1179,9 +1163,7 @@ export default function App() {
     saveState(updatedDb);
     setDb(updatedDb);
     duplicateIds.forEach(id => {
-      registerDeletedId(id, 'semesters');
-      deleteDocFromFirestore('semesters', id).catch(() => {});
-      deleteDocFromSupabase('semesters', id).catch(() => {});
+      registerDeletedIdInSupabase(id, 'semesters').catch(() => {});
     });
     showToast(`Se depuraron y unificaron ${duplicateIds.length} semestres duplicados con éxito (9 semestres oficiales).`, 'success');
   };
@@ -1196,9 +1178,7 @@ export default function App() {
     saveState(updatedDb);
     setDb(updatedDb);
     duplicateIds.forEach(id => {
-      registerDeletedId(id, 'subjects');
-      deleteDocFromFirestore('subjects', id).catch(() => {});
-      deleteDocFromSupabase('subjects', id).catch(() => {});
+      registerDeletedIdInSupabase(id, 'subjects').catch(() => {});
     });
     showToast(`Se depuraron y unificaron ${duplicateIds.length} materias duplicadas con éxito.`, 'success');
   };
@@ -1213,9 +1193,7 @@ export default function App() {
     saveState(updatedDb);
     setDb(updatedDb);
     duplicateIds.forEach(id => {
-      registerDeletedId(id, 'parciales');
-      deleteDocFromFirestore('parciales', id).catch(() => {});
-      deleteDocFromSupabase('parciales', id).catch(() => {});
+      registerDeletedIdInSupabase(id, 'parciales').catch(() => {});
     });
     showToast(`Se depuraron ${duplicateIds.length} parciales duplicados (se conservaron intactos los parciales con evaluaciones de estudiantes).`, 'success');
   };
@@ -1242,33 +1220,27 @@ export default function App() {
     };
     const nextRecycle = [recItem, ...currentRecycle];
     saveRecycleBin(nextRecycle);
-    saveRecycleItemToFirestore(recItem).catch(err => console.warn('Recycle Firestore error:', err));
     markAsDeleted(item.id);
 
     let nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
     if (tipo === 'estudiante') {
       nextDb.users = (nextDb.users || []).filter(u => u.id !== item.id);
-      deleteDocFromFirestore('users', item.id).catch(() => {});
       deleteDocFromSupabase('users', item.id).catch(() => {});
       markDeletedInSupabase(item.id, 'users').catch(() => {});
     } else if (tipo === 'parcial') {
       nextDb.parciales = (nextDb.parciales || []).filter(p => p.id !== item.id);
-      deleteDocFromFirestore('parciales', item.id).catch(() => {});
       deleteDocFromSupabase('parciales', item.id).catch(() => {});
       markDeletedInSupabase(item.id, 'parciales').catch(() => {});
     } else if (tipo === 'examen') {
       nextDb.exams = (nextDb.exams || []).filter(e => e.id !== item.id);
-      deleteDocFromFirestore('exams', item.id).catch(() => {});
       deleteDocFromSupabase('exams', item.id).catch(() => {});
       markDeletedInSupabase(item.id, 'exams').catch(() => {});
     } else if (tipo === 'materia') {
       nextDb.subjects = (nextDb.subjects || []).filter(s => s.id !== item.id);
-      deleteDocFromFirestore('subjects', item.id).catch(() => {});
       deleteDocFromSupabase('subjects', item.id).catch(() => {});
       markDeletedInSupabase(item.id, 'subjects').catch(() => {});
     } else if (tipo === 'semestre') {
       nextDb.semesters = (nextDb.semesters || []).filter(s => s.id !== item.id);
-      deleteDocFromFirestore('semesters', item.id).catch(() => {});
       deleteDocFromSupabase('semesters', item.id).catch(() => {});
       markDeletedInSupabase(item.id, 'semesters').catch(() => {});
     }
@@ -1283,10 +1255,7 @@ export default function App() {
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
     const nextRecycle = currentRecycle.filter(r => r.id !== item.id);
     saveRecycleBin(nextRecycle);
-    deleteRecycleItemFromFirestore(item.id).catch(err => console.warn('Delete recycle Firestore error:', err));
-    unmarkAsDeleted(item.originalId);
-    unRegisterDeletedId(item.originalId);
-    unmarkDeletedInSupabase(item.originalId).catch(() => {});
+    unRegisterDeletedIdInSupabase(item.originalId).catch(() => {});
 
     let nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
     const payload = item.data || item.payload;
@@ -1294,23 +1263,23 @@ export default function App() {
       if (item.tipo === 'estudiante') {
         const nextUsers = [payload, ...(nextDb.users || []).filter(u => u.id !== payload.id)];
         nextDb.users = nextUsers;
-        saveDocToFirestore('users', payload).catch(() => {});
+        saveDocToSupabase('users', payload).catch(() => {});
       } else if (item.tipo === 'parcial') {
         const nextParciales = [payload, ...(nextDb.parciales || []).filter(p => p.id !== payload.id)];
         nextDb.parciales = nextParciales;
-        saveDocToFirestore('parciales', payload).catch(() => {});
+        saveDocToSupabase('parciales', payload).catch(() => {});
       } else if (item.tipo === 'examen') {
         const nextExams = [payload, ...(nextDb.exams || []).filter(e => e.id !== payload.id)];
         nextDb.exams = nextExams;
-        saveDocToFirestore('exams', payload).catch(() => {});
+        saveDocToSupabase('exams', payload).catch(() => {});
       } else if (item.tipo === 'materia') {
         const nextSubjects = [payload, ...(nextDb.subjects || []).filter(s => s.id !== payload.id)];
         nextDb.subjects = nextSubjects;
-        saveDocToFirestore('subjects', payload).catch(() => {});
+        saveDocToSupabase('subjects', payload).catch(() => {});
       } else if (item.tipo === 'semestre') {
         const nextSemesters = [payload, ...(nextDb.semesters || []).filter(s => s.id !== payload.id)];
         nextDb.semesters = nextSemesters;
-        saveDocToFirestore('semesters', payload).catch(() => {});
+        saveDocToSupabase('semesters', payload).catch(() => {});
       }
     }
 
@@ -1322,18 +1291,12 @@ export default function App() {
 
   const handleRestoreExamFromCloud = async (exam: Exam) => {
     if (!exam || !exam.id) return;
-    unmarkAsDeleted(exam.id);
-    unRegisterDeletedId(exam.id);
-    await unmarkDeletedInSupabase(exam.id).catch(() => {});
+    await unRegisterDeletedIdInSupabase(exam.id).catch(() => {});
 
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
-    const removedRecycleItems = currentRecycle.filter(r => r.tipo === 'examen' && r.originalId === exam.id);
     const nextRecycle = currentRecycle.filter(r => !(r.tipo === 'examen' && r.originalId === exam.id));
-    if (removedRecycleItems.length > 0) {
+    if (nextRecycle.length !== currentRecycle.length) {
       saveRecycleBin(nextRecycle);
-      removedRecycleItems.forEach(item => {
-        deleteRecycleItemFromFirestore(item.id).catch(() => {});
-      });
     }
 
     const nextExams = [exam, ...(currentDbRef.current.exams || []).filter(e => e.id !== exam.id)];
@@ -1346,7 +1309,6 @@ export default function App() {
     saveState(nextDb);
     setDb(nextDb);
 
-    saveDocToFirestore('exams', exam).catch(() => {});
     saveDocToSupabase('exams', exam).catch(() => {});
     showToast(`El examen "${exam.titulo}" fue restaurado a tu lista ✓`, 'success');
   };
@@ -1354,19 +1316,13 @@ export default function App() {
   const handleDeleteCloudExam = async (examId: string, examTitle: string) => {
     if (!examId) return;
     markAsDeleted(examId);
-    registerDeletedId(examId, 'exams');
     await markDeletedInSupabase(examId, 'exams').catch(() => {});
-    await deleteDocFromFirestore('exams', examId).catch(() => {});
     const supaRes = await deleteDocFromSupabase('exams', examId).catch(() => ({ success: false }));
 
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
-    const removedRecycleItems = currentRecycle.filter(r => r.tipo === 'examen' && r.originalId === examId);
     const nextRecycle = currentRecycle.filter(r => !(r.tipo === 'examen' && r.originalId === examId));
-    if (removedRecycleItems.length > 0) {
+    if (nextRecycle.length !== currentRecycle.length) {
       saveRecycleBin(nextRecycle);
-      removedRecycleItems.forEach(item => {
-        deleteRecycleItemFromFirestore(item.id).catch(() => {});
-      });
     }
 
     const nextDb: AppState = {
@@ -1398,12 +1354,8 @@ export default function App() {
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
     const nextRecycle = currentRecycle.filter(r => r.id !== itemId);
     saveRecycleBin(nextRecycle);
-    deleteRecycleItemFromFirestore(itemId).catch(err => console.warn('Delete recycle Firestore error:', err));
     const tableName = mapRecycleTipoToTable(tipo);
-    registerDeletedId(originalId, tableName);
-    markAsDeleted(originalId);
-    if (tableName) deleteDocFromSupabase(tableName, originalId).catch(() => {});
-    markDeletedInSupabase(originalId, tableName).catch(() => {});
+    registerDeletedIdInSupabase(originalId, tableName).catch(() => {});
 
     const nextDb = { ...currentDbRef.current, recycleBin: nextRecycle };
     currentDbRef.current = nextDb;
@@ -1415,12 +1367,8 @@ export default function App() {
   const handleEmptyTrash = () => {
     const currentRecycle = currentDbRef.current.recycleBin || getRecycleBin();
     currentRecycle.forEach(it => {
-      deleteRecycleItemFromFirestore(it.id).catch(() => {});
       const tableName = mapRecycleTipoToTable(it.tipo);
-      registerDeletedId(it.originalId, tableName);
-      markAsDeleted(it.originalId);
-      if (tableName) deleteDocFromSupabase(tableName, it.originalId).catch(() => {});
-      markDeletedInSupabase(it.originalId, tableName).catch(() => {});
+      registerDeletedIdInSupabase(it.originalId, tableName).catch(() => {});
     });
     saveRecycleBin([]);
     const nextDb = { ...currentDbRef.current, recycleBin: [] };
@@ -1452,10 +1400,7 @@ export default function App() {
     }));
 
     newRecycleItems.forEach(it => {
-      saveRecycleItemToFirestore(it).catch(() => {});
-      registerDeletedId(it.originalId, 'users');
-      deleteDocFromFirestore('users', it.originalId).catch(() => {});
-      deleteDocFromSupabase('users', it.originalId).catch(() => {});
+      registerDeletedIdInSupabase(it.originalId, 'users').catch(() => {});
     });
 
     const finalRecycle = [...newRecycleItems, ...currentRecycle];
@@ -1582,12 +1527,12 @@ export default function App() {
     if (!currentUser) return null;
 
     if (activeEditExamId) {
-      if (isFirebaseLoading) {
+      if (isCloudLoading) {
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
             <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-              Sincronizando con Firebase...
+              Sincronizando con Supabase...
             </p>
           </div>
         );
@@ -2366,8 +2311,8 @@ export default function App() {
             onThemeChange={(newTheme) => setTheme(newTheme as 'theme-academia' | 'theme-cyber')}
             onLogout={handleLogout}
             onOpenShareModal={() => setIsShareModalOpen(true)}
-            onSyncFirebase={handleManualSync}
-            isSyncing={isSyncingFirebase}
+            onSyncCloud={handleManualSync}
+            isSyncing={isSyncingCloud}
             onNavigate={(tab) => {
               if (tab === 'dashboard') {
                 const defaultCat = currentUser?.rol === 'estudiante' ? 'estudiante' : currentUser?.rol === 'docente' ? 'docente' : 'admin';
@@ -2541,11 +2486,11 @@ export default function App() {
       <ShareAppModal 
         isOpen={isShareModalOpen} 
         onClose={() => setIsShareModalOpen(false)} 
-        onSyncFirebase={handleManualSync}
+        onSyncCloud={handleManualSync}
         onRestoreBackup={handleRestoreBackup}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
-        isSyncing={isSyncingFirebase}
+        isSyncing={isSyncingCloud}
         currentState={db}
         stats={{
           subjects: db.subjects.length,

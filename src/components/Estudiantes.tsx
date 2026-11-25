@@ -12,8 +12,7 @@ import {
 } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
 import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
-import { deleteDocFromFirestore, saveDocToFirestore, uploadAllStudentsToFirestore } from '../lib/firebase';
-import { saveDocToSupabase, deleteDocFromSupabase } from '../lib/supabase';
+import { saveDocToSupabase, deleteDocFromSupabase, uploadUsersBatchToSupabase } from '../lib/supabase';
 
 interface EstudiantesProps {
   users: User[];
@@ -102,7 +101,6 @@ export default function Estudiantes({
     onUpdateUsers(updatedUsers);
     const updatedStudent = updatedUsers.find(u => u.id === permStudent.id);
     if (updatedStudent) {
-      saveDocToFirestore('users', updatedStudent).catch(() => {});
       saveDocToSupabase('users', updatedStudent).catch(() => {});
     }
 
@@ -195,7 +193,7 @@ export default function Estudiantes({
 
     onUpdateUsers(nextUsers);
     if (updatedStudent) {
-      saveDocToFirestore('users', updatedStudent).catch(() => {});
+      saveDocToSupabase('users', updatedStudent).catch(() => {});
       try {
         const currentSaved = localStorage.getItem('instituto_currentUser');
         if (currentSaved) {
@@ -350,11 +348,11 @@ Enlace del portal: ${window.location.origin}`;
           ...(pass.trim() ? { pass: pass.trim() } : {}),
         };
         nextUsers[idx] = updatedUser;
-        saveDocToFirestore('users', updatedUser, true).catch(err => {
-          console.error('Error saving updated student to cloud:', err);
+        saveDocToSupabase('users', updatedUser).catch(err => {
+          console.error('Error saving updated student to Supabase:', err);
         });
         onUpdateUsers(nextUsers);
-        toast(`Ficha de ${updatedUser.nombre} actualizada y sincronizada en la nube`, 'success');
+        toast(`Ficha de ${updatedUser.nombre} actualizada y sincronizada en Supabase`, 'success');
       }
     } else {
       if (users.some(u => u.email.toLowerCase() === finalEmail.toLowerCase())) {
@@ -375,8 +373,8 @@ Enlace del portal: ${window.location.origin}`;
         celular: celular.trim() || undefined,
       };
 
-      saveDocToFirestore('users', newSt, true).catch(err => {
-        console.error('Error saving new student to cloud:', err);
+      saveDocToSupabase('users', newSt).catch(err => {
+        console.error('Error saving new student to Supabase:', err);
       });
       onUpdateUsers([...nextUsers, newSt]);
       toast(`Estudiante registrado y sincronizado. Correo: ${finalEmail} | Código: ${finalCode}`, 'success');
@@ -391,8 +389,7 @@ Enlace del portal: ${window.location.origin}`;
       onSendToRecycle(student);
       return;
     }
-    deleteDocFromFirestore('users', id);
-    deleteDocFromSupabase('users', id);
+    deleteDocFromSupabase('users', id).catch(() => {});
     const nextUsers = users.filter(u => u.id !== id);
     onUpdateUsers(nextUsers);
     toast('Estudiante desvinculado del sistema correctamente', 'success');
@@ -455,7 +452,7 @@ Enlace del portal: ${window.location.origin}`;
         celular: customCelular ? customCelular.trim() : undefined,
       };
 
-      saveDocToFirestore('users', newSt);
+      saveDocToSupabase('users', newSt).catch(() => {});
       newUsersList.push(newSt);
       addedCount++;
     });
@@ -507,7 +504,7 @@ Enlace del portal: ${window.location.origin}`;
                 rol: 'estudiante',
               };
               existingMap.set(stId, mergedSt);
-              saveDocToFirestore('users', mergedSt);
+              saveDocToSupabase('users', mergedSt).catch(() => {});
             }
           });
 
@@ -524,12 +521,12 @@ Enlace del portal: ${window.location.origin}`;
     e.target.value = '';
   };
 
-  const [isSyncingFirestore, setIsSyncingFirestore] = useState(false);
+  const [isSyncingSupabase, setIsSyncingSupabase] = useState(false);
 
-  // Sync all students to Cloud Firestore
+  // Sync all students to Supabase
   const handleSyncAllStudents = async () => {
     try {
-      setIsSyncingFirestore(true);
+      setIsSyncingSupabase(true);
       const defaultUsers = (backupAppState.users || []) as User[];
       const userMap = new Map<string, User>();
       defaultUsers.forEach(u => userMap.set(u.id, u));
@@ -544,13 +541,13 @@ Enlace del portal: ${window.location.origin}`;
       });
       const mergedList = Array.from(userMap.values());
       onUpdateUsers(mergedList);
-      await uploadAllStudentsToFirestore(mergedList);
-      toast(`¡Se sincronizaron exitosamente los ${mergedList.filter(u => u.rol === 'estudiante').length} estudiantes en la base de datos!`, 'success');
+      await uploadUsersBatchToSupabase(mergedList);
+      toast(`¡Se sincronizaron exitosamente los ${mergedList.filter(u => u.rol === 'estudiante').length} estudiantes en Supabase!`, 'success');
     } catch (e) {
       console.error(e);
-      toast('Error al sincronizar estudiantes con la base de datos', 'error');
+      toast('Error al sincronizar estudiantes con Supabase', 'error');
     } finally {
-      setIsSyncingFirestore(false);
+      setIsSyncingSupabase(false);
     }
   };
 
@@ -569,12 +566,12 @@ Enlace del portal: ${window.location.origin}`;
           <button
             type="button"
             onClick={handleSyncAllStudents}
-            disabled={isSyncingFirestore}
+            disabled={isSyncingSupabase}
             className="btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-bold border border-emerald-200 transition-all cursor-pointer text-xs disabled:opacity-50"
-            title="Sincronizar y subir todos los estudiantes a Cloud Firestore"
+            title="Sincronizar y subir todos los estudiantes a Supabase (PostgreSQL)"
           >
-            <Sparkles className={`w-4 h-4 text-emerald-600 ${isSyncingFirestore ? 'animate-spin' : ''}`} />
-            <span>{isSyncingFirestore ? 'Sincronizando...' : 'Subir a BD'}</span>
+            <Sparkles className={`w-4 h-4 text-emerald-600 ${isSyncingSupabase ? 'animate-spin' : ''}`} />
+            <span>{isSyncingSupabase ? 'Sincronizando...' : 'Subir a BD'}</span>
           </button>
 
           {onDeduplicateStudents && (
