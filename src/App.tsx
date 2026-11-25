@@ -88,8 +88,16 @@ import {
   deleteDocFromSupabase,
   markDeletedInSupabase,
   registerDeletedIdInSupabase,
-  unRegisterDeletedIdInSupabase
+  unRegisterDeletedIdInSupabase,
+  sanitizeForSupabase,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 } from './lib/supabase';
+import {
+  enqueueSubmissionForBackgroundSync,
+  removeQueuedSubmission,
+  triggerManualSWBackgroundSync
+} from './lib/offlineSyncQueue';
 
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
@@ -135,20 +143,60 @@ export default function App() {
     currentDbRef.current = db;
   }, [db]);
 
-  const flushPendingSubmissions = async (subsList: Submission[]) => {
+  const notifiedSyncedIdsRef = useRef<Set<string>>(new Set());
+
+  const notifyBackgroundSyncCompletion = (count: number, titles: string[] = [], syncedIds: string[] = []) => {
+    const freshIds = syncedIds.filter(id => !notifiedSyncedIdsRef.current.has(id));
+    syncedIds.forEach(id => notifiedSyncedIdsRef.current.add(id));
+    if (syncedIds.length > 0 && freshIds.length === 0) return;
+
+    const effectiveCount = freshIds.length > 0 ? freshIds.length : count;
+    if (effectiveCount <= 0) return;
+
+    window.dispatchEvent(
+      new CustomEvent('synapsis:bg-sync-complete', {
+        detail: { count: effectiveCount, titles },
+      })
+    );
+
+    const detail =
+      titles.length === 1
+        ? ` ("${titles[0]}")`
+        : '';
+    const msg =
+      effectiveCount === 1
+        ? `Sincronización en segundo plano completada: 1 entrega de examen enviada a la nube${detail} ✓`
+        : `Sincronización en segundo plano completada: ${effectiveCount} entregas de examen enviadas a la nube ✓`;
+    showToast(msg, 'success');
+  };
+
+  const flushPendingSubmissions = async (subsList: Submission[]): Promise<number> => {
     const pendingIds = getPendingSubmissionIds();
-    if (pendingIds.length === 0) return;
+    if (pendingIds.length === 0) return 0;
+    const syncedNowIds: string[] = [];
+    const syncedTitles: string[] = [];
+
     for (const pId of pendingIds) {
       const targetSub = subsList.find(s => s.id === pId);
       if (!targetSub) {
         removePendingSubmissionId(pId);
+        await removeQueuedSubmission(pId);
         continue;
       }
       const res = await saveDocToSupabase('submissions', targetSub);
       if (res.success) {
         removePendingSubmissionId(pId);
+        await removeQueuedSubmission(pId);
+        syncedNowIds.push(pId);
+        const ex = (currentDbRef.current.exams || []).find(e => e.id === targetSub.examenId);
+        if (ex?.titulo) syncedTitles.push(ex.titulo);
       }
     }
+
+    if (syncedNowIds.length > 0) {
+      notifyBackgroundSyncCompletion(syncedNowIds.length, syncedTitles, syncedNowIds);
+    }
+    return syncedNowIds.length;
   };
 
   // Protección de estado: si un examen/parcial está 'activo' localmente y la nube intenta
@@ -525,6 +573,7 @@ export default function App() {
     }
 
     const handleOnline = async () => {
+      await triggerManualSWBackgroundSync();
       await flushPendingSubmissions(currentDbRef.current.submissions || []);
       await syncStateToSupabase(currentDbRef.current).catch(() => {});
       triggerThrottledRefresh();
@@ -535,11 +584,36 @@ export default function App() {
       }
     };
 
+    const handleSWMessage = (event: MessageEvent) => {
+      const data = event.data as {
+        type?: string;
+        syncedIds?: string[];
+        syncedCount?: number;
+        syncedTitles?: string[];
+      } | null;
+      if (!data || data.type !== 'SYNAPSIS_BG_SYNC_COMPLETE') return;
+
+      const ids = Array.isArray(data.syncedIds) ? data.syncedIds : [];
+      ids.forEach((id) => removePendingSubmissionId(id));
+
+      const count = typeof data.syncedCount === 'number' ? data.syncedCount : ids.length;
+      const titles = Array.isArray(data.syncedTitles) ? data.syncedTitles : [];
+      if (count > 0) {
+        notifyBackgroundSyncCompletion(count, titles, ids);
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('focus', handleVisibilityOrFocus);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    }
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('focus', handleVisibilityOrFocus);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+      }
     };
   }, [activeTab]);
 
@@ -2594,9 +2668,19 @@ export default function App() {
                 const res = await updateSubmissions(nextSubs, [sub.id]);
                 if (res.remoteSynced) {
                   removePendingSubmissionId(sub.id);
+                  await removeQueuedSubmission(sub.id);
                   showToast('Examen enviado y guardado correctamente en la nube ✓', 'success');
                 } else {
-                  showToast('Examen guardado en tu dispositivo. Se sincronizará automáticamente al restablecer conexión.', 'warning');
+                  await enqueueSubmissionForBackgroundSync({
+                    id: sub.id,
+                    table: 'submissions',
+                    payload: sanitizeForSupabase(sub, 'submissions'),
+                    examTitle: targetExam?.titulo,
+                    supabaseUrl: SUPABASE_URL,
+                    supabaseAnonKey: SUPABASE_ANON_KEY,
+                    queuedAt: new Date().toISOString(),
+                  }).catch(err => console.warn('Could not enqueue background sync record:', err));
+                  showToast('Examen guardado en tu dispositivo. El Service Worker lo reenviará automáticamente al recuperar conexión.', 'warning');
                 }
                 return res;
               }}

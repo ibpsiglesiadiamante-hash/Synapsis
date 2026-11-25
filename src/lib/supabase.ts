@@ -237,7 +237,7 @@ export async function unmarkDeletedInSupabase(id: string): Promise<void> {
 /**
  * Cleans object properties before writing to Supabase
  */
-function sanitizeForSupabase(obj: any, table?: string): any {
+export function sanitizeForSupabase(obj: any, table?: string): any {
   if (obj === undefined) return null;
   if (obj === null || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj;
