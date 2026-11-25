@@ -2377,8 +2377,8 @@ export default function App() {
             <main className={`flex-1 p-2 sm:p-4 md:p-5 ${activeTab === 'dashboard' ? 'bg-[#03181e] min-h-[calc(100vh-60px)]' : 'bg-slate-50'} w-full overflow-x-hidden relative`}>
               {/* Opción destacada: Volver a la categoría exacta del módulo o al menú general */}
               {activeTab !== 'dashboard' && (
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
-                  <div className="flex items-center gap-2">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 bg-gradient-to-r from-[#05242a] via-[#072f38] to-[#093944] border border-[#11505e] px-3 sm:px-4 py-2.5 rounded-2xl shadow-md animate-fade-in select-none">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Botón principal: Volver a Menú (regresa posicionado en la categoría del módulo con sus tarjetas visibles, tal como en la segunda captura) */}
                     <button
                       type="button"
@@ -2389,10 +2389,10 @@ export default function App() {
                         setActiveTab('dashboard');
                         setActiveEditExamId(null);
                       }}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md group active:scale-95"
+                      className="flex items-center gap-1.5 sm:gap-2 text-xs font-bold text-slate-950 bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-300 hover:to-cyan-300 px-3 sm:px-4 py-2 rounded-xl transition-all cursor-pointer shadow-md group active:scale-95 whitespace-nowrap"
                       title="Regresar al menú principal"
                     >
-                      <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                      <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform shrink-0" />
                       <span>Volver a Menú</span>
                     </button>
 
@@ -2405,19 +2405,19 @@ export default function App() {
                         setActiveTab('dashboard');
                         setActiveEditExamId(null);
                       }}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-[#041c21] hover:bg-[#0a3842] border border-[#115463] px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-teal-200 hover:text-white bg-[#041c21] hover:bg-[#0a3842] border border-[#115463] px-3 sm:px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
                       title="Ver todas las categorías del menú"
                     >
-                      <LayoutGrid className="w-3.5 h-3.5 text-cyan-400" />
+                      <LayoutGrid className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                       <span>Todas las Categorías</span>
                     </button>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
                     <span className="text-[11px] font-mono text-teal-200/70 hidden sm:inline">
                       Módulo actual:
                     </span>
-                    <div className="relative">
+                    <div className="relative flex-1 sm:flex-initial">
                       <select
                         value={activeTab}
                         onChange={(e) => {
@@ -2427,7 +2427,7 @@ export default function App() {
                             setActiveEditExamId(null);
                           }
                         }}
-                        className="bg-[#041c21] border border-[#115463] text-cyan-300 text-xs font-bold rounded-xl pl-3 pr-7 py-1.5 focus:outline-none focus:border-cyan-400 cursor-pointer shadow-xs appearance-none truncate max-w-[210px] sm:max-w-[250px]"
+                        className="bg-[#041c21] border border-[#115463] text-cyan-300 text-xs font-bold rounded-xl pl-3 pr-7 py-1.5 focus:outline-none focus:border-cyan-400 cursor-pointer shadow-xs appearance-none truncate w-full sm:w-auto sm:max-w-[250px]"
                         title="Cambiar a otro módulo sin tener que salir al menú principal"
                       >
                         {ALL_MODULE_TABS

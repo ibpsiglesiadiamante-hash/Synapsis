@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -171,6 +172,11 @@ body.theme-cyber .auto-expand-textarea.bg-transparent,
 .dark textarea.bg-transparent,
 .dark .auto-expand-textarea.bg-transparent {
   background-color: transparent !important;
+}
+
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body {
