@@ -8,7 +8,9 @@ import { BookOpen, Clock, RefreshCw, Award, CheckCircle, HelpCircle, Search, Loc
 import { User, Exam, Submission, Subject, Semester, Parcial } from '../types';
 import {
   cleanExamTitle,
-  getStudentAssignedSubjects,
+  getStudentExplicitAssignedSubjects,
+  resolveEffectiveStudentSemester,
+  canStudentAccessExam,
   sortExamsBySubjectAndSequence,
   resolveExamSubjectName,
   extractPartialSequenceNumber,
@@ -71,21 +73,22 @@ export default function MisExamenesTake({
     }
   };
 
-  const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
-  const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
-  const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
+  const studentEffectiveSemester = useMemo(
+    () => resolveEffectiveStudentSemester(currentUser, users),
+    [currentUser, users]
+  );
+
+  const myAssignedSubjects = useMemo(
+    () => getStudentExplicitAssignedSubjects(currentUser, subjects, semesters, users),
+    [currentUser, subjects, semesters, users]
+  );
 
   const activeExams = useMemo(() => {
     const filtered = exams
       .filter(e => e.estado === 'activo')
       .filter(e => {
-        if (currentUser.rol === 'admin' || currentUser.rol === 'docente' || myAssignedSubjects.length === 0) return true;
-        if (e.materia && assignedIds.has(e.materia)) return true;
-        const eMat = (e.materia || '').toLowerCase().trim();
-        if (assignedNames.has(eMat)) return true;
-        const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
-        if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-        return false;
+        if (currentUser.rol !== 'estudiante') return true;
+        return canStudentAccessExam(currentUser, e, subjects, semesters, parciales, users);
       })
       .filter(e => {
         const q = searchQuery.toLowerCase().trim();
@@ -97,7 +100,7 @@ export default function MisExamenesTake({
 
     // Agrupar siempre por asignatura y ordenar Parcial 1 / Evaluación I antes que Parcial 2 / Evaluación II
     return sortExamsBySubjectAndSequence(filtered, subjects, parciales);
-  }, [exams, currentUser.rol, myAssignedSubjects.length, assignedIds, assignedNames, subjects, parciales, searchQuery]);
+  }, [exams, currentUser, subjects, semesters, parciales, users, searchQuery]);
 
   // Reset page to 1 when a search/filter search is entered
   React.useEffect(() => {
@@ -228,10 +231,22 @@ export default function MisExamenesTake({
         <div className="card bg-white p-12 border border-slate-200 rounded-2xl text-center flex flex-col items-center theme-bg-surface theme-border">
           <BookOpen className="w-12 h-12 text-slate-300 mb-3" />
           <h4 className="font-bold text-slate-600">
-            {searchQuery ? 'No se encontraron exámenes' : 'No hay exámenes habilitados'}
+            {searchQuery
+              ? 'No se encontraron exámenes'
+              : currentUser.rol === 'estudiante' && !studentEffectiveSemester
+                ? 'No tienes un semestre asignado todavía'
+                : currentUser.rol === 'estudiante' && myAssignedSubjects.length === 0
+                  ? 'Aún no tienes exámenes asignados'
+                  : 'No hay exámenes habilitados'}
           </h4>
-          <p className="text-xs text-slate-400 mt-1">
-            {searchQuery ? 'Prueba escribiendo otros términos de búsqueda de materia o examen.' : 'Los docentes aún no han configurado ni activado exámenes para este corte.'}
+          <p className="text-xs text-slate-400 mt-1 max-w-md">
+            {searchQuery
+              ? 'Prueba escribiendo otros términos de búsqueda de materia o examen.'
+              : currentUser.rol === 'estudiante' && !studentEffectiveSemester
+                ? 'Tu usuario no tiene un semestre registrado aún. Cuando la coordinación o docente te asigne tu semestre y materias, aquí aparecerán únicamente los exámenes de tu semestre.'
+                : currentUser.rol === 'estudiante' && myAssignedSubjects.length === 0
+                  ? 'Cuando se te asignen materias en tu semestre, aquí aparecerán únicamente las evaluaciones habilitadas para tu curso.'
+                  : 'Los docentes aún no han configurado ni activado exámenes para tus materias de este semestre.'}
           </p>
         </div>
       ) : (

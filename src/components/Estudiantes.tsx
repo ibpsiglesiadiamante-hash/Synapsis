@@ -11,7 +11,7 @@ import {
   Eye, EyeOff, KeyRound, Copy
 } from 'lucide-react';
 import { User, Subject, Semester } from '../types';
-import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState } from '../lib/db';
+import { uid, now, fmtDate, avatarColor, avatarLetter, generateStudentCode, backupAppState, areSemestersEquivalent } from '../lib/db';
 import { saveDocToSupabase, deleteDocFromSupabase, uploadUsersBatchToSupabase } from '../lib/supabase';
 
 interface EstudiantesProps {
@@ -134,9 +134,8 @@ export default function Estudiantes({
 
     // If student has a semester, but no valid subjects selected yet, preselect the subjects of that semester
     if (validSubIds.length === 0 && semMatch) {
-      const semName = semMatch.nombre.toLowerCase().trim();
       const semSubIds = effectiveSubjects
-        .filter(s => s.semestre === semMatch.id || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+        .filter(s => areSemestersEquivalent(s.semestre, semMatch.id, effectiveSemesters))
         .map(s => s.id);
       setSelectedSubjectIds(semSubIds);
     } else {
@@ -151,10 +150,8 @@ export default function Estudiantes({
   const handleSemesterChange = (newSemId: string) => {
     setSelectedSemesterId(newSemId);
     if (newSemId) {
-      const semObj = effectiveSemesters.find(s => s.id === newSemId);
-      const semName = semObj?.nombre?.toLowerCase().trim() || '';
       const semesterSubIds = effectiveSubjects
-        .filter(s => s.semestre === newSemId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+        .filter(s => areSemestersEquivalent(s.semestre, newSemId, effectiveSemesters))
         .map(s => s.id);
       
       // Auto-assign semester subjects if student currently has 0 subjects selected
@@ -217,20 +214,16 @@ export default function Estudiantes({
 
   const handleSelectAllInSemester = (semesterId: string) => {
     if (!semesterId) return;
-    const semObj = effectiveSemesters.find(s => s.id === semesterId);
-    const semName = semObj?.nombre?.toLowerCase().trim() || '';
     const semesterSubIds = effectiveSubjects
-      .filter(s => s.semestre === semesterId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+      .filter(s => areSemestersEquivalent(s.semestre, semesterId, effectiveSemesters))
       .map(s => s.id);
     setSelectedSubjectIds(prev => Array.from(new Set([...prev, ...semesterSubIds])));
   };
 
   const handleReplaceWithSemesterSubjects = (semesterId: string) => {
     if (!semesterId) return;
-    const semObj = effectiveSemesters.find(s => s.id === semesterId);
-    const semName = semObj?.nombre?.toLowerCase().trim() || '';
     const semesterSubIds = effectiveSubjects
-      .filter(s => s.semestre === semesterId || (s.semestre && s.semestre.toLowerCase().trim() === semName))
+      .filter(s => areSemestersEquivalent(s.semestre, semesterId, effectiveSemesters))
       .map(s => s.id);
     setSelectedSubjectIds(semesterSubIds);
   };
@@ -1182,10 +1175,7 @@ Enlace del portal: ${window.location.origin}`;
                       if (!nameMatch) return false;
 
                       if (filterBySemesterOnly && selectedSemesterId) {
-                        const semObj = effectiveSemesters.find(s => s.id === selectedSemesterId);
-                        const semName = semObj?.nombre?.toLowerCase().trim() || '';
-                        const subSem = (sub.semestre || '').toLowerCase().trim();
-                        return sub.semestre === selectedSemesterId || subSem === semName || subSem.includes(semName) || semName.includes(subSem);
+                        return areSemestersEquivalent(sub.semestre, selectedSemesterId, effectiveSemesters);
                       }
                       return true;
                     })

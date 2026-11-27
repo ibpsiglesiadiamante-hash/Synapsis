@@ -13,8 +13,17 @@ import {
   Filter, 
   Layers
 } from 'lucide-react';
-import { User, Exam, Assignment, AssignmentSubmission, Submission, Subject, Parcial } from '../types';
-import { sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus } from '../lib/db';
+import { User, Exam, Assignment, AssignmentSubmission, Submission, Subject, Semester, Parcial } from '../types';
+import {
+  sortExamsBySubjectAndSequence,
+  getAllMatchingUserIds,
+  getStudentExamAttemptStatus,
+  canStudentAccessExam,
+  getStudentExplicitAssignedSubjects,
+  resolveEffectiveStudentSemester,
+  areSemestersEquivalent,
+  normalizeString
+} from '../lib/db';
 
 interface CentroNotificacionesProps {
   currentUser: User;
@@ -24,6 +33,7 @@ interface CentroNotificacionesProps {
   assignmentSubmissions: AssignmentSubmission[];
   submissions: Submission[];
   subjects: Subject[];
+  semesters?: Semester[];
   parciales?: Parcial[];
   onNavigate: (tab: string) => void;
   onTakeExam?: (examId: string) => void;
@@ -56,6 +66,7 @@ export default function CentroNotificaciones({
   assignmentSubmissions = [],
   submissions = [],
   subjects = [],
+  semesters = [],
   parciales = [],
   onNavigate,
   onTakeExam,
@@ -91,29 +102,25 @@ export default function CentroNotificaciones({
     return title.replace(/^(evaluaci[oó]n|examen|parcial)\s*i*\s*[-–—:]\s*/i, '').trim() || title;
   };
 
-  // Student assigned subjects calculation
-  const myAssignedSubjects = useMemo(() => {
-    if (rol === 'estudiante') {
-      const direct = currentUser.asignaturas || [];
-      if (direct.length > 0) return direct;
-      if (currentUser.semestre) {
-        return (subjects || [])
-          .filter(s => s.semestre && s.semestre.toLowerCase().trim() === (currentUser.semestre || '').toLowerCase().trim())
-          .map(s => s.id);
-      }
-    }
-    return [];
-  }, [currentUser, rol, subjects]);
+  const studentEffectiveSem = useMemo(
+    () => resolveEffectiveStudentSemester(currentUser, users),
+    [currentUser, users]
+  );
 
-  const assignedIds = useMemo(() => new Set(myAssignedSubjects), [myAssignedSubjects]);
+  // Student explicitly assigned subjects calculation (no semester fallback)
+  const myAssignedSubjects = useMemo(() => {
+    if (rol !== 'estudiante') return [];
+    return getStudentExplicitAssignedSubjects(currentUser, subjects, semesters, users);
+  }, [currentUser, rol, subjects, semesters, users]);
+
+  const assignedIds = useMemo(() => new Set(myAssignedSubjects.map(s => s.id)), [myAssignedSubjects]);
   const assignedNames = useMemo(() => {
     const names = new Set<string>();
-    myAssignedSubjects.forEach(id => {
-      const s = (subjects || []).find(sub => sub.id === id);
-      if (s) names.add(s.nombre.toLowerCase().trim());
+    myAssignedSubjects.forEach(s => {
+      if (s.nombre) names.add(normalizeString(s.nombre));
     });
     return names;
-  }, [myAssignedSubjects, subjects]);
+  }, [myAssignedSubjects]);
 
   const matchingUserIds = useMemo(() => new Set(getAllMatchingUserIds(currentUser, users)), [currentUser, users]);
 
@@ -127,16 +134,7 @@ export default function CentroNotificaciones({
       .filter(e => e.estado === 'activo')
       .filter(exam => {
         if (rol === 'estudiante') {
-          if (myAssignedSubjects.length > 0) {
-            if (exam.materia && assignedIds.has(exam.materia)) return true;
-            const eMat = (exam.materia || '').toLowerCase().trim();
-            if (assignedNames.has(eMat)) return true;
-            const matchingSubj = (subjects || []).find(s => s.id === exam.materia || s.nombre.toLowerCase().trim() === eMat);
-            if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-            if (exam.semestre && currentUser.semestre && exam.semestre.toLowerCase().trim() === currentUser.semestre.toLowerCase().trim()) return true;
-            return false;
-          }
-          return true;
+          return canStudentAccessExam(currentUser, exam, subjects, semesters, parciales, users);
         }
         return true;
       })
@@ -181,23 +179,23 @@ export default function CentroNotificaciones({
         };
       })
       .filter(Boolean) as AcademicNotification[];
-  }, [exams, rol, myAssignedSubjects, assignedIds, assignedNames, subjects, currentUser, parciales, submissions, users, onTakeExam, onNavigate]);
+  }, [exams, rol, subjects, semesters, currentUser, parciales, submissions, users, onTakeExam, onNavigate]);
 
   // 2. Task notifications
   const taskNotifications: AcademicNotification[] = useMemo(() => {
     return (assignments || [])
       .filter(task => {
         if (rol === 'estudiante') {
-          if (myAssignedSubjects.length > 0) {
-            if (task.asignatura && assignedIds.has(task.asignatura)) return true;
-            const tAsig = (task.asignatura || '').toLowerCase().trim();
-            if (assignedNames.has(tAsig)) return true;
-            const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || s.nombre.toLowerCase().trim() === tAsig);
-            if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-            if (task.semestre && currentUser.semestre && task.semestre.toLowerCase().trim() === currentUser.semestre.toLowerCase().trim()) return true;
+          if (!studentEffectiveSem || myAssignedSubjects.length === 0) return false;
+          if (task.semestre && !areSemestersEquivalent(studentEffectiveSem, task.semestre, semesters)) {
             return false;
           }
-          return true;
+          if (task.asignatura && assignedIds.has(task.asignatura)) return true;
+          const tAsig = normalizeString(task.asignatura);
+          if (tAsig && assignedNames.has(tAsig)) return true;
+          const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || normalizeString(s.nombre) === tAsig);
+          if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(normalizeString(matchingSubj.nombre)))) return true;
+          return false;
         }
         return true;
       })
@@ -261,7 +259,7 @@ export default function CentroNotificaciones({
         };
       })
       .filter(Boolean) as AcademicNotification[];
-  }, [assignments, rol, myAssignedSubjects, assignedIds, assignedNames, subjects, currentUser.semestre, currentUser.id, assignmentSubmissions, onNavigate]);
+  }, [assignments, rol, studentEffectiveSem, myAssignedSubjects, assignedIds, assignedNames, subjects, semesters, currentUser.id, assignmentSubmissions, onNavigate]);
 
   const allNotifications: AcademicNotification[] = useMemo(() => {
     return [...examNotifications, ...taskNotifications].sort((a, b) => {

@@ -73,7 +73,8 @@ import {
   addPendingSubmissionId,
   removePendingSubmissionId,
   getAllMatchingUserIds,
-  getStudentExamAttemptStatus
+  getStudentExamAttemptStatus,
+  canStudentAccessExam
 } from './lib/db';
 import { bioCosmicSynth } from './lib/audioEngine';
 import {
@@ -460,7 +461,7 @@ export default function App() {
   const [regEmail, setRegEmail] = useState('');
   const [regCedula, setRegCedula] = useState('');
   const [regCelular, setRegCelular] = useState('');
-  const [regSemestre, setRegSemestre] = useState('SEMESTRE I');
+  const [regSemestre, setRegSemestre] = useState('');
   const [regPass, setRegPass] = useState('');
   const [regFoto, setRegFoto] = useState('');
   const [regShowPass, setRegShowPass] = useState(false);
@@ -516,18 +517,24 @@ export default function App() {
     }
   }, [activeTakeExamId]);
 
-  // If a student reloads/restores activeTakeExamId after exhausting attempts, clear it immediately
+  // If a student reloads/restores activeTakeExamId without permission or after exhausting attempts, clear it immediately
   useEffect(() => {
     if (!activeTakeExamId || !currentUser || currentUser.rol !== 'estudiante') return;
     const targetExam = db.exams.find(e => e.id === activeTakeExamId);
     if (!targetExam) return;
+    if (!canStudentAccessExam(currentUser, targetExam, db.subjects, db.semesters, db.parciales, db.users)) {
+      localStorage.removeItem('synapsis_activeTakeExamId');
+      setActiveTakeExamId(null);
+      showToast('Este examen no está habilitado para tu semestre o materias asignadas.', 'warning');
+      return;
+    }
     const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, db.submissions, db.users);
     if (!localStatus.canTake) {
       localStorage.removeItem('synapsis_activeTakeExamId');
       setActiveTakeExamId(null);
       showToast('Ya utilizaste tu intento en esta evaluación. Comunícate con tu docente si necesitas otro intento.', 'warning');
     }
-  }, [activeTakeExamId, currentUser, db.exams, db.submissions, db.users]);
+  }, [activeTakeExamId, currentUser, db.exams, db.submissions, db.subjects, db.semesters, db.parciales, db.users]);
 
   useEffect(() => {
     if (activeEditExamId) {
@@ -959,7 +966,8 @@ export default function App() {
         codigo: newStudentCode,
         cedula: regCedula.trim(),
         celular: regCelular.trim(),
-        semestre: regSemestre || 'SEMESTRE I',
+        semestre: regSemestre.trim() || undefined,
+        asignaturas: [],
         foto: regFoto.trim() || undefined,
         permisosCategorias: ['estudiante', 'recursos'],
         creado: now(),
@@ -977,6 +985,7 @@ export default function App() {
       setRegEmail('');
       setRegCedula('');
       setRegCelular('');
+      setRegSemestre('');
       setRegPass('');
       setRegFoto('');
       setRegTouched({ email: false, cedula: false });
@@ -1242,6 +1251,11 @@ export default function App() {
           showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
           return;
         }
+        const liveDb = currentDbRef.current;
+        if (!canStudentAccessExam(currentUser, targetExam, liveDb.subjects || [], liveDb.semesters || [], liveDb.parciales || [], liveDb.users || [])) {
+          showToast('No tienes acceso a esta evaluación porque no pertenece a tu semestre o materias asignadas.', 'warning');
+          return;
+        }
 
         if (remoteSubs.length > 0) {
           const remoteMap = new Map<string, Submission>(remoteSubs.map((r): [string, Submission] => [r.id, r]));
@@ -1272,6 +1286,10 @@ export default function App() {
       if (currentUser.rol === 'estudiante') {
         if (targetExam.estado !== 'activo') {
           showToast('Esta evaluación no se encuentra habilitada actualmente.', 'warning');
+          return;
+        }
+        if (!canStudentAccessExam(currentUser, targetExam, latestDb.subjects || [], latestDb.semesters || [], latestDb.parciales || [], latestDb.users || [])) {
+          showToast('No tienes acceso a esta evaluación porque no pertenece a tu semestre o materias asignadas.', 'warning');
           return;
         }
         const localStatus = getStudentExamAttemptStatus(currentUser, targetExam, latestDb.submissions || [], latestDb.users || []);
@@ -2033,6 +2051,7 @@ export default function App() {
             assignmentSubmissions={db.assignmentSubmissions || []}
             submissions={db.submissions}
             subjects={db.subjects}
+            semesters={db.semesters}
             parciales={db.parciales}
             onNavigate={(tab) => {
               setActiveTab(tab);
@@ -2420,6 +2439,7 @@ export default function App() {
                       onChange={e => setRegSemestre(e.target.value)}
                       className="w-full min-h-[46px] bg-white rounded-xl px-3 py-2.5 text-slate-900 text-base font-medium border-2 border-slate-300/80 focus:border-[#22d3ee] focus:ring-4 focus:ring-[#22d3ee]/25 focus:shadow-[0_0_16px_rgba(34,211,238,0.3)] outline-none cursor-pointer transition-all"
                     >
+                      <option value="">Sin semestre (por definir)</option>
                       <option value="SEMESTRE I">SEMESTRE I</option>
                       <option value="SEMESTRE II">SEMESTRE II</option>
                       <option value="SEMESTRE III">SEMESTRE III</option>
@@ -2428,6 +2448,7 @@ export default function App() {
                       <option value="SEMESTRE VI">SEMESTRE VI</option>
                       <option value="SEMESTRE VII">SEMESTRE VII</option>
                       <option value="SEMESTRE VIII">SEMESTRE VIII</option>
+                      <option value="SEMESTRE IX">SEMESTRE IX</option>
                     </select>
                   </div>
                 </div>

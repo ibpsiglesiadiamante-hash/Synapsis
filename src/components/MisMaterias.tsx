@@ -17,7 +17,8 @@ import {
   avatarColor, 
   avatarLetter,
   getStudentExamAttemptStatus,
-  sortExamsBySubjectAndSequence
+  sortExamsBySubjectAndSequence,
+  canStudentAccessExam
 } from '../lib/db';
 
 interface MisMateriasProps {
@@ -267,9 +268,12 @@ export default function MisMaterias({
               assignedSubjects.some(asg => asg.id === sub.id)
             );
             const subNameNorm = normalizeString(sub.nombre);
-            const subExams = exams.filter(e =>
+            const rawSubExams = exams.filter(e =>
               e.materia === sub.id || normalizeString(e.materia) === subNameNorm
             );
+            const subExams = isStaff
+              ? rawSubExams
+              : rawSubExams.filter(e => canStudentAccessExam(currentUser, e, subjects, semesters, [], users));
             const activeSubExams = subExams.filter(e => e.estado === 'activo');
 
             return (

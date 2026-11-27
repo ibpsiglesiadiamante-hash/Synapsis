@@ -17,7 +17,7 @@ import {
   Flame, Inbox
 } from 'lucide-react';
 import { User, Exam, Submission, Subject, Semester, Assignment, AssignmentSubmission, Parcial } from '../types';
-import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentAssignedSubjects, resolveStudentSemester, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus, getRecycleBin } from '../lib/db';
+import { avatarColor, avatarLetter, fmtDate, cleanExamTitle, formatGrade5, getStudentExplicitAssignedSubjects, resolveEffectiveStudentSemester, canStudentAccessExam, areSemestersEquivalent, normalizeString, sortExamsBySubjectAndSequence, getAllMatchingUserIds, getStudentExamAttemptStatus, getRecycleBin } from '../lib/db';
 import { fetchExamsByIdsFromSupabase } from '../lib/supabase';
 
 export interface AcademicNotification {
@@ -186,23 +186,10 @@ export default function Dashboard({
     const matchingStudentIds = new Set(getAllMatchingUserIds(currentUser, users));
     const studentSubs = (submissions || []).filter(s => matchingStudentIds.has(s.estudianteId));
     sortedSubs = [...studentSubs].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
-    
-    const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
-    const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
-    const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
 
-    const availableExams = (exams || []).filter(e => {
-      if (e.estado !== 'activo') return false;
-      if (myAssignedSubjects.length > 0) {
-        if (e.materia && assignedIds.has(e.materia)) return true;
-        const eMat = (e.materia || '').toLowerCase().trim();
-        if (assignedNames.has(eMat)) return true;
-        const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
-        if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-        return false;
-      }
-      return true;
-    });
+    const availableExams = (exams || []).filter(e =>
+      canStudentAccessExam(currentUser, e, subjects, semesters, parciales, users)
+    );
     sortedExams = availableExams.filter(e => getStudentExamAttemptStatus(currentUser, e, submissions, users).canTake);
   }
 
@@ -211,9 +198,10 @@ export default function Dashboard({
   // =========================================================================
   // MOTOR DE NOTIFICACIONES ACADÉMICAS (Alertas de Exámenes y Tareas)
   // =========================================================================
-  const myAssignedSubjects = getStudentAssignedSubjects(currentUser, subjects, semesters);
+  const studentEffectiveSem = resolveEffectiveStudentSemester(currentUser, users);
+  const myAssignedSubjects = getStudentExplicitAssignedSubjects(currentUser, subjects, semesters, users);
   const assignedIds = new Set(myAssignedSubjects.map(s => s.id));
-  const assignedNames = new Set(myAssignedSubjects.map(s => (s.nombre || '').toLowerCase().trim()));
+  const assignedNames = new Set(myAssignedSubjects.map(s => normalizeString(s.nombre)).filter(Boolean));
   const matchingIdsForNotif = new Set(getAllMatchingUserIds(currentUser, users));
   const studentSubsList = (submissions || []).filter(s => matchingIdsForNotif.has(s.estudianteId));
 
@@ -222,15 +210,7 @@ export default function Dashboard({
     .filter(e => {
       if (e.estado !== 'activo') return false;
       if (rol === 'estudiante') {
-        if (myAssignedSubjects.length > 0) {
-          if (e.materia && assignedIds.has(e.materia)) return true;
-          const eMat = (e.materia || '').toLowerCase().trim();
-          if (assignedNames.has(eMat)) return true;
-          const matchingSubj = (subjects || []).find(s => s.id === e.materia || s.nombre.toLowerCase().trim() === eMat);
-          if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-          return false;
-        }
-        return true;
+        return canStudentAccessExam(currentUser, e, subjects, semesters, parciales, users);
       }
       return true;
     })
@@ -282,16 +262,16 @@ export default function Dashboard({
   const taskNotifications: AcademicNotification[] = (assignments || [])
     .filter(task => {
       if (rol === 'estudiante') {
-        if (myAssignedSubjects.length > 0) {
-          if (task.asignatura && assignedIds.has(task.asignatura)) return true;
-          const tAsig = (task.asignatura || '').toLowerCase().trim();
-          if (assignedNames.has(tAsig)) return true;
-          const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || s.nombre.toLowerCase().trim() === tAsig);
-          if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(matchingSubj.nombre.toLowerCase().trim()))) return true;
-          if (task.semestre && currentUser.semestre && task.semestre.toLowerCase().trim() === currentUser.semestre.toLowerCase().trim()) return true;
+        if (!studentEffectiveSem || myAssignedSubjects.length === 0) return false;
+        if (task.semestre && !areSemestersEquivalent(studentEffectiveSem, task.semestre, semesters)) {
           return false;
         }
-        return true;
+        if (task.asignatura && assignedIds.has(task.asignatura)) return true;
+        const tAsig = normalizeString(task.asignatura);
+        if (tAsig && assignedNames.has(tAsig)) return true;
+        const matchingSubj = (subjects || []).find(s => s.id === task.asignatura || normalizeString(s.nombre) === tAsig);
+        if (matchingSubj && (assignedIds.has(matchingSubj.id) || assignedNames.has(normalizeString(matchingSubj.nombre)))) return true;
+        return false;
       }
       return true;
     })
@@ -431,8 +411,8 @@ export default function Dashboard({
   const paginatedExams = sortedExams.slice((currentExamsPage - 1) * 4, currentExamsPage * 4);
 
   // Compute stats
-  const totalExams = exams.length;
-  const activeExams = exams.filter(e => e.estado === 'activo').length;
+  const totalExams = rol === 'estudiante' ? sortedExams.length : exams.length;
+  const activeExams = rol === 'estudiante' ? sortedExams.length : exams.filter(e => e.estado === 'activo').length;
   const totalTeachers = users.filter(u => u.rol === 'docente').length;
   const totalStudents = users.filter(u => u.rol === 'estudiante').length;
 

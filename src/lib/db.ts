@@ -196,16 +196,216 @@ export function sanitizeUserAsignaturas(users: User[], subjects: Subject[]): Use
   });
 }
 
+export function isBlankSemesterValue(val?: string): boolean {
+  const norm = normalizeString(val);
+  if (!norm) return true;
+  return (
+    norm === 'sin semestre' ||
+    norm === 'sin_semestre' ||
+    norm === 'sin asignar' ||
+    norm === 'por definir' ||
+    norm === 'ninguno' ||
+    norm === 'ninguna' ||
+    norm === 'n/a' ||
+    norm === 'na' ||
+    norm === 's/s'
+  );
+}
+
 export function resolveStudentSemester(studentSem: string | undefined, semesters: Semester[]): Semester | undefined {
-  if (!studentSem) return undefined;
-  const clean = studentSem.toLowerCase().trim();
-  return (semesters || []).find(s => 
+  if (isBlankSemesterValue(studentSem)) return undefined;
+  const clean = normalizeString(studentSem);
+  return (semesters || []).find(s =>
     s && (
-      s.id === studentSem || 
-      (s.nombre && s.nombre.toLowerCase().trim() === clean) || 
-      (s.codigo && s.codigo.toLowerCase().trim() === clean)
+      s.id === studentSem ||
+      (s.nombre && normalizeString(s.nombre) === clean) ||
+      (s.codigo && normalizeString(s.codigo) === clean)
     )
   );
+}
+
+/**
+ * Compara dos valores de semestre (ID, código o nombre) de forma estricta y canónica,
+ * evitando falsos positivos por subcadenas (ej. "Semestre I" nunca coincide con "Semestre II/III/IV").
+ */
+export function areSemestersEquivalent(
+  semA?: string,
+  semB?: string,
+  semesters: Semester[] = []
+): boolean {
+  if (isBlankSemesterValue(semA) || isBlankSemesterValue(semB)) return false;
+
+  const resolvedA = resolveStudentSemester(semA, semesters);
+  const resolvedB = resolveStudentSemester(semB, semesters);
+
+  if (resolvedA && resolvedB && resolvedA.id === resolvedB.id) {
+    return true;
+  }
+
+  const labelA = resolvedA ? (resolvedA.nombre || resolvedA.codigo || semA!) : semA!;
+  const labelB = resolvedB ? (resolvedB.nombre || resolvedB.codigo || semB!) : semB!;
+
+  const normA = normalizeString(labelA);
+  const normB = normalizeString(labelB);
+  if (!normA || !normB) return false;
+  if (normA === normB) return true;
+
+  const keyA = normalizeSemesterCanonicalKey(labelA);
+  const keyB = normalizeSemesterCanonicalKey(labelB);
+  return Boolean(keyA && keyB && keyA === keyB);
+}
+
+/**
+ * Resuelve el semestre efectivo de un estudiante sin recurrir a coincidencia difusa por nombre.
+ */
+export function resolveEffectiveStudentSemester(
+  student: User | null | undefined,
+  users: User[] = []
+): string {
+  if (!student) return '';
+  if (!isBlankSemesterValue(student.semestre)) {
+    return (student.semestre || '').trim();
+  }
+
+  const cleanEmail = (student.email || '').trim().toLowerCase();
+  const cleanCedula = (student.cedula || '').trim();
+  const sibling = (users || []).find(u => {
+    if (!u || u.id === student.id || u.rol !== 'estudiante' || isBlankSemesterValue(u.semestre)) {
+      return false;
+    }
+    const uEmail = (u.email || '').trim().toLowerCase();
+    const uCedula = (u.cedula || '').trim();
+    return Boolean(
+      (cleanEmail && uEmail && uEmail === cleanEmail) ||
+      (cleanCedula && cleanCedula.length >= 4 && uCedula === cleanCedula)
+    );
+  });
+
+  return sibling && sibling.semestre ? sibling.semestre.trim() : '';
+}
+
+/**
+ * Devuelve únicamente las asignaturas explícitamente asignadas al estudiante (sin fallback por semestre).
+ * Si el estudiante tiene semestre asignado, descarta asignaturas que pertenezcan a otro semestre.
+ */
+export function getStudentExplicitAssignedSubjects(
+  student: User | null | undefined,
+  subjects: Subject[] = [],
+  semesters: Semester[] = [],
+  users: User[] = []
+): Subject[] {
+  if (!student) return [];
+
+  const cleanEmail = (student.email || '').trim().toLowerCase();
+  const cleanCedula = (student.cedula || '').trim();
+  const combinedAsignaturas = new Set<string>();
+
+  const collectFrom = (list?: string[]) => {
+    (list || []).forEach(item => {
+      if (typeof item === 'string' && item.trim()) {
+        combinedAsignaturas.add(item.trim());
+      }
+    });
+  };
+
+  collectFrom(student.asignaturas);
+  (users || []).forEach(u => {
+    if (!u || u.rol !== 'estudiante') return;
+    if (u.id === student.id) {
+      collectFrom(u.asignaturas);
+      return;
+    }
+    const uEmail = (u.email || '').trim().toLowerCase();
+    const uCedula = (u.cedula || '').trim();
+    if (
+      (cleanEmail && uEmail && uEmail === cleanEmail) ||
+      (cleanCedula && cleanCedula.length >= 4 && uCedula === cleanCedula)
+    ) {
+      collectFrom(u.asignaturas);
+    }
+  });
+
+  if (combinedAsignaturas.size === 0) return [];
+
+  const normalizedAsg = new Set(Array.from(combinedAsignaturas).map(a => normalizeString(a)).filter(Boolean));
+  const studentSem = resolveEffectiveStudentSemester(student, users);
+
+  return (subjects || []).filter(s => {
+    if (!s || !s.id) return false;
+    const isExplicitlyAssigned =
+      combinedAsignaturas.has(s.id) ||
+      (s.nombre ? normalizedAsg.has(normalizeString(s.nombre)) : false) ||
+      (s.codigo ? normalizedAsg.has(normalizeString(s.codigo)) : false);
+
+    if (!isExplicitlyAssigned) return false;
+
+    if (studentSem && !isBlankSemesterValue(s.semestre)) {
+      return areSemestersEquivalent(studentSem, s.semestre, semesters);
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Valida estrictamente si un estudiante puede ver y presentar un examen:
+ * 1. El examen debe estar activo.
+ * 2. El estudiante debe tener un semestre válido asignado.
+ * 3. El estudiante debe tener materias asignadas explícitamente (los nuevos sin asignar ven 0 exámenes).
+ * 4. El semestre del examen y el de su materia deben coincidir exactamente con el semestre del estudiante.
+ * 5. La materia del examen debe estar dentro de las asignaturas explícitas del estudiante.
+ */
+export function canStudentAccessExam(
+  student: User | null | undefined,
+  exam: Exam | null | undefined,
+  subjects: Subject[] = [],
+  semesters: Semester[] = [],
+  parciales: Parcial[] = [],
+  users: User[] = []
+): boolean {
+  if (!exam) return false;
+  if (!student || student.rol !== 'estudiante') return true;
+  if (exam.estado !== 'activo') return false;
+
+  const studentSem = resolveEffectiveStudentSemester(student, users);
+  if (!studentSem) return false;
+
+  const explicitSubjects = getStudentExplicitAssignedSubjects(student, subjects, semesters, users);
+  if (explicitSubjects.length === 0) return false;
+
+  const examSem = resolveExamSemester(exam, subjects, semesters, parciales);
+  if (!areSemestersEquivalent(studentSem, examSem, semesters)) {
+    return false;
+  }
+
+  const assignedIds = new Set(explicitSubjects.map(s => s.id));
+  const assignedNames = new Set(explicitSubjects.map(s => normalizeString(s.nombre)).filter(Boolean));
+  const assignedCodes = new Set(explicitSubjects.map(s => normalizeString(s.codigo)).filter(Boolean));
+
+  const eMatRaw = (exam.materia || '').trim();
+  const eMatNorm = normalizeString(exam.materia);
+
+  const matchedSubjectInCatalog = (subjects || []).find(s =>
+    s && (
+      s.id === eMatRaw ||
+      (s.nombre && normalizeString(s.nombre) === eMatNorm) ||
+      (s.codigo && normalizeString(s.codigo) === eMatNorm)
+    )
+  );
+
+  if (
+    matchedSubjectInCatalog &&
+    !isBlankSemesterValue(matchedSubjectInCatalog.semestre) &&
+    !areSemestersEquivalent(studentSem, matchedSubjectInCatalog.semestre, semesters)
+  ) {
+    return false;
+  }
+
+  if (eMatRaw && assignedIds.has(eMatRaw)) return true;
+  if (matchedSubjectInCatalog && assignedIds.has(matchedSubjectInCatalog.id)) return true;
+  if (eMatNorm && (assignedNames.has(eMatNorm) || assignedCodes.has(eMatNorm))) return true;
+
+  return false;
 }
 
 export function getStudentAssignedSubjects(student: User | null | undefined, subjects: Subject[], semesters: Semester[]): Subject[] {
@@ -214,7 +414,7 @@ export function getStudentAssignedSubjects(student: User | null | undefined, sub
   const assignedByIdOrName = (subjects || []).filter(s => {
     if (!s || !s.id) return false;
     if (userAsignaturas.includes(s.id)) return true;
-    if (userAsignaturas.some(asg => typeof asg === 'string' && asg.toLowerCase().trim() === (s.nombre || '').toLowerCase().trim())) return true;
+    if (userAsignaturas.some(asg => typeof asg === 'string' && normalizeString(asg) === normalizeString(s.nombre))) return true;
     return false;
   });
 
@@ -222,15 +422,11 @@ export function getStudentAssignedSubjects(student: User | null | undefined, sub
     return assignedByIdOrName;
   }
 
-  // Fallback: If student has a semester assigned, resolve the semester and return its curriculum subjects
-  if (student.semestre) {
-    const sem = resolveStudentSemester(student.semestre, semesters);
-    const semName = sem?.nombre?.toLowerCase().trim() || student.semestre.toLowerCase().trim();
-    const semId = sem?.id || student.semestre;
+  // Fallback for MisMaterias display: if student has a valid semester, return ONLY subjects of that exact semester
+  if (!isBlankSemesterValue(student.semestre)) {
     const semesterSubs = (subjects || []).filter(s => {
-      if (!s || !s.id) return false;
-      const subSem = (s.semestre || '').toLowerCase().trim();
-      return s.semestre === semId || (subSem && (subSem === semName || subSem.includes(semName) || semName.includes(subSem)));
+      if (!s || !s.id || isBlankSemesterValue(s.semestre)) return false;
+      return areSemestersEquivalent(student.semestre, s.semestre, semesters);
     });
     if (semesterSubs.length > 0) {
       return semesterSubs;
